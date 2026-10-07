@@ -1,0 +1,71 @@
+'use strict';
+
+/**
+ * OpenVibe.Space — process entry. `node server/index.js`
+ * Listens on PORT (4940) behind nginx; see deploy/ for the unit and vhost.
+ */
+const config = require('./config');
+const { createApp } = require('./app');
+
+(async () => {
+    // PostgreSQL first (migrations run as the owner), then the app: its revocation cutoffs load before it serves.
+    await require('./db').initDb(config);
+    const app = await createApp();
+    if (config.discordRelay.enabled) {
+        const rs = await app.locals.relay.status();
+        const part = (x) => (x.enabled ? 'on' : `off (${x.reason})`);
+        console.log(`[Relay] Discord relay on: creates queued by the ${rs.creates_from === 'events' ? 'Events worker' : 'forum'}; events worker ${part(rs.events_worker)}; inbound ${part(rs.inbound)}`);
+    }
+    // Space → OpenVibe.Events (server/events.js): off unless EVENTS_URL and the client secret are set.
+    try { require('./events').init(require('./db').getDb()); } catch (err) { console.warn('[Events] not started:', err.message); }
+    // The Roadmap space follows docs/roadmap/public.json (server/forum/roadmap.js).
+    try {
+        const r = await require('./forum/roadmap').syncFromFile(require('./db').getDb());
+        if (r && (r.created || r.updated)) console.log(`[Roadmap] ${r.created} item(s) added, ${r.updated} updated`);
+    } catch (err) { console.warn('[Roadmap] not synced:', err.message); }
+    const server = app.listen(config.port, config.host, () => {
+        console.log(`[Space] ${config.nodeEnv} on http://${config.host}:${config.port} → ${config.baseUrl}`);
+        console.log(`[Space] forums: spaces, threads and posts (PostgreSQL); identity via ${config.networkUrl}`);
+    });
+    server.keepAliveTimeout = 65_000;
+    // Subscribe to the network events Space applies at /internal/events (idempotent; off without EVENTS_URL / SPACE_EVENTS_SECRET).
+    let subscriptions = null;
+    try {
+        const secret = String(process.env.SPACE_EVENTS_SECRET || '').split(',')[0].trim();
+        subscriptions = require('./events-consumer').startSubscriptions({ config, port: config.port, secret });
+    } catch (err) { console.warn('[Events consumer] not subscribed:', err.message); }
+
+    // ── Stop (roadmap WS-P lifecycle; openvibe-sdk/service) ──────
+    // SIGTERM: the subscription retries stop (nothing new starts); the server stops taking connections,
+    // closes idle keep-alive ones (it keeps them 65 s otherwise) and lets requests in flight finish
+    // (4 s at most); then the Discord relay's drain and its Events worker's page (the gateway closes at
+    // once) and the events outbox's send finish (unsent rows stay in their tables for the next start),
+    // space.db closes, and the process exits 0, within the manifest's 5 s.
+    const { gracefulStop, within } = require('openvibe-sdk/service');
+    gracefulStop({
+        name: 'Space', server,
+        drainMs: 4000, deadlineMs: 5000, deadlineExitCode: 1,
+        stop: [
+            () => { if (subscriptions) subscriptions.stop(); },
+        ],
+        close: [
+            () => within(1000, app.locals.relay && app.locals.relay.stop()),
+            () => within(1500, require('./events').stop()),
+            async () => {
+                const ev = await require('./events').backlog().catch(() => require('./events').status());
+                let relay = 'off';
+                if (config.discordRelay.enabled) {
+                    let rs = null;
+                    try { rs = await app.locals.relay.status(); } catch { /* the database is gone */ }
+                    relay = rs ? `stopped (events worker ${rs.events_worker.enabled ? 'stopped' : 'off'}, gateway ${rs.inbound.enabled ? 'stopped' : 'off'})` : 'stopped';
+                }
+                console.log(`[Space] stopped: subscriptions ${subscriptions ? 'stopped' : 'off'}, relay ${relay}, outbox ${ev.enabled ? `stopped (${ev.pending} pending)` : 'off'}`);
+                if (app.locals.valkey) app.locals.valkey.close().catch(() => {});
+                return await require('./db').closeDb();
+            },
+        ],
+    });
+})().catch((err) => {
+    console.error('[Space] failed to start:', err);
+    process.exit(1);
+});

@@ -1,0 +1,44 @@
+{
+  "name": "openvibe-space",
+  "version": "0.1.0",
+  "private": true,
+  "description": "OpenVibe.Space — the forums of the OpenVibe network: public and members-only spaces, threads, posts, votes, categories, per-space moderators, a space's chat room on OpenVibe.Chat and the Discord relay. The forum engine moved here from OpenVibe.Community (plan T10 step 3); identity stays on OpenVibe.Network, images on OpenVibe.Media, memberships on OpenVibe.VIP.",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "NODE_ENV=development node server/index.js",
+    "test": "node test/run.js",
+    "test:pg": "SPACE_TEST_STORE=pg node test/run.js"
+  },
+  "keywords": [
+    "openvibe",
+    "space",
+    "forum",
+    "forums",
+    "boards",
+    "community"
+  ],
+  "author": "OpenVibers",
+  "license": "AGPL-3.0-only",
+  "repository": "github:OpenVibers/OpenVibe.Space",
+  "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.1.0",
+    "highlight.js": "^11.11.1",
+    "iovalkey": "^0.4.0",
+    "multer": "^2.4.0",
+    "openvibe-contracts": "https://codeload.github.com/OpenVibers/OpenVibe.Contracts/tar.gz/refs/tags/v0.108.0",
+    "openvibe-sdk": "https://codeload.github.com/OpenVibers/OpenVibe.SDK/tar.gz/refs/tags/v0.34.0",
+    "openvibe-shared": "https://codeload.github.com/OpenVibers/OpenVibe.Shared/tar.gz/refs/tags/v2.11.0",
+    "pg": "^8.23.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8"
+  }
+}

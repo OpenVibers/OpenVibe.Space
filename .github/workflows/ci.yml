@@ -1,0 +1,18 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  # install, node --check, npm test and openvibe-contracts-check: the shared test job (Track Q).
+  # ADR-035: PostgreSQL 18 + PgBouncer (transaction mode) + Valkey 9 containers (openvibe-sdk
+  # scripts/test-services.sh); npm test runs every file on PGlite, test:pg runs them all through PgBouncer.
+  test:
+    uses: OpenVibers/OpenVibe.Shared/.github/workflows/test.yml@aa570e4815063dc65624a6a486038d83ff6f6ec0
+    with:
+      syntax-dirs: server public/js test
+      contracts-service: space
+      test: 'eval "$(node_modules/openvibe-sdk/scripts/test-services.sh up)" && npm test && npm run test:pg'
+  # Secret scan (gitleaks) and dependency audit, shared by every OpenVibers repo (Track Q).
+  security:
+    uses: OpenVibers/OpenVibe.Shared/.github/workflows/security.yml@aa570e4815063dc65624a6a486038d83ff6f6ec0
