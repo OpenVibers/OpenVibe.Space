@@ -296,3 +296,9 @@ docs/roadmap/public.json      the Roadmap space's source (synced at boot)
 ## License
 
 AGPL-3.0-only. See [LICENSE](LICENSE).
+
+<!-- versions:start -->
+- openvibe-contracts: v0.112.0
+- openvibe-sdk: v0.35.0
+- openvibe-shared: v2.13.0
+<!-- versions:end -->
