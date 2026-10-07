@@ -43,8 +43,8 @@ module.exports = {
         secure: process.env.COOKIE_SECURE ? process.env.COOKIE_SECURE === 'true' : isProduction,
     },
 
-    // OpenVibe.Community — the hub (D12). Space's pages link the network Pulse feed it serves; Space
-    // stores none of it (space.pulse.read is planned, not built).
+    // OpenVibe.Community — the hub (D12). Space's pages link the network Pulse feed Community serves;
+    // Space stores none of it and serves no Pulse page of its own.
     communityUrl: (process.env.OV_COMMUNITY_URL || 'https://openvibe.community').replace(/\/$/, ''),
     // OpenVibe.Live — author profile links (the Network hosts the profile page; Live's layout is the
     // familiar one) and avatars.

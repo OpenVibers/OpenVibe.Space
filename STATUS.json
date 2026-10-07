@@ -6,16 +6,14 @@
   "runtime": "node 22, express, PostgreSQL 18 (openvibe-sdk/db, async) + Valkey 9",
   "port": 4940,
   "domain": "openvibe.space",
-  "contracts": "openvibe-contracts v0.108.0",
+  "contracts": "openvibe-contracts v0.110.0",
   "sdk": "openvibe-sdk v0.34.0",
-  "shared": "openvibe-shared v2.11.0",
+  "shared": "openvibe-shared v2.12.0",
   "capabilities": [
     "space.forum.read",
     "space.forum.manage",
     "space.thread.read",
-    "space.thread.write",
-    "space.post.write",
-    "space.pulse.read"
+    "space.post.write"
   ],
   "capabilitiesRegistered": true,
   "deployed": false,
@@ -30,14 +28,13 @@
     "a space's chat room on OpenVibe.Chat, attached with the person's own token",
     "the Discord relay: outbound webhooks, the Events worker, and inbound through the gateway",
     "blocks, token cutoffs, account export/deletion and subject merge from Network events",
-    "service capabilities space.forum.read/manage, space.thread.read/write, space.post.write",
+    "service capabilities space.forum.read/manage, space.thread.read, space.post.write",
     "server-rendered pages with full SEO (robots, llms.txt, sitemap, RSS, IndexNow)",
     "per-actor limits (openvibe-sdk/limits) and per-person write limits",
     "the process boots on a fresh database and stops cleanly (test/boot.test.js)"
   ],
   "knownGaps": [
-    "space.forum.manage, space.thread.write and space.pulse.read are still 'planned' in openvibe-contracts; Space uses space.forum.manage for moderation and space.post.write for threads today",
-    "OpenVibe.Contracts has no space.thread.created / space.post.created / space.moderation.action event payloads; the outbox stays off without EVENTS_URL",
+    "space.thread.write and space.pulse.read stay 'planned' in openvibe-contracts and Space serves neither; space.post.write carries thread and reply writes and community serves the network Pulse feed",
     "no Search documents (no space.index_document.* contract) and no /search page",
     "the network Pulse feed is Community's: Space publishes no Pulse item and renders no pulse page",
     "paste cards on forum posts were dropped with the move (pastes are Community's)"
