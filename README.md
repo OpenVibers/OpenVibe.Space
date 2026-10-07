@@ -42,7 +42,7 @@ and adds a little progressive JavaScript for comfort.
 - OpenVibe.Media (attachment uploads through the Object API), OpenVibe.VIP (members-only gates),
   OpenVibe.Chat (a space's room), OpenVibe.Events (the outbox relay and the block/account/VIP
   subscriptions), OpenVibe.Community (the hub: the Pulse feed Space's pages link)
-- `openvibe-contracts` v0.108.0, `openvibe-sdk` v0.34.0, `openvibe-shared` v2.11.0, pinned by release tarball
+- `openvibe-contracts` v0.110.0, `openvibe-sdk` v0.34.0, `openvibe-shared` v2.12.0, pinned by release tarball
 
 ## How it fits the network
 
@@ -149,16 +149,19 @@ the SDK inbox:
 
 ## Capabilities
 
-Space's capabilities are `space.*` (openvibe-contracts `manifests/services/space.json`):
+Space's capabilities are `space.*` (openvibe-contracts `manifests/services/space.json`); v0.110.0
+registers them active and lists them on the Space manifest:
 
 | Capability | What it covers |
 | --- | --- |
 | `space.forum.read` | list the spaces the caller can open, one space's metadata, `GET /s` |
-| `space.forum.manage` | staff administration of spaces (create, rename, visibility, members-only) |
+| `space.forum.manage` | moderation and staff administration of spaces (create, rename, settings, categories, moderators, visibility, members-only) |
 | `space.thread.read` | a space's threads and one thread with its posts, the feeds |
-| `space.thread.write` | thread lifecycle (planned: today `space.post.write` carries it) |
 | `space.post.write` | create threads and replies, vote, edit or delete one's own posts |
-| `space.pulse.read` | the Pulse activity Space shows beside its forums (planned; Community serves the feed today) |
+
+`space.thread.write` (a thread lifecycle grant on its own) and `space.pulse.read` (the Pulse activity
+beside the forums) stay planned in Contracts and Space serves neither: `space.post.write` carries
+thread writes and Community serves the Pulse feed.
 
 Service tokens are held to these (`server/http/v1.js` `serviceCap`/`serviceAnyCap`); browsers and
 anonymous callers pass the middlewares and are judged by Space's own rules instead. Staff powers come
@@ -268,10 +271,10 @@ docs/roadmap/public.json      the Roadmap space's source (synced at boot)
 - **The data cutover** (plan T10 step 4, not this repository's job): move Community's forum tables
   into `ov_space`, 301 `/s/*` on Community to Space, drop Community's forum tables and the
   deprecated `community.*` forum capabilities, and remove the Sites placeholder for openvibe.space.
-- **Contracts**: OpenVibe.Contracts still marks `space.forum.manage`, `space.thread.write` and
-  `space.pulse.read` planned, and has no `space.thread.created` / `space.post.created` /
-  `space.moderation.action` event payloads — Space already emits those types (the outbox is off
-  without `EVENTS_URL`), so Events will refuse them until the contracts land.
+- **Contracts**: v0.110.0 registers Space live and its capabilities active, and publishes the
+  `space.thread.created` / `space.post.created` / `space.moderation.action` event payloads, so the
+  outbox only waits on `EVENTS_URL` and `OV_OAUTH_CLIENT_SECRET`; `space.thread.write` and
+  `space.pulse.read` stay planned (`space.post.write` carries thread writes, Community serves Pulse).
 - **Search**: Space pushes no Search documents yet (there is no `space.index_document.*` contract),
   so `/search` on every site does not see forum threads; there is no `/search` page here.
 - **Pulse**: forum activity no longer publishes to the network Pulse feed. Restoring it belongs to

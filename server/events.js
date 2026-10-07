@@ -14,9 +14,9 @@
  * Off unless EVENTS_URL and OV_OAUTH_CLIENT_SECRET are set (EVENTS_PUBLISH=off disables it).
  *
  * The event types are the forum's own namespace (plan T10 D3: the forum's contracts are Space's).
- * OpenVibe.Contracts must publish the space.thread.created / space.post.created / space.moderation.action
- * payload contracts before this producer is switched on: Events refuses an event type it has no contract
- * for, and both this and the Discord relay's Events worker are off without EVENTS_URL.
+ * openvibe-contracts v0.110.0 publishes the space.thread.created / space.post.created /
+ * space.moderation.action payloads (space.json `eventsProduced`), so Events accepts them; the producer
+ * and the Discord relay's Events worker stay off without EVENTS_URL and OV_OAUTH_CLIENT_SECRET.
  */
 const { createClient } = require('openvibe-sdk/core');
 const { createServiceTokenClient } = require('openvibe-sdk/auth');
