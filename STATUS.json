@@ -8,7 +8,7 @@
   "domain": "openvibe.space",
   "contracts": "openvibe-contracts v0.112.0",
   "sdk": "openvibe-sdk v0.35.0",
-  "shared": "openvibe-shared v2.13.0",
+  "shared": "openvibe-shared v2.13.2",
   "capabilities": [
     "space.forum.read",
     "space.forum.manage",
@@ -39,5 +39,5 @@
     "the network Pulse feed is Community's: Space publishes no Pulse item and renders no pulse page",
     "paste cards on forum posts were dropped with the move (pastes are Community's)"
   ],
-  "updated": "2026-10-07"
+  "updated": "2026-10-08"
 }
