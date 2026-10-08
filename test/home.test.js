@@ -54,7 +54,8 @@ const { boot, check, done } = require('./helpers/app');
         const body = ready.json();
         assert.strictEqual(body.service, 'space');
         assert.strictEqual(body.checks.db.status, 'ok');
-        assert.strictEqual(body.checks.db.detail.store, 'pglite');
+        // PGlite locally, PostgreSQL in CI (the containers): either is a real store.
+        assert.ok(['pglite', 'postgresql'].includes(body.checks.db.detail.store), `store ${body.checks.db.detail.store}`);
     });
 
     await check('sign-in is mounted: /auth/me answers a guest, /auth/login sends the browser to the Network', async () => {
