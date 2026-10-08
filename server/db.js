@@ -3,13 +3,11 @@
 /**
  * Space's own database: PostgreSQL (ADR-035). The schema is migrations/NNNN_*.sql, applied at boot.
  *
- * Space owns the forum: space groups, spaces, categories, threads, posts and their versions, thread
- * votes, attachments (Media objects), post reactions, a space's chat room, per-space moderators, the
- * Discord relay's bookkeeping and the account-data and block projections. People are referenced by
- * Network subject ids (usr_… / gst_…), never by a service-local integer; subject_projection is only a
- * display cache of what the Network says about them.
- *
- * Pastes, typed comment threads, Pulse and submissions are OpenVibe.Community's; they are not here.
+ * Space holds no user content while it is rebuilt. The migrations still create the forum tables
+ * (spaces, threads, posts, votes, attachments, the relay's bookkeeping, the event inbox and the
+ * account-data records) that Space served when the forum lived here; they stay in the database —
+ * this release writes no drop migration — and their rows are OpenVibe.Community's now, where the
+ * forum is. The database itself stays for the shared schema and the release ledger.
  *
  * Timestamps are text ('YYYY-MM-DD HH:MM:SS', UTC): the schema defines ov_now(), datetime() and julianday()
  * with those semantics, and ov_hot() for the forum's hot rank.

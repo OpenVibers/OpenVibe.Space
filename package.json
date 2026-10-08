@@ -2,7 +2,7 @@
   "name": "openvibe-space",
   "version": "0.1.0",
   "private": true,
-  "description": "OpenVibe.Space — the forums of the OpenVibe network: public and members-only spaces, threads, posts, votes, categories, per-space moderators, a space's chat room on OpenVibe.Chat and the Discord relay. The forum engine moved here from OpenVibe.Community (plan T10 step 3); identity stays on OpenVibe.Network, images on OpenVibe.Media, memberships on OpenVibe.VIP.",
+  "description": "OpenVibe.Space — code and dynamic pages for the OpenVibe network, and \"spaces\": apps people build that use their OpenVibe account, the network's services and the SDK. The forum moved back to OpenVibe.Community (owner decision, 2026-10-08); every forum URL here redirects there.",
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
@@ -13,10 +13,9 @@
   "keywords": [
     "openvibe",
     "space",
-    "forum",
-    "forums",
-    "boards",
-    "community"
+    "code",
+    "pages",
+    "apps"
   ],
   "author": "OpenVibers",
   "license": "AGPL-3.0-only",
@@ -27,10 +26,7 @@
     "express": "^4.21.2",
     "express-rate-limit": "^7.5.0",
     "helmet": "^8.1.0",
-    "highlight.js": "^11.11.1",
-    "iovalkey": "^0.4.0",
-    "multer": "^2.4.0",
-    "openvibe-contracts": "https://codeload.github.com/OpenVibers/OpenVibe.Contracts/tar.gz/refs/tags/v0.112.0",
+    "openvibe-contracts": "https://codeload.github.com/OpenVibers/OpenVibe.Contracts/tar.gz/refs/tags/v0.118.0",
     "openvibe-sdk": "https://codeload.github.com/OpenVibers/OpenVibe.SDK/tar.gz/refs/tags/v0.35.0",
     "openvibe-shared": "https://codeload.github.com/OpenVibers/OpenVibe.Shared/tar.gz/refs/tags/v2.15.0",
     "pg": "^8.23.0"
