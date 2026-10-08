@@ -10,7 +10,7 @@ jobs:
   test:
     uses: OpenVibers/OpenVibe.Shared/.github/workflows/test.yml@aa570e4815063dc65624a6a486038d83ff6f6ec0
     with:
-      syntax-dirs: server public/js test
+      syntax-dirs: server test
       contracts-service: space
       test: 'eval "$(node_modules/openvibe-sdk/scripts/test-services.sh up)" && npm test && npm run test:pg'
   # Secret scan (gitleaks) and dependency audit, shared by every OpenVibers repo (Track Q).

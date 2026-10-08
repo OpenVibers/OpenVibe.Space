@@ -1,9 +1,9 @@
 [Unit]
-Description=OpenVibe.Space — the forums of the OpenVibe network
-# Network (identity) should be up first, but Space degrades gracefully if it is not: public pages and
-# reads still work, sign-in and signed-in writes answer 503 (server/observability.js).
-After=network.target postgresql.service pgbouncer.service valkey-server.service
-Wants=openvibe-network.service postgresql.service pgbouncer.service valkey-server.service
+Description=OpenVibe.Space — code and dynamic pages for the OpenVibe network
+# Network (identity) should be up first, but Space degrades gracefully if it is not: the home page and
+# the discovery files still work, sign-in is unavailable (server/observability.js).
+After=network.target postgresql.service pgbouncer.service
+Wants=openvibe-network.service postgresql.service pgbouncer.service
 
 [Service]
 Type=simple

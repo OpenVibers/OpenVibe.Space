@@ -4,8 +4,7 @@
  * Page shell — every page on the site is server-rendered through openvibe-shared/shell: full <head>
  * SEO (description, canonical, robots, Open Graph, Twitter card, JSON-LD and the ai-summary page
  * summary), the shared OpenVibe Frame (theme-loader first so there is no flash, navbar.js +
- * footer.js from the Network, the SSR footer), plus this site's small stylesheet and its
- * progressive script.
+ * footer.js from the Network, the SSR footer), plus this site's small stylesheet.
  */
 const crypto = require('crypto');
 const ovServe = require('openvibe-shared/serve');
@@ -14,11 +13,15 @@ const appIcon = require('openvibe-shared/app-icon');
 const fs = require('fs');
 const path = require('path');
 const config = require('../config');
-const { escapeHtml } = require('./highlight');
+
+/** Escape a value for HTML text or a quoted attribute. */
+function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
 
 const SITE_NAME = 'OpenVibe.Space';
 const NETWORK_URL = 'https://openvibe.network';
-const DEFAULT_DESCRIPTION = 'The forums of OpenVibe: public and members-only spaces, threads, replies, votes and categories — read without an account, sign in with your OpenVibe identity to post.';
+const DEFAULT_DESCRIPTION = 'OpenVibe.Space will host code and dynamic pages, and "spaces": apps people build that use their OpenVibe account, the network\'s services and the SDK. The forum is on OpenVibe.Community.';
 const DEFAULT_OG_IMAGE = `${config.baseUrl}/og-default.png`;
 
 // Content-hashed asset URLs so browsers and nginx can cache them for a year and still pick up
@@ -59,11 +62,11 @@ function navbarInit(opts) {
     const cfg = {
         service: 'space',
         apiBase: NETWORK_URL,
+        // Space's own navigation is the home page; the forum lives on OpenVibe.Community now (owner
+        // decision, 2026-10-08), so its link points there rather than at a /s that redirects.
         links: [
-            { label: 'Spaces', href: '/s', active: opts.active === 'spaces' },
-            // Pulse is OpenVibe.Community's feed (D12): Space shows forums, the hub shows network activity.
-            { label: 'Pulse', href: `${config.communityUrl}/pulse` },
-            { label: 'Community', href: config.communityUrl },
+            { label: 'Home', href: '/', active: opts.active === 'home' },
+            { label: 'The forum', href: `${config.communityUrl}/s` },
         ],
         menu: { after: [{ label: 'OpenVibe.Network', href: NETWORK_URL, icon: 'fa-globe' }] },
         history: { type: opts.historyType || 'page', title: opts.historyTitle || opts.title },
@@ -83,15 +86,13 @@ function footerInit(opts) {
         mount: '#ov-footer',
         brandName: SITE_NAME,
         updates: `${config.communityUrl}/updates`,   // this site ships with the community's log for now
-        tagline: 'Forums for the people of OpenVibe — free speech within the rules.',
+        tagline: 'Code and dynamic pages for the people of OpenVibe.',
         legalBase: config.liveUrl,
         links: [{
             heading: 'Space',
             items: [
-                { name: 'Spaces', url: '/s' },
-                { name: 'Roadmap', url: '/s/roadmap' },
-                { name: 'Feedback', url: '/s/feedback' },
-                { name: 'Pulse', url: `${config.communityUrl}/pulse` },
+                { name: 'Home', url: '/' },
+                { name: 'The forum', url: `${config.communityUrl}/s` },
                 { name: 'OpenVibe.Community', url: config.communityUrl },
                 { name: 'Source code', url: 'https://github.com/OpenVibers/OpenVibe.Space' },
             ],
@@ -102,10 +103,10 @@ function footerInit(opts) {
 /**
  * @param {object} o
  *   title, description, canonicalPath, robots ('index,follow'), ogType ('website'|'article'),
- *   ogImage, imageAlt, jsonLd (array), alternates ([{ hreflang, href }]), body (main HTML), active ('spaces'),
- *   feeds ([{ title, href }] RSS alternates; default: the latest-threads feed),
- *   historyType ('page'|'thread'), historyTitle, footerVariant ('full'|'compact'), bodyClass,
- *   styles (Shared stylesheets by name, linked before space.css so this site's rules win: ['showcase.css']),
+ *   ogImage, imageAlt, jsonLd (array), alternates ([{ hreflang, href }]), body (main HTML), active ('home'),
+ *   feeds ([{ title, href }] RSS alternates; default: none),
+ *   historyType, historyTitle, footerVariant ('full'|'compact'), bodyClass,
+ *   styles (Shared stylesheets by name, linked before space.css so this site's rules win),
  *   published/modified (ISO, for article:*), noFrame (error pages during outages)
  */
 function renderPage(o) {
@@ -113,19 +114,19 @@ function renderPage(o) {
     const canonical = abs(o.canonicalPath || '/');
     const nav = navbarInit(o);
     const foot = footerInit(o);
-    const feeds = o.feeds || [{ title: `${SITE_NAME} — latest threads`, href: '/s/feed.xml' }];
+    const feeds = o.feeds || [];
 
     // shell.page writes the document, the SEO head and ai-summary, the theme-loader, navbar.js/footer.js
     // with the navbar init, the noscript nav and the SSR footer; the rest of the head is this site's own.
     const html = shell.page({
         name: SITE_NAME, service: 'space', lang: 'en',
-        title: o.title || `${SITE_NAME} — the forums of OpenVibe`,
+        title: o.title || `${SITE_NAME} — code and dynamic pages`,
         titleSuffix: o.title ? ` · ${SITE_NAME}` : undefined,
         siteName: SITE_NAME, description, canonical, robots: o.robots || 'index,follow',
         type: o.ogType || 'website', image: o.ogImage || DEFAULT_OG_IMAGE, imageAlt: o.imageAlt,
         jsonLd: o.jsonLd, alternates: o.alternates,
         summary: description, url: canonical, updated: o.modified,
-        navbar: nav, home: '/s', navLinks: nav.links.map(({ label, href }) => ({ label, href })),
+        navbar: nav, home: '/', navLinks: nav.links.map(({ label, href }) => ({ label, href })),
         footer: { service: 'space', variant: 'full', updates: `${config.communityUrl}/updates` },
         head: [
             o.published ? `<meta property="article:published_time" content="${escapeHtml(o.published)}">` : '',
@@ -135,7 +136,6 @@ function renderPage(o) {
             ...(o.styles || []).map((name) => `<link rel="stylesheet" href="${ovServe.url(name)}">`),
             `<link rel="stylesheet" href="${asset('css/space.css')}">`,
             '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">',
-            `<script src="${asset('js/space.js')}" defer></script>`,
             `<meta name="ov-boost" content="space@${escapeHtml(RELEASE)}">`,
             `<script src="${ovServe.url('boost.js')}" data-main="#main" defer></script>`,
         ].filter(Boolean).join('\n'),
@@ -156,4 +156,4 @@ document.addEventListener('DOMContentLoaded', function () {
     return o.ogImage ? html : html.replace('<meta name="twitter:card" content="summary_large_image">', '<meta name="twitter:card" content="summary">');
 }
 
-module.exports = { renderPage, asset, assetVersion, abs, setRelease, SITE_NAME, DEFAULT_DESCRIPTION, DEFAULT_OG_IMAGE };
+module.exports = { renderPage, asset, assetVersion, abs, setRelease, escapeHtml, SITE_NAME, DEFAULT_DESCRIPTION, DEFAULT_OG_IMAGE };

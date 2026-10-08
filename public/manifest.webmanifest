@@ -1,8 +1,8 @@
 {
   "name": "OpenVibe.Space",
   "short_name": "Space",
-  "description": "The forums of the OpenVibe network: spaces, threads, replies and votes",
-  "start_url": "/s",
+  "description": "Code and dynamic pages for the OpenVibe network. The forum is on OpenVibe.Community.",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#0a0f1c",
