@@ -42,7 +42,7 @@ and adds a little progressive JavaScript for comfort.
 - OpenVibe.Media (attachment uploads through the Object API), OpenVibe.VIP (members-only gates),
   OpenVibe.Chat (a space's room), OpenVibe.Events (the outbox relay and the block/account/VIP
   subscriptions), OpenVibe.Community (the hub: the Pulse feed Space's pages link)
-- `openvibe-contracts` v0.110.0, `openvibe-sdk` v0.35.0, `openvibe-shared` v2.14.0, pinned by release tarball
+- `openvibe-contracts` v0.110.0, `openvibe-sdk` v0.35.0, `openvibe-shared` v2.14.1, pinned by release tarball
 
 ## How it fits the network
 
@@ -300,5 +300,5 @@ AGPL-3.0-only. See [LICENSE](LICENSE).
 <!-- versions:start -->
 - openvibe-contracts: v0.112.0
 - openvibe-sdk: v0.35.0
-- openvibe-shared: v2.14.0
+- openvibe-shared: v2.14.1
 <!-- versions:end -->
