@@ -47,7 +47,7 @@ Nothing that is not a forum path redirects.
 
 - OpenVibe.Network (SSO, JWKS, the `space` OAuth client)
 - OpenVibe.Community (where every forum URL redirects)
-- `openvibe-contracts` v0.112.0, `openvibe-sdk` v0.35.0, `openvibe-shared` v2.15.0, pinned by release tarball
+- `openvibe-contracts` v0.112.0, `openvibe-sdk` v0.35.0, `openvibe-shared` v2.17.0, pinned by release tarball
 
 ## What Space applies from the network: nothing
 
@@ -165,5 +165,5 @@ AGPL-3.0-only. See [LICENSE](LICENSE).
 <!-- versions:start -->
 - openvibe-contracts: v0.118.0
 - openvibe-sdk: v0.35.0
-- openvibe-shared: v2.15.0
+- openvibe-shared: v2.17.0
 <!-- versions:end -->
