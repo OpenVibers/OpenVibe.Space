@@ -195,7 +195,7 @@ OpenVibe account, the network's services and the SDK.
 AGPL-3.0-only. See [LICENSE](LICENSE).
 
 <!-- versions:start -->
-- openvibe-contracts: v0.126.0
+- openvibe-contracts: v0.127.0
 - openvibe-sdk: v0.35.0
 - openvibe-shared: v2.20.3
 <!-- versions:end -->
