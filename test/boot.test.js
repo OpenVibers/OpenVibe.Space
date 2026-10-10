@@ -56,9 +56,9 @@ async function check(name, fn) {
             const body = await r.json();
             assert.ok(r.status >= 200 && r.status < 300, `ready answered ${r.status}: ${JSON.stringify(body)}`);
             assert.strictEqual(body.service, 'space');
-            // The database is the required check; without a Network to reach, the optional JWKS check
-            // degrades the report (server/observability.js) — the process is still serving pages.
-            assert.ok(['ok', 'degraded'].includes(body.status), `status ${body.status}`);
+            // The database is the required check; the optional JWKS check may degrade the report when no Network
+            // answers (server/observability.js). openvibe-shared/ready says ready, degraded or not_ready.
+            assert.ok(['ready', 'degraded'].includes(body.status), `status ${body.status}`);
             assert.strictEqual(body.checks.db.status, 'ok');
             assert.strictEqual(body.checks.db.detail.store, 'pglite');
         });
