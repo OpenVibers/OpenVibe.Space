@@ -68,6 +68,15 @@ const { boot, check, done } = require('./helpers/app');
         assert.match(login.headers.get('location'), /^https?:\/\/127\.0\.0\.1:\d+\/oauth\/authorize/);
     });
 
+    await check('a session token signs in; a typed Network token (a FedCM assertion, a realtime ticket, an export token) never does', async () => {
+        const me = (token) => fetch(`${t.base}/auth/me`, { headers: { cookie: `ov_token=${token}` } });
+        const claims = { id: 7, username: 'alex', subject_id: 'usr_01JAB2C3D4E5F6G7H8J9K0MNPR' };
+        assert.strictEqual((await me(t.network.sign(claims))).status, 200);
+        for (const extra of [{ typ: 'fedcm', aud: 'space' }, { typ: 'realtime', purpose: 'realtime' }, { purpose: 'export' }]) {
+            assert.strictEqual((await me(t.network.sign({ ...claims, ...extra }))).status, 401, JSON.stringify(extra));
+        }
+    });
+
     await check('there is no forum here: an unknown path is an honest 404 page', async () => {
         const r = await t.get('/nope');
         assert.strictEqual(r.status, 404);
