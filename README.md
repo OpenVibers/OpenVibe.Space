@@ -66,7 +66,7 @@ migration.
 
 - OpenVibe.Network (SSO, JWKS, the `space` OAuth client)
 - OpenVibe.Community (where every forum URL redirects)
-- `openvibe-contracts` v0.112.0, `openvibe-sdk` v0.35.0, `openvibe-shared` v2.20.0, pinned by release tarball
+- `openvibe-contracts` v0.112.0, `openvibe-sdk` v0.35.0, `openvibe-shared` v2.20.3, pinned by release tarball
 
 ## Capabilities
 
@@ -197,5 +197,5 @@ AGPL-3.0-only. See [LICENSE](LICENSE).
 <!-- versions:start -->
 - openvibe-contracts: v0.126.0
 - openvibe-sdk: v0.35.0
-- openvibe-shared: v2.20.0
+- openvibe-shared: v2.20.3
 <!-- versions:end -->
