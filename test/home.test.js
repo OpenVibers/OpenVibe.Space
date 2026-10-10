@@ -13,9 +13,11 @@ const { boot, check, done } = require('./helpers/app');
     await check('the home page says what Space will host and links the forum on OpenVibe.Community', async () => {
         const r = await t.get('/');
         assert.strictEqual(r.status, 200);
-        assert.match(r.text, /<h1>Code and dynamic pages for the OpenVibe network<\/h1>/);
-        assert.match(r.text, /<strong>code<\/strong> and <strong>dynamic pages<\/strong>/);
-        assert.match(r.text, /<strong>spaces<\/strong>/);
+        assert.match(r.text, /<h1>Code and dynamic pages,<span class="sc-accent"> on your OpenVibe account\.<\/span><\/h1>/);
+        assert.match(r.text, /static sites, dynamic pages and spaces/);
+        assert.match(r.text, /Nothing is hosted here yet\./, 'it claims nothing is open');
+        assert.match(r.text, /What Space will host/);
+        assert.match(r.text, /showcase\.css/, 'built from the network\'s showcase sections');
         assert.match(r.text, /The forum moved to OpenVibe\.Community/);
         assert.match(r.text, /href="https:\/\/openvibe\.community\/s"/, 'the forum link points at Community');
         assert.match(r.text, /<link rel="canonical" href="https:\/\/openvibe\.space\/">/);
