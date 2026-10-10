@@ -11,8 +11,8 @@
   "shared": "openvibe-shared v2.21.2",
   "capabilities": [],
   "capabilitiesRegistered": false,
-  "deployed": false,
-  "deployment": "Not deployed: Space publishes nothing yet. Unit deploy/systemd/openvibe-space.service on 127.0.0.1:4940, vhost deploy/nginx/openvibe.space.conf, database ov_space via OpenVibe.Host roles/data add-service.sh space. Every forum URL (/s and /s/*, /api/v1/spaces|posts|space-groups|relay) answers a permanent redirect to the same path and query on https://openvibe.community. The forum tables stay in ov_space; this release writes no drop migration.",
+  "deployed": true,
+  "deployment": "openvibe-ovh: unit openvibe-space.service on 127.0.0.1:4940 (git checkout /opt/openvibe.space, env /etc/openvibe/space.env, database ov_space), deployed with `sudo ovhost deploy space`; public at https://openvibe.space since 2026-10-08.",
   "features": [
     "the home page: what Space will host (code, dynamic pages, \"spaces\" apps) and where the forum went",
     "permanent forum redirects: /s and /s/* (301 GET/HEAD, 308 otherwise) and the forum APIs (308) to openvibe.community",
