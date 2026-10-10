@@ -6,7 +6,7 @@
   "runtime": "node 22, express, PostgreSQL 18 (openvibe-sdk/db, async)",
   "port": 4940,
   "domain": "openvibe.space",
-  "contracts": "openvibe-contracts v0.122.1",
+  "contracts": "openvibe-contracts v0.126.0",
   "sdk": "openvibe-sdk v0.35.0",
   "shared": "openvibe-shared v2.20.0",
   "capabilities": [],
@@ -27,5 +27,5 @@
     "the forum tables remain in ov_space (migrations 0001+ still create them) with their rows; no drop migration in this release",
     "Space consumes no network events and has no account export/deletion: it holds no user content, and the forum's account data is Community's"
   ],
-  "updated": "2026-10-09"
+  "updated": "2026-10-10"
 }
