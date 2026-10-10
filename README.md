@@ -37,6 +37,25 @@ Nothing that is not a forum path redirects.
 - **Discovery** — `/robots.txt`, `/llms.txt`, `/llms-full.txt`, `/sitemap.xml` (the home page alone).
 - **Health and release** — `/api/health`, `/api/ready`, `/release.json`, `/metrics` (loopback only).
 
+## Owns
+
+Space's own database is `ov_space` on the host's data role; `migrations/0001_initial.sql` is the whole
+schema and it runs at boot. The tables it creates:
+
+- **forum tables** (what Space served when the forum lived here): `space_groups`, `spaces`,
+  `categories`, `threads`, `posts`, `post_versions`, `thread_votes`, `attachments`, `post_reactions`,
+  `space_chat_rooms`, `space_moderators`;
+- **Discord relay bookkeeping**: `relay_mappings`, `relay_deliveries`, `relay_message_map`,
+  `relay_cursors`, `relay_inbound_failures`;
+- **projections and records**: `subject_projection` (a display cache of what OpenVibe.Network says
+  about a subject — never authority), `legacy_id_map`, `network_blocks`, `account_data_events`;
+- **shared runtime tables**: `space_event_inbox`, `token_revocations`, `event_outbox`.
+
+Space is the authority for this schema and for what it serves: the home page, the forum redirects,
+sign-in, the discovery files and health/readiness. It is not the authority for the forum rows — the
+forum is OpenVibe.Community's, so those rows are Community's, and this release writes no drop
+migration.
+
 ## Does not own
 
 - the forum, pastes, typed comment threads, Pulse and submissions — OpenVibe.Community's
@@ -48,6 +67,19 @@ Nothing that is not a forum path redirects.
 - OpenVibe.Network (SSO, JWKS, the `space` OAuth client)
 - OpenVibe.Community (where every forum URL redirects)
 - `openvibe-contracts` v0.112.0, `openvibe-sdk` v0.35.0, `openvibe-shared` v2.20.0, pinned by release tarball
+
+## Capabilities
+
+`manifests/services/space.json` lists **no capabilities** (`"capabilities": []`), so Space serves no
+capability of its own. The forum capabilities it once owned are retired: Contracts still carries
+`space.forum.read`, `space.forum.manage`, `space.thread.read`, `space.thread.write`, `space.post.write`
+and `space.pulse.read`, each marked `status: retired` and pointing at its `community.*` replacement on
+OpenVibe.Community.
+
+Space calls no capability on another service. Its only outbound calls are OpenVibe.Network's OAuth
+token grant, `/oauth/revoke` and the JWKS document, which are OAuth endpoints rather than the
+capability surface. (The test Network mock still offers `identity.subject.resolve`, but nothing in
+`server/` calls it.)
 
 ## What Space applies from the network: nothing
 
