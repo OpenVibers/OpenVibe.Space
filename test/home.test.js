@@ -5,6 +5,17 @@
  * files describe the same site and the sitemap holds the home page alone; health and readiness answer.
  */
 const assert = require('assert');
+
+function assertSitemapLastmods(xml, tag = 'url') {
+    const entries = [...xml.matchAll(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`, 'g'))];
+    for (const [, body] of entries) {
+        const match = /<lastmod>(\d{4}-\d{2}-\d{2})<\/lastmod>/.exec(body);
+        assert.ok(match, body);
+        assert.strictEqual(new Date(match[1]).toISOString().slice(0, 10), match[1]);
+    }
+    return entries;
+}
+
 const { boot, check, done } = require('./helpers/app');
 
 (async () => {
@@ -45,6 +56,7 @@ const { boot, check, done } = require('./helpers/app');
         assert.strictEqual(r.status, 200);
         const locs = [...r.text.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
         assert.deepStrictEqual(locs, ['https://openvibe.space/']);
+        assert.strictEqual(assertSitemapLastmods(r.text).length, 1);
     });
 
     await check('health and readiness answer, and readiness names the store', async () => {

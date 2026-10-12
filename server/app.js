@@ -157,7 +157,7 @@ async function createApp(opts = {}) {
         .send(seo.llmsFull({ site: SITE_NAME, summary: discovery.SUMMARY, base: config.baseUrl, sections: await discovery.llmsFullSections(), maxBytes: 512 * 1024 }))));
     app.get('/sitemap.xml', async (_req, res) => {
         let rows;
-        try { rows = await discovery.sitemapRows(); } catch { return res.status(503).end(); }
+        try { rows = await discovery.sitemapRows(release.full().released_at === release.full().booted_at ? undefined : release.full().released_at); } catch { return res.status(503).end(); }
         res.type('application/xml').set('Cache-Control', cache.htmlHeaders({ maxAge: 3600 })).send(seo.sitemapXml(rows));
     });
 

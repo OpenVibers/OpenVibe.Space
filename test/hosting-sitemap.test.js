@@ -7,6 +7,17 @@
  * either path always wins. Neither generated body carries a secret, and both say how to cache them.
  */
 const assert = require('assert');
+
+function assertSitemapLastmods(xml, tag = 'url') {
+    const entries = [...xml.matchAll(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`, 'g'))];
+    for (const [, body] of entries) {
+        const match = /<lastmod>(\d{4}-\d{2}-\d{2})<\/lastmod>/.exec(body);
+        assert.ok(match, body);
+        assert.strictEqual(new Date(match[1]).toISOString().slice(0, 10), match[1]);
+    }
+    return entries;
+}
+
 const { boot, check, done } = require('./stageb/boot');
 
 const HOST = 'widgets.openvibe.website';
@@ -19,7 +30,7 @@ const CUSTOM = 'www.widgets-example.org';
     const site = await t.site(alice, project.id, 'widgets');
     const origin = `https://${HOST}`;
 
-    await t.deploy(alice, site.id, {
+    const firstDeploy = await t.deploy(alice, site.id, {
         'index.html': '<h1>Home</h1>',
         'about.html': '<h1>About</h1>',
         'docs/index.html': '<h1>Docs</h1>',
@@ -34,6 +45,8 @@ const CUSTOM = 'www.widgets-example.org';
         assert.match(r.headers['content-type'], /application\/xml/);
         const locs = [...r.text.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
         assert.deepStrictEqual([...new Set(locs)].sort(), [`${origin}/`, `${origin}/about.html`, `${origin}/docs/`].sort());
+        assert.strictEqual(assertSitemapLastmods(r.text).length, 3);
+        assert.ok(r.text.includes(`<lastmod>${new Date(firstDeploy.created_at).toISOString().slice(0, 10)}</lastmod>`));
     });
 
     await check('a generated robots.txt welcomes crawlers and names the sitemap', async () => {

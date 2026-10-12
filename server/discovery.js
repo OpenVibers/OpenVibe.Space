@@ -39,8 +39,8 @@ async function llmsFullSections() {
 
 // ── sitemap.xml rows ─────────────────────────────────────────
 /** Space's only page is the home page. */
-async function sitemapRows() {
-    return [{ loc: abs('/'), lastmod: null, changefreq: 'weekly', priority: '1.0' }];
+async function sitemapRows(releaseLastmod) {
+    return [{ loc: abs('/'), lastmod: releaseLastmod, changefreq: 'weekly', priority: '1.0' }];
 }
 
 module.exports = { ROBOTS_DISALLOW, SUMMARY, llmsSections, llmsFullSections, sitemapRows };
