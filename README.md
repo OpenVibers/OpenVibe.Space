@@ -1,20 +1,20 @@
 # OpenVibe.Space
 
-**https://openvibe.space — code and dynamic pages for the OpenVibe network.**
+**https://openvibe.space — static hosting for the OpenVibe network.**
 
-## Purpose
+## Purpose and status
 
-Space is being rebuilt to host **code** and **dynamic pages**, and **spaces**: apps people build
-that use their OpenVibe account, the network's services and the SDK.
+Space owns static hosting. The Stage B engine moved here from OpenVibe.Host as code; production had no projects, sites or deploys to migrate. It supports projects and members, immutable content-addressed deploys, activation and one-step rollback, private previews, CI Git ingest, per-site configuration, verified custom domains, takedowns, Media-backed objects, Host-header tenant serving, and a resource index. Tenant names serve at `<name>.openvibe.website`.
 
-Nothing is published here yet. The site is honest about that: the home page says what is coming and
-nothing else, and no feature is faked.
+Public hosting remains off by default (`SPACE_PUBLIC_HOSTING=off`). Only OpenVibe staff can create projects. Abuse handling and a designated DMCA agent precede public launch. Dynamic pages and spaces (small apps on a person's OpenVibe account) are planned and not built.
+
+OpenVibe.Host is the hosting price comparison; its copy of the engine is being removed, and its old hosting URLs will answer 410 with a link here.
 
 ## The forum moved to OpenVibe.Community
 
 The forum lived here from 3 October 2026 (it moved off Community then). On **2026-10-08 the owner
 moved it back**: OpenVibe.Community owns the forum (spaces, threads, posts, votes, categories,
-per-space moderators, the Discord relay) again, and Space becomes code hosting and spaces.
+per-space moderators, the Discord relay) again, and Space became the network's hosting (static sites now; dynamic pages and spaces next).
 
 So Space keeps no forum code and **every forum URL answers a permanent redirect to the same path and
 query on https://openvibe.community**:
@@ -28,174 +28,67 @@ query on https://openvibe.community**:
 A redirected bookmark, crawler or API client therefore lands on Community's copy of the same page.
 Nothing that is not a forum path redirects.
 
-## What is here today
+## Routes
 
-- **`GET /`** — the home page (server-rendered through the shared OpenVibe Frame), with a clear link to
-  the forum at https://openvibe.community/s.
-- **Sign-in** — the Network OAuth2 client `space`: `/auth/login|callback|fedcm|logout|me|refresh`.
-  No signed-in surface needs it yet; it is kept because the shared navbar signs people in everywhere.
-- **Discovery** — `/robots.txt`, `/llms.txt`, `/llms-full.txt`, `/sitemap.xml` (the home page alone).
-- **Health and release** — `/api/health`, `/api/ready`, `/release.json`, `/metrics` (loopback only).
+| Route | Purpose |
+| --- | --- |
+| `/` | Public status and static hosting description |
+| `/dashboard`, `/projects/:id`, `/sites/:id`, `/deploys/:id` | Signed-in hosting dashboard and forms |
+| `/preview/:deployId/*` | Private, sandboxed deploy preview |
+| `/api/v1/projects`, `/api/v1/sites`, `/api/v1/deploys`, `/api/v1/domains` | Hosting API (Bearer tokens, no cookie auth) |
+| `/api/v1/resources` | First-party resource index |
+| `/limits.json` | Enforced hosting limits |
+| `/auth/login|callback|fedcm|logout|me|refresh` | Space's Network OAuth client |
+| `/robots.txt`, `/llms.txt`, `/llms-full.txt`, `/sitemap.xml` | Discovery for Space's public page |
+| `/api/health`, `/api/ready`, `/release.json`, `/metrics` | Health, release and observability |
 
-## Owns
+Tenant requests are dispatched by Host header before dashboard routes. `deploy/nginx/openvibe.website.conf` is a reference wildcard vhost; the existing `openvibe.space` vhost includes larger upload locations. Neither is installed by this code change. Unknown hosts answer 404. Tenant sites cannot reach the dashboard, API, auth or metrics. A custom domain serves only after TXT verification.
 
-Space's own database is `ov_space` on the host's data role; `migrations/0001_initial.sql` is the whole
-schema and it runs at boot. The tables it creates:
+## Capabilities and events
 
-- **forum tables** (what Space served when the forum lived here): `space_groups`, `spaces`,
-  `categories`, `threads`, `posts`, `post_versions`, `thread_votes`, `attachments`, `post_reactions`,
-  `space_chat_rooms`, `space_moderators`;
-- **Discord relay bookkeeping**: `relay_mappings`, `relay_deliveries`, `relay_message_map`,
-  `relay_cursors`, `relay_inbound_failures`;
-- **projections and records**: `subject_projection` (a display cache of what OpenVibe.Network says
-  about a subject — never authority), `legacy_id_map`, `network_blocks`, `account_data_events`;
-- **shared runtime tables**: `space_event_inbox`, `token_revocations`, `event_outbox`.
+The hosting API guards `space.site.manage`, `space.site.config`, `space.deploy.create`, `space.domain.manage` and `space.resource.read` (openvibe-contracts 0.149.0, owner `space`); every route names exactly one, and `npx openvibe-contracts-check --service space` checks the code against the release. Service tokens need audience `openvibe.space`, and project membership still applies. The per-actor limits (`server/http/actor-limits.js`) count uploads, domain checks, project creation and writes per person or app; those are limit buckets, not capabilities. The retired `space.forum.*` contracts are unrelated to hosting.
 
-Space is the authority for this schema and for what it serves: the home page, the forum redirects,
-sign-in, the discovery files and health/readiness. It is not the authority for the forum rows — the
-forum is OpenVibe.Community's, so those rows are Community's, and this release writes no drop
-migration.
+The transactional outbox emits `space.deploy.created`, `space.deploy.activated`, `space.deploy.failed` and `space.domain.verified`; each has a payload schema in openvibe-contracts, and the SDK outbox refuses any other type.
 
-## Does not own
+## Data and configuration
 
-- the forum, pastes, typed comment threads, Pulse and submissions — OpenVibe.Community's
-- identity, accounts and tokens — OpenVibe.Network's
-- images, memberships and chat rooms — OpenVibe.Media's, OpenVibe.VIP's and OpenVibe.Chat's
+`migrations/0002_initial.sql` through `0005_git_sources.sql` create the hosting tables, indexes and immutable-artifact triggers from Host Stage B with `space_` names. They run through `openvibe-sdk/db` at boot; tables are never created by a request. `0001_initial.sql` remains the historical forum schema, which this release does not drop. This is a code move, with no data copy.
 
-## Depends on
+Copy `.env.example` to `.env`. Production uses `/etc/openvibe/space.env` (0600). Important values:
 
-- OpenVibe.Network (SSO, JWKS, the `space` OAuth client)
-- OpenVibe.Community (where every forum URL redirects)
-- `openvibe-contracts` v0.112.0, `openvibe-sdk` v0.44.0, `openvibe-shared` v4.0.0, pinned by release tarball
-
-## Capabilities
-
-`manifests/services/space.json` lists **no capabilities** (`"capabilities": []`), so Space serves no
-capability of its own. The forum capabilities it once owned are retired: Contracts still carries
-`space.forum.read`, `space.forum.manage`, `space.thread.read`, `space.thread.write`, `space.post.write`
-and `space.pulse.read`, each marked `status: retired` and pointing at its `community.*` replacement on
-OpenVibe.Community.
-
-Space calls no capability on another service. Its only outbound calls are OpenVibe.Network's OAuth
-token grant, `/oauth/revoke` and the JWKS document, which are OAuth endpoints rather than the
-capability surface. (The test Network mock still offers `identity.subject.resolve`, but nothing in
-`server/` calls it.)
-
-## What Space applies from the network: nothing
-
-Space holds **no user content**, so it consumes no network events and has nothing to export or erase:
-
-- **Account export and deletion are gone.** Space's former export/deletion hooks (`network.account.export_requested`,
-  `network.account.deleted`) only ever touched the **forum tables** — threads, posts, attachments, votes,
-  reactions, the moderator list. Those tables' rows are the forum's, and the forum is
-  OpenVibe.Community's, so **the forum's account data is Community's** and Space's hooks were removed.
-- **Platform blocks, subject merges and VIP membership changes are gone** for the same reason: they only
-  updated forum projections.
-- The **token-cutoff projection** (`network.user.token_valid_after`) went with them: without signed-in
-  content there is nothing here for a cutoff to protect.
-
-The forum tables stay in Space's database (migrations `0001_initial.sql` onward still create them).
-This release writes **no drop migration**; the rows are Community's, and dropping them is a later
-decision.
-
-## Configuration
-
-Copy `.env.example` to `.env` (production: `/etc/openvibe/space.env`, mode 0600).
-
-| Variable | Default | Meaning |
+| Variable | Default | Purpose |
 | --- | --- | --- |
-| `PORT` / `HOST` | `4940` / `127.0.0.1` | Listen address (nginx in front) |
-| `BASE_URL` | `https://openvibe.space` in production | Canonical origin |
-| `TRUST_PROXY` | `2` | X-Forwarded-For hops (Cloudflare → nginx → Node) |
-| `OV_NETWORK_URL` | `https://openvibe.network` | Issuer / authorize URL / JWKS |
-| `OV_NETWORK_INTERNAL_URL` | `http://127.0.0.1:4000` | Token grants, JWKS (tried first) |
-| `OV_OAUTH_CLIENT_ID` | `space` | Registered on the Network |
-| `OV_OAUTH_CLIENT_SECRET` | — | **Required** for sign-in |
-| `OV_OAUTH_REDIRECT_URI` | `https://openvibe.space/auth/callback` | Must match the registration |
-| `OV_COMMUNITY_URL` | `https://openvibe.community` | Where every forum URL redirects |
-| `OV_LIVE_URL` | `https://openvibe.live` | Legal pages the shared footer links |
-| `DATABASE_URL`, `DATABASE_DIRECT_URL` | unset (development: embedded PGlite in `data/pglite`) | PostgreSQL through PgBouncer, and the owner's direct connection for migrations (written by OpenVibe.Host `roles/data/add-service.sh space`) |
+| `SPACE_PUBLIC_HOSTING` | `off` | Staff-only project creation until launch |
+| `SPACE_SITES_DOMAIN` | `openvibe.website` | Tenant names |
+| `SPACE_STORAGE_DIR` | `./data/objects` | Content-addressed local object store |
+| `SPACE_OBJECT_STORE` | `local` | Set `media` for Media write-through and cache |
+| `SPACE_FORM_SECRET` | random per process | Dashboard CSRF form signing |
+| `SPACE_WORKER` | on | Domain rechecks, object sweep, outbox pruning |
+| `EVENTS_URL` | unset | Outbox relay destination; unset keeps rows queued |
+| `DATABASE_URL`, `DATABASE_DIRECT_URL` | unset | PostgreSQL serving and owner migration connections |
 
-## Run
+Other `SPACE_*` quota, upload, domain and DNS settings are listed in `.env.example` and `server/hosting-config.js`. Space keeps its existing OAuth and forum redirect settings.
 
-```
+## Run and tests
+
+```sh
 npm install
-npm start          # http://127.0.0.1:4940
-npm test           # boots the Network mock in-process; no network needed
+npm start
+npm test
 ```
 
-## Acceptance
+`test/hosting-core.test.js` exercises migrations, launch gate, project/site creation, tenant dispatch, immutable deploys, pointer rollback and events directly against PGlite without a socket. The ported Stage B integration files under `test/hosting-*.test.js` use `test/stageb/boot.js` and raw HTTP for Host-header and request-target cases. The existing `home`, `redirects`, and `boot` tests cover Space's public app and forum redirects.
 
-`npm test` runs every `test/*.test.js`:
+## Security and dependencies
 
-- `home` — the home page says what Space will host and links the forum on Community; discovery, health,
-  readiness and sign-in answer; an unknown path is an honest 404;
-- `redirects` — `/s`, `/s/*` (301 for GET/HEAD, 308 otherwise) and the forum APIs (308) redirect to the
-  same path and query on openvibe.community, and nothing else redirects;
-- `boot` — the real process on a fresh PGlite database: migrations run, `/api/ready` is 2xx, the home
-  page renders, the forum URLs redirect, and SIGTERM stops it cleanly.
-
-## Security
-
-Reporting a vulnerability: [SECURITY.md](SECURITY.md). The rules the code keeps:
-
-- **Auth.** Browsers use Network JWTs (the `ov_token` cookie); the session layer verifies them offline
-  against the Network's JWKS. The OAuth `state` cookie is required, and post-auth targets are restricted
-  to this site or `https://openvibe.network/…`.
-- **Egress.** Space calls only its configured Network host.
-- **Secrets.** `OV_OAUTH_CLIENT_SECRET` lives in `/etc/openvibe/space.env` (0600), by name only.
-
-## Deploy
-
-```
-/opt/openvibe.space                     # git checkout, `npm ci --omit=dev`
-/etc/openvibe/space.env                 # secrets (0600)
-deploy/systemd/openvibe-space.service   # → /etc/systemd/system/, User=ubuntu, port 4940
-deploy/nginx/openvibe.space.conf        # → /etc/nginx/sites-available/, TLS from
-                                        #   /etc/letsencrypt/live/openvibe.space/
-```
-
-The database is `ov_space` on the host's data role. Rollback: ovhost puts the previous sha back when
-`/api/ready` does not answer 2xx after the restart.
-
-## Layout
-
-```
-server/
-  index.js            process entry (listen, graceful stop)
-  app.js              Express app factory: redirects, home page, sign-in, discovery, health
-  config.js           env → config
-  db.js               PostgreSQL (openvibe-sdk/db): initDb/getDb, migrations/ applied at boot
-  discovery.js        robots disallow set, llms sections, the sitemap (the home page alone)
-  observability.js    truthful /api/ready (the database is required; the Network key degrades)
-  auth/routes.js      OAuth2 client (login/callback/fedcm/logout/me/refresh)
-  render/layout.js    page shell (openvibe-shared/shell) and the redirect/site constants
-  render/pages.js     the home page and the error pages
-public/               css/space.css, assets/ (logo, og-default), manifest.webmanifest
-migrations/           the shared schema, including the forum tables Space no longer serves
-deploy/               systemd unit, nginx vhost
-test/                 run.js + home/redirects/boot tests
-```
-
-## What is next
-
-Code hosting (repositories, releases) and dynamic pages, then "spaces": apps people build on their
-OpenVibe account, the network's services and the SDK.
-
-## Related services
-
-- Identity/SSO: https://openvibe.network (OpenVibers/OpenVibe.Network)
-- The forum and the hub: https://openvibe.community (OpenVibers/OpenVibe.Community)
-- Streaming: https://openvibe.live (OpenVibers/OpenVibe.Live)
-- Tools: https://openvibe.tools (OpenVibers/OpenVibe.Tools)
-- Media: https://openvibe.media (OpenVibers/OpenVibe.Media)
+Static uploads are validated before storage; tenant content runs on a separate registrable domain and previews use a sandbox CSP. APIs ignore cookies. OpenVibe.Network supplies identity; `svc:space` needs `events.event.publish` and, when `SPACE_OBJECT_STORE=media`, the `media.object.upload/read/list/delete` grants for the `space` namespace. OpenVibe.Media may hold tenant objects; OpenVibe.Events receives the outbox when configured. Space's own database is `ov_space` through `openvibe-sdk/db`. See [SECURITY.md](SECURITY.md).
 
 ## License
 
 AGPL-3.0-only. See [LICENSE](LICENSE).
 
 <!-- versions:start -->
-- openvibe-contracts: v0.143.0
+- openvibe-contracts: v0.149.0
 - openvibe-sdk: v0.44.0
 - openvibe-shared: v4.0.0
 <!-- versions:end -->

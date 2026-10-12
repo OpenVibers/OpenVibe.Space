@@ -3,11 +3,11 @@
 /**
  * Space's own database: PostgreSQL (ADR-035). The schema is migrations/NNNN_*.sql, applied at boot.
  *
- * Space holds no user content while it is rebuilt. The migrations still create the forum tables
+ * Space owns the static hosting tables in migrations 0002-0005. Migration 0001 still creates the forum tables
  * (spaces, threads, posts, votes, attachments, the relay's bookkeeping, the event inbox and the
  * account-data records) that Space served when the forum lived here; they stay in the database —
  * this release writes no drop migration — and their rows are OpenVibe.Community's now, where the
- * forum is. The database itself stays for the shared schema and the release ledger.
+ * forum is. The same database serves the hosting engine and the release ledger.
  *
  * Timestamps are text ('YYYY-MM-DD HH:MM:SS', UTC): the schema defines ov_now(), datetime() and julianday()
  * with those semantics, and ov_hot() for the forum's hot rank.
@@ -60,4 +60,8 @@ async function closeDb() {
     if (db) await db.close().catch(() => {});
 }
 
-module.exports = { openDb, initDb, getDb, setDb, closeDb, MIGRATIONS };
+function createStore(db, { now = () => Date.now() } = {}) {
+    return { db, now, tx: async (fn) => db.tx(() => fn()), close: () => db.close() };
+}
+
+module.exports = { openDb, initDb, getDb, setDb, closeDb, createStore, MIGRATIONS };

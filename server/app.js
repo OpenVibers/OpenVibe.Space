@@ -1,13 +1,13 @@
 'use strict';
 
 /**
- * OpenVibe.Space — code and dynamic pages for the OpenVibe network.
+ * OpenVibe.Space — static hosting for the OpenVibe network.
  *
  * Express app factory (server/index.js listens; tests build their own instance).
  *
- * Space is being rebuilt and publishes one page of its own:
+ * Space serves tenant sites, a hosting API and dashboard, plus a public page:
  *
- *   GET /                        the home page: what Space will host, and where the forum went
+ *   GET /                        the home page: static hosting status and where the forum went
  *   GET /auth/login|callback|fedcm|logout|me|refresh   sign-in (OpenVibe.Network OAuth2 client)
  *   GET /robots.txt, /llms.txt, /llms-full.txt, /sitemap.xml   crawler endpoints (the sitemap is / alone)
  *   GET /api/health, /api/ready, /release.json, /metrics (loopback)
@@ -16,8 +16,8 @@
  * a permanent redirect to the same path and query there — /s and /s/* (301 for GET and HEAD, 308
  * otherwise), and /api/v1/spaces*, /api/v1/posts/*, /api/v1/space-groups* and /api/v1/relay* (308).
  *
- * Space holds no user content, so it consumes no network events and has no account export or
- * deletion: the forum's account data is Community's. See README.md.
+ * Space holds hosted content and emits hosting lifecycle events. The historical forum rows belong
+ * to Community; the forum redirects below stay intact. See README.md.
  */
 const path = require('path');
 const express = require('express');
@@ -64,9 +64,29 @@ async function createApp(opts = {}) {
     const release = require('openvibe-shared/release').createRelease({ service: 'space', root: path.join(__dirname, '..') });
     require('./render/layout').setRelease(release.release);
     // HTTP golden signals by route template, process metrics, release_info; GET /metrics answers
-    // direct loopback callers only (Track O). Request metrics only: no content counts.
-    const metrics = require('openvibe-shared/metrics').instrument(app, { service: 'space', release: release.release });
+    // direct loopback callers only (Track O), and only on the dashboard host (mounted after the host dispatch).
+    // Request metrics only: no content counts. A tenant request is counted as one route, never by its path.
+    const sharedMetrics = require('openvibe-shared/metrics');
+    const registry = sharedMetrics.createRegistry();
+    const httpMetrics = sharedMetrics.httpMetrics(registry, { normalize: (req) => (req.hostTarget === 'site' ? 'tenant_site' : req.hostTarget === 'unknown' ? 'unknown_host' : null) });
+    const proc = sharedMetrics.processMetrics(registry);
+    sharedMetrics.releaseInfo(registry, { service: 'space', release: release.release });
+    app.use(httpMetrics.middleware);
+    require('openvibe-shared/express-async').routeAsyncErrors(app);
+    const metrics = { registry, http: httpMetrics, stop: proc.stop };
     app.locals.metrics = metrics.registry;
+
+    // Host dispatch precedes everything else, including the platform's headers: a tenant site is answered by
+    // http/tenant.js with its own headers and never reaches /metrics, auth, the API, readiness or the forum redirects.
+    const auth = opts.auth || createAuthClient(config);
+    const db = opts.db || getDb();
+    app.locals.auth = auth;
+    app.locals.config = config;
+    app.locals.db = db;
+    const hosting = require('./hosting').createHosting(app, { db, auth, config: opts.hostingConfig, now: opts.now, resolver: opts.resolver, fetchImpl: opts.fetchImpl, indexnow: opts.indexnow, log: opts.log, storageDir: opts.storageDir, forumRedirect });
+    app.locals.hosting = hosting;
+    hosting.mountDispatch(app);
+    app.get('/metrics', sharedMetrics.metricsHandler(registry));
 
     app.use(helmet({
         contentSecurityPolicy: {
@@ -96,20 +116,12 @@ async function createApp(opts = {}) {
     }));
     app.use(cookieParser());
 
-    // ── The forum is Community's: every forum URL redirects there ───
-    app.use(forumRedirect);
+    hosting.mountRoutes(app);
 
     // ── Auth (OAuth2 client of OpenVibe.Network) ─────────────
-    const auth = opts.auth || createAuthClient(config);
-    app.locals.auth = auth;
-    app.locals.config = config;
     app.use('/auth/', rateLimit({ windowMs: 15 * 60_000, max: 60, standardHeaders: true, legacyHeaders: false }));
     app.use('/auth', createAuthRoutes(config, auth));
     { const legal = require('openvibe-shared/legal'); app.get(legal.PATHS, legal.handler({ id: 'space', service: 'space', host: 'openvibe.space', name: 'OpenVibe.Space', profile: 'ugc' })); app.get('/tos', (_req, res) => res.redirect(301, '/terms')); }
-
-    // ── Space's database (for readiness and the shared schema) ───
-    const db = opts.db || getDb();
-    app.locals.db = db;
 
     // /updates: Space ships with the community's log until it has one of its own.
     app.get('/updates', (_req, res) => res.redirect(302, `${config.communityUrl}/updates`));
@@ -120,7 +132,7 @@ async function createApp(opts = {}) {
     release.mount(app, { registry: metrics.registry });
     // Readiness reports what is actually served: 503 only without the database; a Network key that has
     // not loaded degrades (server/observability.js).
-    const readiness = require('./observability').createSpaceReadiness({ db, auth, config, release: release.release });
+    const readiness = require('./observability').createSpaceReadiness({ db, auth, config, release: release.release, hosting });
     app.get('/api/ready', readiness.handler);
 
     // ── Static assets (content-hashed ?v= → immutable) ───────
@@ -150,7 +162,7 @@ async function createApp(opts = {}) {
     });
 
     // ── Pages ────────────────────────────────────────────────
-    // The home page: what Space will host, and where the forum went (no fake features).
+    // The public home page: what works now and what comes next.
     app.get('/', (_req, res) => res.type('html').set('Cache-Control', PAGE_CACHE).send(require('./render/pages').homePage()));
 
     // ── 404 / errors ─────────────────────────────────────────

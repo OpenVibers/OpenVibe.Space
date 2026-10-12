@@ -2,30 +2,35 @@
   "repository": "OpenVibers/OpenVibe.Space",
   "stage": "alpha",
   "code": true,
-  "plan": "OpenVibe Updated Plan Based On Codebase (T0–T19) — the forum moved back to OpenVibe.Community (owner decision, 2026-10-08); Space becomes code hosting and spaces",
+  "plan": "T20 step 2: static hosting engine moved into Space; public launch remains gated",
   "runtime": "node 22, express, PostgreSQL 18 (openvibe-sdk/db, async)",
   "port": 4940,
   "domain": "openvibe.space",
-  "contracts": "openvibe-contracts v0.143.0",
+  "contracts": "openvibe-contracts v0.149.0",
   "sdk": "openvibe-sdk v0.44.0",
   "shared": "openvibe-shared v4.0.0",
-  "capabilities": [],
-  "capabilitiesRegistered": false,
+  "capabilities": [
+    "space.site.manage",
+    "space.site.config",
+    "space.deploy.create",
+    "space.domain.manage",
+    "space.resource.read"
+  ],
+  "capabilitiesRegistered": true,
   "deployed": true,
   "deployment": "openvibe-ovh: unit openvibe-space.service on 127.0.0.1:4940 (git checkout /opt/openvibe.space, env /etc/openvibe/space.env, database ov_space), deployed with `sudo ovhost deploy space`; public at https://openvibe.space since 2026-10-08.",
   "features": [
-    "the home page: what Space will host (code, dynamic pages, \"spaces\" apps) and where the forum went",
-    "permanent forum redirects: /s and /s/* (301 GET/HEAD, 308 otherwise) and the forum APIs (308) to openvibe.community",
-    "sign-in: the Network OAuth2 client `space` (login, callback, FedCM, logout, me, refresh)",
-    "discovery: robots.txt, llms.txt, llms-full.txt, sitemap.xml (the home page alone)",
-    "health and release: /api/health, /api/ready, /release.json, /metrics (loopback)",
-    "the process boots on a fresh database and stops cleanly (test/boot.test.js)"
+    "staff-only static hosting engine: projects, sites, immutable deploys, previews, rollback, Git ingest, custom domains, takedowns, Media-backed objects and resource index",
+    "tenant serving at <name>.openvibe.website",
+    "permanent forum redirects to OpenVibe.Community",
+    "Network OAuth sign-in, discovery, health and readiness"
   ],
   "knownGaps": [
-    "code hosting and dynamic pages are not built yet, and no \"spaces\" apps run here; the home page says so",
-    "openvibe-contracts still registers space.forum.read/manage, space.thread.read and space.post.write for Space; the Contracts update that retires or reassigns them is a separate change",
-    "the forum tables remain in ov_space (migrations 0001+ still create them) with their rows; no drop migration in this release",
-    "Space consumes no network events and has no account export/deletion: it holds no user content, and the forum's account data is Community's"
+    "Public project creation is off until abuse handling and a designated DMCA agent are in place",
+    "Dynamic pages and spaces apps are not built",
+    "The historical forum tables remain in ov_space; this code move copies no production hosting data",
+    "No app or agent holds a space.* grant on OpenVibe.Network yet; staff use the dashboard"
   ],
-  "updated": "2026-10-11"
+  "hostingDeployed": false,
+  "updated": "2026-10-12"
 }

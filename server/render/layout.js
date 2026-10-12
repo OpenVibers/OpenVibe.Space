@@ -21,7 +21,7 @@ function escapeHtml(s) {
 
 const SITE_NAME = 'OpenVibe.Space';
 const NETWORK_URL = 'https://openvibe.network';
-const DEFAULT_DESCRIPTION = 'OpenVibe.Space will host code and dynamic pages, and "spaces": apps people build that use their OpenVibe account, the network\'s services and the SDK. The forum is on OpenVibe.Community.';
+const DEFAULT_DESCRIPTION = 'OpenVibe.Space hosts static sites for OpenVibe staff, with immutable deploys, rollback, previews, Git ingest and custom domains. Dynamic pages and spaces are planned.';
 const DEFAULT_OG_IMAGE = `${config.baseUrl}/og-default.png`;
 
 // Content-hashed asset URLs so browsers and nginx can cache them for a year and still pick up
@@ -66,6 +66,7 @@ function navbarInit(opts) {
         // decision, 2026-10-08), so its link points there rather than at a /s that redirects.
         links: [
             { label: 'Home', href: '/', active: opts.active === 'home' },
+            { label: 'Hosting', href: '/dashboard' },
             { label: 'The forum', href: `${config.communityUrl}/s` },
         ],
         menu: { after: [{ label: 'OpenVibe.Network', href: NETWORK_URL, icon: 'fa-globe' }] },
@@ -86,7 +87,7 @@ function footerInit(opts) {
         mount: '#ov-footer',
         brandName: SITE_NAME,
         updates: `${config.communityUrl}/updates`,   // this site ships with the community's log for now
-        tagline: 'Code and dynamic pages for the people of OpenVibe.',
+        tagline: 'Static hosting for the people of OpenVibe.',
         legalBase: config.liveUrl,
         links: [{
             heading: 'Space',
@@ -107,6 +108,7 @@ function footerInit(opts) {
  *   feeds ([{ title, href }] RSS alternates; default: none),
  *   historyType, historyTitle, footerVariant ('full'|'compact'), bodyClass,
  *   styles (Shared stylesheets by name, linked before space.css so this site's rules win),
+ *   localStyles (this site's page-only stylesheets, e.g. 'css/hosting.css', linked after space.css),
  *   published/modified (ISO, for article:*), noFrame (error pages during outages)
  */
 function renderPage(o) {
@@ -120,7 +122,7 @@ function renderPage(o) {
     // with the navbar init, the noscript nav and the SSR footer; the rest of the head is this site's own.
     const html = shell.page({
         name: SITE_NAME, service: 'space', lang: 'en',
-        title: o.title || `${SITE_NAME} — code and dynamic pages`,
+        title: o.title || `${SITE_NAME} — static hosting`,
         titleSuffix: o.title ? ` · ${SITE_NAME}` : undefined,
         siteName: SITE_NAME, description, canonical, robots: o.robots || 'index,follow',
         type: o.ogType || 'website', image: o.ogImage || DEFAULT_OG_IMAGE, imageAlt: o.imageAlt,
@@ -135,6 +137,8 @@ function renderPage(o) {
             ...feeds.map((f) => `<link rel="alternate" type="application/rss+xml" title="${escapeHtml(f.title)}" href="${escapeHtml(f.href)}">`),
             ...(o.styles || []).map((name) => `<link rel="stylesheet" href="${ovServe.url(name)}">`),
             `<link rel="stylesheet" href="${asset('css/space.css')}">`,
+            // Page-only stylesheets of this site (the dashboard's hosting.css), after space.css; the home page loads none.
+            ...(o.localStyles || []).map((rel) => `<link rel="stylesheet" href="${asset(rel)}">`),
             '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">',
             `<meta name="ov-boost" content="space@${escapeHtml(RELEASE)}">`,
             `<script src="${ovServe.url('boost.js')}" data-main="#main" defer></script>`,
