@@ -42,8 +42,8 @@ module.exports = {
     // OpenVibe.Live — the legal pages the shared footer links (the Network hosts the profile page).
     liveUrl: (process.env.OV_LIVE_URL || 'https://openvibe.live').replace(/\/$/, ''),
 
-    // PostgreSQL (ADR-035). Space holds no user content yet; the database is kept for the release
-    // ledger and the shared schema migrations. Without DATABASE_URL, development uses an embedded
+    // PostgreSQL (ADR-035). Space stores hosted sites and deploy records here, along with the
+    // historical schema and release ledger. Without DATABASE_URL, development uses an embedded
     // PGlite database in data/pglite.
     db: { url: process.env.DATABASE_URL || '', directUrl: process.env.DATABASE_DIRECT_URL || '' },
 };

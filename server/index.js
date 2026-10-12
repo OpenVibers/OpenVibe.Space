@@ -8,15 +8,16 @@ const config = require('./config');
 const { createApp } = require('./app');
 
 (async () => {
-    // PostgreSQL first (migrations run as the owner). Space holds no user content yet, but the
-    // database carries the shared schema and the readiness check reports it.
+    // PostgreSQL first (migrations run as the owner); readiness reports the serving database.
     await require('./db').initDb(config);
     const app = await createApp();
     const server = app.listen(config.port, config.host, () => {
         console.log(`[Space] ${config.nodeEnv} on http://${config.host}:${config.port} → ${config.baseUrl}`);
-        console.log(`[Space] code and dynamic pages (nothing published here yet); the forum is on ${config.communityUrl}; identity via ${config.networkUrl}`);
+        console.log(`[Space] static hosting for staff; dynamic pages and spaces planned; the forum is on ${config.communityUrl}; identity via ${config.networkUrl}`);
     });
     server.keepAliveTimeout = 65_000;
+    app.locals.hosting.worker.start();
+    app.locals.hosting.outbox.start();
 
     // ── Stop (roadmap WS-P lifecycle; openvibe-sdk/service) ──────
     // SIGTERM: the server stops taking connections, closes idle keep-alive ones (it keeps them 65 s
@@ -26,7 +27,7 @@ const { createApp } = require('./app');
     gracefulStop({
         name: 'Space', server,
         drainMs: 4000, deadlineMs: 5000, deadlineExitCode: 1,
-        stop: [],
+        stop: [async () => { app.locals.hosting.worker.stop(); await app.locals.hosting.outbox.stop(); }],
         close: [
             async () => {
                 console.log('[Space] stopped');

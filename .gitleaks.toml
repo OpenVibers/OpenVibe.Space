@@ -3,3 +3,9 @@
 # allowlist below is one proven false positive, matched on path AND value so nothing else is hidden.
 [extend]
 useDefault = true
+
+[[allowlists]]
+description = "Fake Stripe key planted in a test deploy to prove Space rejects and never echoes secrets (moved from Host)"
+condition = "AND"
+paths = ['''^test/hosting-secrets-dashboard\.test\.js$''']
+regexes = ['''^sk_live_TOPSECRET123$''']

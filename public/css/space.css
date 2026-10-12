@@ -64,3 +64,8 @@ body {
   background: var(--bg-hover, #1c2a44);
   outline: 0;
 }
+
+/* The quotas note names its source file by URL: let it wrap on a phone. */
+.sc-note a {
+  overflow-wrap: anywhere;
+}
