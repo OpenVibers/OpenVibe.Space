@@ -42,6 +42,8 @@ Nothing that is not a forum path redirects.
 | `/robots.txt`, `/llms.txt`, `/llms-full.txt`, `/sitemap.xml` | Discovery for Space's public page |
 | `/api/health`, `/api/ready`, `/release.json`, `/metrics` | Health, release and observability |
 
+Sitemap entries carry lastmod from the release commit or, for hosted pages, the active deploy.
+
 Tenant requests are dispatched by Host header before dashboard routes. `deploy/nginx/openvibe.website.conf` is a reference wildcard vhost; the existing `openvibe.space` vhost includes larger upload locations. Neither is installed by this code change. Unknown hosts answer 404. Tenant sites cannot reach the dashboard, API, auth or metrics. A custom domain serves only after TXT verification.
 
 ## Capabilities and events

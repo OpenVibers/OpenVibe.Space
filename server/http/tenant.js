@@ -132,6 +132,7 @@ function createTenantServer({ store, config, blobs, takedowns = null, siteConfig
         file: db.prepare(`SELECT f.sha256, f.size, f.content_type, d.project_id FROM space_deploy_files f JOIN space_deploys d ON d.id = f.deploy_id
                           WHERE f.deploy_id = ? AND f.path = ? AND d.state = 'ready'`),
         htmlFiles: db.prepare("SELECT path FROM space_deploy_files WHERE deploy_id = ? AND content_type LIKE 'text/html%' ORDER BY path"),
+        deployTime: db.prepare('SELECT created_at FROM space_deploys WHERE id = ?'),
         deployById: db.prepare('SELECT id, site_id, project_id, state FROM space_deploys WHERE id = ?'),
         siteById: db.prepare('SELECT * FROM space_sites WHERE id = ?'),
         projectById: db.prepare('SELECT id, status, environment FROM space_projects WHERE id = ?'),
@@ -256,6 +257,8 @@ function createTenantServer({ store, config, blobs, takedowns = null, siteConfig
         const origin = originOf(req);
         if (!origin) return await notFound(req, res, site, 'invalid');
         const locs = [];
+        const deploy = await q.deployTime.get(site.active_deploy_id);
+        const lastmod = deploy && deploy.created_at ? new Date(deploy.created_at).toISOString() : undefined;
         const seen = new Set();
         for (const row of await q.htmlFiles.all(site.active_deploy_id)) {
             const p = pagePath(row.path);
@@ -263,7 +266,7 @@ function createTenantServer({ store, config, blobs, takedowns = null, siteConfig
             const loc = `${origin}${p}`;
             if (seen.has(loc)) continue;
             seen.add(loc);
-            locs.push({ loc });
+            locs.push({ loc, lastmod });
         }
         const body = sitemapXml(locs);
         res.statusCode = 200;
