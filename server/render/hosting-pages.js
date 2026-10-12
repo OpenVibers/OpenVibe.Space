@@ -127,8 +127,8 @@ function site({ site: s, project: p, role, deploys, activations, domains, siteCo
 <h1>${esc(s.name)}</h1>
 <p class="hd-chips"><a class="hd-url hd-url--big" href="${esc(url)}" rel="noopener">${esc(url.replace(/^https?:\/\//, ''))} ${icon('fa-arrow-up-right-from-square')}</a> ${status} <code>${esc(s.id)}</code></p></header>
 ${canDeploy ? card('Upload a deploy', form(`/sites/${s.id}/deploys`, csrf, `<div class="hd-sources">
-<fieldset class="hd-source"><legend>${icon('fa-folder-open')} A folder</legend><input type="file" name="files" multiple webkitdirectory><input type="hidden" name="strip" value="folder"></fieldset>
-<fieldset class="hd-source"><legend>${icon('fa-file-zipper')} …or an archive (.tar.gz / .tar)</legend><input type="file" name="archive" accept=".tar,.tgz,.gz,application/gzip,application/x-tar"></fieldset>
+<fieldset class="hd-source"><legend>${icon('fa-folder-open')} A folder</legend><input type="file" name="files" multiple webkitdirectory aria-label="A folder to upload"><input type="hidden" name="strip" value="folder"></fieldset>
+<fieldset class="hd-source"><legend>${icon('fa-file-zipper')} …or an archive (.tar.gz / .tar)</legend><input type="file" name="archive" accept=".tar,.tgz,.gz,application/gzip,application/x-tar" aria-label="An archive to upload (.tar.gz or .tar)"></fieldset>
 </div>
 <label class="hd-field hd-field--narrow">Deploy from subfolder (optional) <input name="root" placeholder="dist"></label>
 <fieldset class="hd-choices"><legend>When it is ready</legend>
