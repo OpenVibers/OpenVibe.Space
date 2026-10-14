@@ -37,6 +37,7 @@ Nothing that is not a forum path redirects.
 | `/preview/:deployId/*` | Private, sandboxed deploy preview |
 | `/api/v1/projects`, `/api/v1/sites`, `/api/v1/deploys`, `/api/v1/domains` | Hosting API (Bearer tokens, no cookie auth) |
 | `/api/v1/resources` | First-party resource index |
+| `POST /api/v1/resources/control` | First-party control: `delete` a site, deploy or domain for a person (Space's own roles decide) |
 | `/limits.json` | Enforced hosting limits |
 | `/auth/login|callback|fedcm|logout|me|refresh` | Space's Network OAuth client |
 | `/robots.txt`, `/llms.txt`, `/llms-full.txt`, `/sitemap.xml` | Discovery for Space's public page |
@@ -48,7 +49,7 @@ Tenant requests are dispatched by Host header before dashboard routes. `deploy/n
 
 ## Capabilities and events
 
-The hosting API guards `space.site.manage`, `space.site.config`, `space.deploy.create`, `space.domain.manage` and `space.resource.read` (openvibe-contracts 0.149.0, owner `space`); every route names exactly one, and `npx openvibe-contracts-check --service space` checks the code against the release. Service tokens need audience `openvibe.space`, and project membership still applies. The per-actor limits (`server/http/actor-limits.js`) count uploads, domain checks, project creation and writes per person or app; those are limit buckets, not capabilities. The retired `space.forum.*` contracts are unrelated to hosting.
+The hosting API guards `space.site.manage`, `space.site.config`, `space.deploy.create`, `space.domain.manage`, `space.resource.read` and `space.resource.control` (openvibe-contracts 0.170.0, owner `space`); every route names exactly one, and `npx openvibe-contracts-check --service space` checks the code against the release. Service tokens need audience `openvibe.space`, and project membership still applies. The per-actor limits (`server/http/actor-limits.js`) count uploads, domain checks, project creation and writes per person or app; those are limit buckets, not capabilities. The retired `space.forum.*` contracts are unrelated to hosting. The control route (`server/registry/resource-control.js`, plan T13 step 10) takes a `common.resource-control-request@1` from OpenVibe.Services and acts as the person in `on_behalf_of` through the same domain code as the DELETE routes: deleting needs maintainer or owner, a non-member gets `resources.unknown_resource`, and the served deploy (`deploy.active`), a default domain (`domain.default`) and anything taken down are refused with Space's own reason. Dry runs; repeats with the same key return the first answer (`space_control_log`).
 
 The transactional outbox emits `space.deploy.created`, `space.deploy.activated`, `space.deploy.failed` and `space.domain.verified`; each has a payload schema in openvibe-contracts, and the SDK outbox refuses any other type.
 
