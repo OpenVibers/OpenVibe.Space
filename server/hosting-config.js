@@ -90,6 +90,15 @@ function load(env = process.env) {
             url: trim(env.EVENTS_URL || ''),
             intervalMs: int(env.EVENTS_RELAY_INTERVAL_MS, 2000),
         },
+        // OpenVibe.Billing (plan T5 step 14): daily gb-month storage readings for the bytes the local object store
+        // keeps (server/billing.js). SPACE_BILLING_INTERVAL_MS=0 (the default) starts nothing; Media mode emits no
+        // reading (Media bills the bytes). Relayed with Space's service token (OV_OAUTH_CLIENT_ID/SECRET).
+        billing: {
+            intervalMs: Math.max(0, int(env.SPACE_BILLING_INTERVAL_MS, 0)),
+            url: trim(env.OV_BILLING_URL || env.OV_BILLING_INTERNAL_URL || ''),
+            audience: env.OV_BILLING_AUDIENCE || 'openvibe.billing',
+            timeoutMs: int(env.SPACE_BILLING_TIMEOUT_MS, 10000),
+        },
         community: {
             internalUrl: trim(env.SPACE_COMMUNITY_URL || ''),
             publicUrl: trim(env.OV_COMMUNITY_URL || 'https://openvibe.community'),

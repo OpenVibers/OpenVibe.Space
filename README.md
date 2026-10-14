@@ -54,7 +54,7 @@ The transactional outbox emits `space.deploy.created`, `space.deploy.activated`,
 
 ## Data and configuration
 
-`migrations/0002_initial.sql` through `0005_git_sources.sql` create the hosting tables, indexes and immutable-artifact triggers from Host Stage B with `space_` names. They run through `openvibe-sdk/db` at boot; tables are never created by a request. `0001_initial.sql` remains the historical forum schema, which this release does not drop. This is a code move, with no data copy.
+`migrations/0002_initial.sql` through `0005_git_sources.sql` create the hosting tables, `0006_billing_readings.sql` the usage-reading outbox,, indexes and immutable-artifact triggers from Host Stage B with `space_` names. They run through `openvibe-sdk/db` at boot; tables are never created by a request. `0001_initial.sql` remains the historical forum schema, which this release does not drop. This is a code move, with no data copy.
 
 Copy `.env.example` to `.env`. Production uses `/etc/openvibe/space.env` (0600). Important values:
 
@@ -67,6 +67,7 @@ Copy `.env.example` to `.env`. Production uses `/etc/openvibe/space.env` (0600).
 | `SPACE_FORM_SECRET` | random per process | Dashboard CSRF form signing |
 | `SPACE_WORKER` | on | Domain rechecks, object sweep, outbox pruning |
 | `EVENTS_URL` | unset | Outbox relay destination; unset keeps rows queued |
+| `SPACE_BILLING_INTERVAL_MS` | `0` (off) | Daily `gb-month` storage readings to OpenVibe.Billing (`OV_BILLING_URL`) in local mode; Media mode emits none (Media bills the bytes) |
 | `DATABASE_URL`, `DATABASE_DIRECT_URL` | unset | PostgreSQL serving and owner migration connections |
 
 Other `SPACE_*` quota, upload, domain and DNS settings are listed in `.env.example` and `server/hosting-config.js`. Space keeps its existing OAuth and forum redirect settings.
@@ -83,7 +84,7 @@ npm test
 
 ## Security and dependencies
 
-Static uploads are validated before storage; tenant content runs on a separate registrable domain and previews use a sandbox CSP. APIs ignore cookies. OpenVibe.Network supplies identity; `svc:space` needs `events.event.publish` and, when `SPACE_OBJECT_STORE=media`, the `media.object.upload/read/list/delete` grants for the `space` namespace. OpenVibe.Media may hold tenant objects; OpenVibe.Events receives the outbox when configured. Space's own database is `ov_space` through `openvibe-sdk/db`. See [SECURITY.md](SECURITY.md).
+Static uploads are validated before storage; tenant content runs on a separate registrable domain and previews use a sandbox CSP. APIs ignore cookies. OpenVibe.Network supplies identity; `svc:space` needs `events.event.publish`, `billing.usage.record` (audience `openvibe.billing`) once `SPACE_BILLING_INTERVAL_MS` is on, and, when `SPACE_OBJECT_STORE=media`, the `media.object.upload/read/list/delete` grants for the `space` namespace. OpenVibe.Media may hold tenant objects; OpenVibe.Events receives the outbox when configured. Space's own database is `ov_space` through `openvibe-sdk/db`. See [SECURITY.md](SECURITY.md).
 
 ## License
 
