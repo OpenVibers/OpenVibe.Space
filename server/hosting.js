@@ -93,7 +93,7 @@ function createHosting(app, { db, auth, config: suppliedConfig, now, resolver, f
     ctx.mountRoutes = (app) => {
         if (forumRedirect) app.use(forumRedirect);
         app.use(contracts.http.middleware());
-        app.use('/api/v1/resources', rateLimit({ windowMs: 60_000, max: 240, standardHeaders: true, legacyHeaders: false }), viewers.middleware('api'), resourceIndex.router({ guard: guard('space.resource.read') }));
+        app.use('/api/v1/resources', rateLimit({ windowMs: 60_000, max: 240, standardHeaders: true, legacyHeaders: false }), viewers.middleware('api'), require('./registry/resource-control').router({ guard: guard('space.resource.control') }), resourceIndex.router({ guard: guard('space.resource.read') }));
         app.use('/api/v1', rateLimit({ windowMs: 60_000, max: 240, standardHeaders: true, legacyHeaders: false }), createApi(ctx));
         app.use('/preview', rateLimit({ windowMs: 60_000, max: 300, standardHeaders: true, legacyHeaders: false }), viewers.middleware('dashboard'), (req, res, next) => Promise.resolve(tenant.preview(req, res)).catch(next));
         app.use(rateLimit({ windowMs: 60_000, max: 300, standardHeaders: true, legacyHeaders: false }), createDashboard(ctx));
