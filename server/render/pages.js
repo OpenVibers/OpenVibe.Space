@@ -78,13 +78,10 @@ curl -X POST "https://openvibe.space/api/v1/sites/$SITE_ID/deploys?activate=1" \
             row('Largest file', 'maxFileBytes', size),
         ],
         source: 'https://github.com/OpenVibers/OpenVibe.Space/blob/main/server/hosting-config.js',
-    }) + sc.steps({
-        title: 'Next',
-        items: [
-            { title: 'Dynamic pages', text: 'Planned; server side pages are not built yet.' },
-            { title: 'Spaces', text: 'Planned; small apps on a person\'s OpenVibe account are not built yet.' },
-            { title: 'The forum', href: FORUM_URL, text: 'The forum moved to OpenVibe.Community.' },
-        ],
+    }) + sc.cta({
+        title: 'Looking for the forum?',
+        text: 'The forum moved to OpenVibe.Community.',
+        actions: [{ label: 'Open the forum', href: FORUM_URL, primary: true }],
     });
     return renderPage({ canonicalPath: '/', active: 'home', styles: [sc.STYLESHEET], body });
 }

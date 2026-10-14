@@ -13,7 +13,7 @@ const { boot, check, done } = require('./stageb/boot');
         assert.match(r.text, /Static site hosting is built and tested/);
         assert.match(r.text, /OpenVibe staff only until public launch/);
         assert.match(r.text, /designated DMCA agent/);
-        assert.match(r.text, /Dynamic pages/);
+        assert.doesNotMatch(r.text, /Planned|not built/, 'the home shows what works, never what is planned');
     });
     await check('a person cannot create a project until launch', async () => {
         const r = await t.api('POST', '/api/v1/projects', { as: alice, json: { name: 'Too early' } });
