@@ -18,6 +18,7 @@ const { load } = require('../server/hosting-config');
         assert.strictEqual(config.sitesDomain, 'openvibe.website');
         const app = await createApp({ db, auth, hostingConfig: config, storageDir: dir });
         const h = app.locals.hosting;
+        assert.strictEqual(h.billing.enabled, false, 'storage usage readings are off unless SPACE_BILLING_INTERVAL_MS > 0');
         const user = { kind: 'user', subject: 'usr_01J8ZQ4Y7N3M2K1H0G9F8E7D6C', staff: false };
         await assert.rejects(h.projects.create(user, { name: 'Blocked' }), (e) => e.status === 403 && e.code === 'space.not_launched');
         user.staff = true;

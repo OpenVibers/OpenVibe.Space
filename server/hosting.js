@@ -22,6 +22,7 @@ const { createApi } = require('./http/api');
 const resourceIndex = require('./registry/resource-index');
 const { createDashboard } = require('./http/dashboard');
 const { createWorker } = require('./worker');
+const { createSpaceBilling } = require('./billing');
 const { createStore } = require('./db');
 
 function createHosting(app, { db, auth, config: suppliedConfig, now, resolver, fetchImpl, indexnow: injectedIndexNow, log = console, storageDir, valkey, forumRedirect } = {}) {
@@ -58,7 +59,8 @@ function createHosting(app, { db, auth, config: suppliedConfig, now, resolver, f
     const tenant = createTenantServer({ store, config, blobs, takedowns, siteConfig, access, log });
     const uploadGate = createUploadGate(config.uploads.maxConcurrent);
     const worker = createWorker({ config, store, domains, blobs, outbox, log });
-    const ctx = { config, store, blobs, outbox, access, takedowns, projects, sites, deploys, domains, siteConfig, siteSources, auth, viewers, tenant, worker, uploadGate, indexnow, log, valkey: valkey || null };
+    const billing = createSpaceBilling({ db, config, now: store.now, ...(fetchImpl ? { fetchImpl } : {}), log });
+    const ctx = { config, store, blobs, outbox, billing, access, takedowns, projects, sites, deploys, domains, siteConfig, siteSources, auth, viewers, tenant, worker, uploadGate, indexnow, log, valkey: valkey || null };
     ctx.actorLimits = require('./http/actor-limits').createHostActorLimits({ registry: app.locals.metrics, valkey: ctx.valkey });
     app.locals.ctx = ctx;
     if (app.locals.metrics && typeof app.locals.metrics.gauge === 'function') {

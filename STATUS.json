@@ -23,7 +23,8 @@
     "staff-only static hosting engine: projects, sites, immutable deploys, previews, rollback, Git ingest, custom domains, takedowns, Media-backed objects and resource index",
     "tenant serving at <name>.openvibe.website",
     "permanent forum redirects to OpenVibe.Community",
-    "Network OAuth sign-in, discovery, health and readiness"
+    "Network OAuth sign-in, discovery, health and readiness",
+    "usage readings (storage, local mode): daily gb-month readings to OpenVibe.Billing, off unless SPACE_BILLING_INTERVAL_MS > 0"
   ],
   "knownGaps": [
     "Public project creation is off until abuse handling and a designated DMCA agent are in place",

@@ -18,6 +18,7 @@ const { createApp } = require('./app');
     server.keepAliveTimeout = 65_000;
     app.locals.hosting.worker.start();
     app.locals.hosting.outbox.start();
+    app.locals.hosting.billing.start();   // off unless SPACE_BILLING_INTERVAL_MS > 0
 
     // ── Stop (roadmap WS-P lifecycle; openvibe-sdk/service) ──────
     // SIGTERM: the server stops taking connections, closes idle keep-alive ones (it keeps them 65 s
@@ -27,7 +28,7 @@ const { createApp } = require('./app');
     gracefulStop({
         name: 'Space', server,
         drainMs: 4000, deadlineMs: 5000, deadlineExitCode: 1,
-        stop: [async () => { app.locals.hosting.worker.stop(); await app.locals.hosting.outbox.stop(); }],
+        stop: [async () => { app.locals.hosting.worker.stop(); await app.locals.hosting.outbox.stop(); await app.locals.hosting.billing.stop(); }],
         close: [
             async () => {
                 console.log('[Space] stopped');
