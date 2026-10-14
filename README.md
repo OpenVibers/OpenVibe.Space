@@ -67,7 +67,7 @@ Copy `.env.example` to `.env`. Production uses `/etc/openvibe/space.env` (0600).
 | `SPACE_FORM_SECRET` | random per process | Dashboard CSRF form signing |
 | `SPACE_WORKER` | on | Domain rechecks, object sweep, outbox pruning |
 | `EVENTS_URL` | unset | Outbox relay destination; unset keeps rows queued |
-| `SPACE_BILLING_INTERVAL_MS` | `0` (off) | Daily `gb-month` storage readings to OpenVibe.Billing (`OV_BILLING_URL`) in local mode; Media mode emits none (Media bills the bytes) |
+| `SPACE_BILLING_INTERVAL_MS` | `0` (off) | Daily `gb-month` storage readings to OpenVibe.Billing (`OV_BILLING_URL`) in local mode, per OpenVibe.Network project (`network_project_id`; a project that names none gets no reading); Media mode emits none (Media bills the bytes) |
 | `DATABASE_URL`, `DATABASE_DIRECT_URL` | unset | PostgreSQL serving and owner migration connections |
 
 Other `SPACE_*` quota, upload, domain and DNS settings are listed in `.env.example` and `server/hosting-config.js`. Space keeps its existing OAuth and forum redirect settings.

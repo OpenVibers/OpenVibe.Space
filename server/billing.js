@@ -81,10 +81,12 @@ function createSpaceBilling({ db, config, now = () => Date.now(), fetchImpl = gl
         if (periodStart !== dayStart(periodStart)) throw new RangeError(`billing: ${periodStart} is not the start of a day`);
         if (periodStart + DAY_MS + GRACE_MS > at) throw new RangeError(`billing: the day ${iso(periodStart)} has not closed`);
         if (mediaMode) return { period: periodStart, readings: 0, created: 0, skipped: 'media' };
-        const rows = await db.prepare(`SELECT p.id AS project_id, p.owner_subject, SUM(b.size) AS bytes
+        // Billing bills OpenVibe.Network projects: a reading names the project's network_project_id. A Space project
+        // that names none (staff hosting before Network projects) has nobody Billing could bill, so it gets no reading.
+        const rows = await db.prepare(`SELECT p.network_project_id AS project_id, p.owner_subject, SUM(b.size) AS bytes
                 FROM space_blobs b JOIN space_projects p ON p.id = b.project_id
-                WHERE p.status = 'active' AND p.environment = 'production'
-                GROUP BY p.id, p.owner_subject`).all();
+                WHERE p.status = 'active' AND p.environment = 'production' AND p.network_project_id IS NOT NULL
+                GROUP BY p.network_project_id, p.owner_subject`).all();
         const days = daysInMonth(periodStart);
         return await db.tx(async (t) => {
             if (await periodDone(STORAGE, periodStart)) return { period: periodStart, readings: 0, created: 0, skipped: true };

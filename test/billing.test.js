@@ -26,9 +26,11 @@ const silent = { log() {}, warn() {}, error() {} };
     try {
         const json = (v) => (typeof v === 'string' ? JSON.parse(v) : v);
         const count = async () => Number((await db.prepare('SELECT COUNT(*) AS n FROM billing_readings').get()).n);
-        const addProject = (id, owner, environment = 'production', status = 'active') => db.prepare(
-            `INSERT INTO space_projects (id, owner_subject, name, environment, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 0, 0)`)
-            .run(id, owner, id, environment, status);
+        // Space projects bill to the OpenVibe.Network project they name (network_project_id).
+        const NET = (id) => `prj_01NETWRK${id.slice(-18)}`;
+        const addProject = (id, owner, environment = 'production', status = 'active', networkProject = NET(id)) => db.prepare(
+            `INSERT INTO space_projects (id, network_project_id, owner_subject, name, environment, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 0, 0)`)
+            .run(id, networkProject, owner, id, environment, status);
         const addBlob = (project, n, size) => db.prepare('INSERT INTO space_blobs (project_id, sha256, size, created_at) VALUES (?, ?, ?, 0)').run(project, sha(n), size);
 
         // 1. Off by default: no interval, no timer, nothing aggregated.
@@ -48,12 +50,15 @@ const silent = { log() {}, warn() {}, error() {} };
         await addProject(PRJ_SBX, USR_A, 'sandbox');
         await addProject(PRJ_DEL, USR_A, 'production', 'deleted');
         await addProject(PRJ_EMPTY, USR_B);
+        const PRJ_LOCAL = 'prj_01K0000000000000000000LOCL';
+        await addProject(PRJ_LOCAL, USR_B, 'production', 'active', null);
         await addBlob(PRJ_A, 1, 3 * GB);
         await addBlob(PRJ_A, 2, 1 * GB);
         await addBlob(PRJ_B, 1, GB / 2);                 // the same sha in another project is that project's copy
         await addBlob(PRJ_SBX, 3, 5 * GB);
         await addBlob(PRJ_DEL, 4, 7 * GB);
         await addBlob(PRJ_EMPTY, 5, 0);
+        await addBlob(PRJ_LOCAL, 6, 2 * GB);             // no Network project: nobody to bill, no reading
 
         const config = load({ NODE_ENV: 'test', SPACE_BILLING_INTERVAL_MS: '60000' });
         assert.strictEqual(config.billing.intervalMs, 60000);
@@ -68,12 +73,12 @@ const silent = { log() {}, warn() {}, error() {} };
         const first = await billing.aggregateStorageDay(day, { now: FIXED });
         assert.deepStrictEqual([first.readings, first.created], [2, 2]);
 
-        const keyA = `space:store:${PRJ_A}:${USR_A}:local:${iso(day)}`;
-        const keyB = `space:store:${PRJ_B}:${USR_B}:local:${iso(day)}`;
+        const keyA = `space:store:${NET(PRJ_A)}:${USR_A}:local:${iso(day)}`;
+        const keyB = `space:store:${NET(PRJ_B)}:${USR_B}:local:${iso(day)}`;
         const rows = await db.prepare('SELECT event_id, envelope, sent_at FROM billing_readings ORDER BY event_id').all();
         assert.deepStrictEqual(rows.map((r) => r.event_id), [keyA, keyB].sort());
         const a = json(rows.find((r) => r.event_id === keyA).envelope);
-        assert.strictEqual(a.project, PRJ_A);
+        assert.strictEqual(a.project, NET(PRJ_A), 'the reading names the Network project');
         assert.strictEqual(a.subject, USR_A);
         assert.strictEqual(a.resource, 'gb-month');
         assert.strictEqual(a.provider, 'local');
@@ -108,7 +113,7 @@ const silent = { log() {}, warn() {}, error() {} };
         assert.ok(ticked, 'the tick never throws');
         assert.strictEqual(ticked.created, 2);
         assert.strictEqual(Number((await db.prepare('SELECT COUNT(*) AS n FROM billing_readings WHERE sent_at IS NULL').get()).n), 4);
-        assert.ok(await db.prepare('SELECT 1 FROM billing_readings WHERE event_id = ?').get(`space:store:${PRJ_A}:${USR_A}:local:${iso(day + DAY_MS)}`));
+        assert.ok(await db.prepare('SELECT 1 FROM billing_readings WHERE event_id = ?').get(`space:store:${NET(PRJ_A)}:${USR_A}:local:${iso(day + DAY_MS)}`));
         assert.strictEqual((await billing.status()).last_error, null);
         await billing.stop();
         console.log('billing: passed');
