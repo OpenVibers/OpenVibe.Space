@@ -10,6 +10,27 @@ Public hosting remains off by default (`SPACE_PUBLIC_HOSTING=off`). Only OpenVib
 
 OpenVibe.Host is the hosting price comparison; its copy of the engine is being removed, and its old hosting URLs will answer 410 with a link here.
 
+## Owns
+
+- Static hosting: projects and members, sites, immutable content-addressed deploys, activation and rollback,
+  previews, Git ingest, per-site configuration, custom domains with TXT verification, and takedowns.
+- Serving tenant sites by Host header at `<name>.openvibe.website` and on verified custom domains.
+- Its tables in `ov_space` (`space_*`), its control log and its outbox (`space.deploy.*`, `space.domain.verified`).
+
+## Does not own
+
+- People, sessions and projects' identity (OpenVibe.Network), stored bytes when `SPACE_OBJECT_STORE=media`
+  (OpenVibe.Media), money and usage rating (OpenVibe.Billing), the forum (OpenVibe.Community, see below) and the
+  hosting price comparison (OpenVibe.Host).
+
+## Depends on
+
+- **OpenVibe.Network:** sign-in (OAuth with PKCE), tokens and their keys, project membership.
+- **OpenVibe.Events:** the outbox relay, when `EVENTS_URL` is set.
+- **OpenVibe.Media:** tenant objects, when `SPACE_OBJECT_STORE=media`.
+- **OpenVibe.Billing:** storage readings, when `SPACE_BILLING_INTERVAL_MS` is on.
+- **OpenVibe.Services:** reads the resource index and sends control requests.
+
 ## The forum moved to OpenVibe.Community
 
 The forum lived here from 3 October 2026 (it moved off Community then). On **2026-10-08 the owner
@@ -73,7 +94,7 @@ Copy `.env.example` to `.env`. Production uses `/etc/openvibe/space.env` (0600).
 
 Other `SPACE_*` quota, upload, domain and DNS settings are listed in `.env.example` and `server/hosting-config.js`. Space keeps its existing OAuth and forum redirect settings.
 
-## Run and tests
+## Tests and running
 
 ```sh
 npm install
@@ -87,12 +108,17 @@ npm test
 
 Static uploads are validated before storage; tenant content runs on a separate registrable domain and previews use a sandbox CSP. APIs ignore cookies. OpenVibe.Network supplies identity; `svc:space` needs `events.event.publish`, `billing.usage.record` (audience `openvibe.billing`) once `SPACE_BILLING_INTERVAL_MS` is on, and, when `SPACE_OBJECT_STORE=media`, the `media.object.upload/read/list/delete` grants for the `space` namespace. OpenVibe.Media may hold tenant objects; OpenVibe.Events receives the outbox when configured. Space's own database is `ov_space` through `openvibe-sdk/db`. See [SECURITY.md](SECURITY.md).
 
+## Deploy
+
+`sudo ovhost deploy space` on the host: the release layout under `/opt/openvibe.space`, `/etc/openvibe/space.env`, the
+`openvibe-space` unit, migrations at boot. The vhosts are `deploy/nginx/` (installed with `ov-vhost-install`).
+
 ## License
 
 AGPL-3.0-only. See [LICENSE](LICENSE).
 
 <!-- versions:start -->
-- openvibe-contracts: v0.149.0
+- openvibe-contracts: v0.170.0
 - openvibe-sdk: v0.44.0
 - openvibe-shared: v4.1.3
 <!-- versions:end -->
