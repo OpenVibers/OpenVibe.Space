@@ -78,6 +78,8 @@ The transactional outbox emits `space.deploy.created`, `space.deploy.activated`,
 
 `migrations/0002_initial.sql` through `0005_git_sources.sql` create the hosting tables, `0006_billing_readings.sql` the usage-reading outbox,, indexes and immutable-artifact triggers from Host Stage B with `space_` names. They run through `openvibe-sdk/db` at boot; tables are never created by a request. `0001_initial.sql` remains the historical forum schema, which this release does not drop. This is a code move, with no data copy.
 
+Request telemetry is aggregated by route template, method and status class, never by raw URL. Once a minute one `http.request` sample per key, plus the active-requests, p95 latency and event-loop-lag gauges, is written to this service's own `telemetry_samples` table (openvibe-sdk 0.46 telemetry, the `platform.telemetry-sample@1` shape), which `migrations/0008_telemetry.sql` creates; rows older than 14 days are deleted daily. `/shared` files, static assets, health, readiness and `/metrics` are not counted. `server/app.js` mounts openvibe-sdk's `telemetryMiddleware` (a no-op until init); `server/index.js` calls `telemetry.init()` at production start, runs the 14-day retention and flushes on stop.
+
 Copy `.env.example` to `.env`. Production uses `/etc/openvibe/space.env` (0600). Important values:
 
 | Variable | Default | Purpose |
