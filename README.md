@@ -119,6 +119,6 @@ AGPL-3.0-only. See [LICENSE](LICENSE).
 
 <!-- versions:start -->
 - openvibe-contracts: v0.186.0
-- openvibe-sdk: v0.44.0
+- openvibe-sdk: v0.46.0
 - openvibe-shared: v4.2.1
 <!-- versions:end -->
