@@ -72,6 +72,7 @@ async function createApp(opts = {}) {
     const proc = sharedMetrics.processMetrics(registry);
     sharedMetrics.releaseInfo(registry, { service: 'space', release: release.release });
     app.use(httpMetrics.middleware);
+    app.use(require('openvibe-sdk/service').telemetryMiddleware);   // request telemetry: a no-op until server/index.js calls telemetry.init()
     require('openvibe-shared/express-async').routeAsyncErrors(app);
     const metrics = { registry, http: httpMetrics, stop: proc.stop };
     app.locals.metrics = metrics.registry;

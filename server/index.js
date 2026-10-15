@@ -6,6 +6,8 @@
  */
 const config = require('./config');
 const { createApp } = require('./app');
+const { telemetry } = require('openvibe-sdk/service');
+const { createPgTelemetrySink, startTelemetryRetention } = require('openvibe-sdk/telemetry');
 
 (async () => {
     // PostgreSQL first (migrations run as the owner); readiness reports the serving database.
@@ -16,6 +18,10 @@ const { createApp } = require('./app');
         console.log(`[Space] static hosting for staff; dynamic pages and spaces planned; the forum is on ${config.communityUrl}; identity via ${config.networkUrl}`);
     });
     server.keepAliveTimeout = 65_000;
+    // Request telemetry (openvibe-sdk/service, plan T1): one aggregated sample per route template, method and status
+    // class each minute, stored in this service's telemetry_samples table; rows older than 14 days go daily.
+    telemetry.init({ service: 'space', sink: createPgTelemetrySink({ db: require('./db').getDb(), log: console }), skipPrefixes: ['/shared'], intervalMs: 60_000 });
+    const telemetryRetention = startTelemetryRetention({ db: require('./db').getDb(), log: console, olderThanDays: 14 });
     app.locals.hosting.worker.start();
     app.locals.hosting.outbox.start();
     app.locals.hosting.billing.start();   // off unless SPACE_BILLING_INTERVAL_MS > 0
@@ -30,6 +36,7 @@ const { createApp } = require('./app');
         drainMs: 4000, deadlineMs: 5000, deadlineExitCode: 1,
         stop: [async () => { app.locals.hosting.worker.stop(); await app.locals.hosting.outbox.stop(); await app.locals.hosting.billing.stop(); }],
         close: [
+            async () => { if (telemetryRetention) await telemetryRetention.stop(); await telemetry.stop(); },
             async () => {
                 console.log('[Space] stopped');
                 return await require('./db').closeDb();
