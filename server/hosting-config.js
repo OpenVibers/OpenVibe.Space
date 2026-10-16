@@ -89,6 +89,9 @@ function load(env = process.env) {
         events: {
             url: trim(env.EVENTS_URL || ''),
             intervalMs: int(env.EVENTS_RELAY_INTERVAL_MS, 2000),
+            // OpenVibe.Events → Space (ADR-033 account export and deletion, server/account-data.js): the secret(s) that
+            // sign its deliveries to /internal/events; the first one is what Space's subscriptions are created with.
+            secrets: list(env.SPACE_EVENTS_SECRET),
         },
         // OpenVibe.Billing (plan T5 step 14): daily gb-month storage readings for the bytes the local object store
         // keeps (server/billing.js). SPACE_BILLING_INTERVAL_MS=0 (the default) starts nothing; Media mode emits no

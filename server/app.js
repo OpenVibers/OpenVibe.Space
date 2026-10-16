@@ -89,6 +89,21 @@ async function createApp(opts = {}) {
     hosting.mountDispatch(app);
     app.get('/metrics', sharedMetrics.metricsHandler(registry));
 
+    // ── OpenVibe.Events → Space (loopback only: nginx answers 404 for /internal/) ──
+    // network.account.export_requested and network.account.deleted (ADR-033), answered by openvibe-sdk/account-data's
+    // consumer over server/account-data.js. It reads the raw body itself (the v2 signature covers it) and refuses a
+    // request that came through a proxy. The sender posts to Network's internal routes with Space's own token.
+    {
+        const hc = hosting.config;
+        const { createNetworkSender } = require('openvibe-sdk/account-data');
+        const accountData = require('./account-data').create({ db, log: opts.log || console });
+        const accountSend = opts.accountSend || (hc.oauth.clientSecret
+            ? createNetworkSender({ networkInternalUrl: hc.networkInternalUrl, clientId: hc.oauth.clientId, clientSecret: hc.oauth.clientSecret, ...(opts.fetchImpl ? { fetch: opts.fetchImpl } : {}) })
+            : async () => { throw new Error('OV_OAUTH_CLIENT_SECRET is not set: Space cannot answer account events'); });
+        app.locals.accountData = accountData;
+        app.post('/internal/events', accountData.consumer({ secrets: hc.events.secrets, send: accountSend, log: opts.log || console }));
+    }
+
     app.use(helmet({
         contentSecurityPolicy: {
             directives: {

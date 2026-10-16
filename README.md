@@ -37,7 +37,11 @@ OpenVibe.Host is the hosting price comparison; its copy of the engine is being r
 ## Depends on
 
 - **OpenVibe.Network:** sign-in (OAuth with PKCE), tokens and their keys, project membership.
-- **OpenVibe.Events:** the outbox relay, when `EVENTS_URL` is set.
+- **OpenVibe.Events:** the outbox relay, when `EVENTS_URL` is set, and account export and deletion (ADR-033):
+  `network.account.export_requested` and `network.account.deleted` reach the loopback `/internal/events` consumer
+  (`server/account-data.js`, openvibe-sdk/account-data), signed with `SPACE_EVENTS_SECRET`. A person's spaces are
+  exported with their files; on deletion their published spaces stop serving and the spaces go with what others kept
+  in them, and their list items, private storage and sign-ins leave other people's spaces.
 - **OpenVibe.Media:** tenant objects, when `SPACE_OBJECT_STORE=media`.
 - **OpenVibe.Billing:** storage readings, when `SPACE_BILLING_INTERVAL_MS` is on.
 - **OpenVibe.Services:** reads the resource index and sends control requests.
@@ -97,6 +101,7 @@ The transactional outbox emits `space.deploy.created`, `space.deploy.activated`,
 `migrations/0002_initial.sql` through `0005_git_sources.sql` create the hosting tables, `0006_billing_readings.sql` the usage-reading outbox,, indexes and immutable-artifact triggers from Host Stage B with `space_` names. They run through `openvibe-sdk/db` at boot; tables are never created by a request. `0001_initial.sql` remains the historical forum schema, which this release does not drop. This is a code move, with no data copy.
 
 `migrations/0009_spaces.sql` creates the spaces tables (`space_apps`, `space_app_files`, `space_app_projects`, `space_app_items`, `space_app_kv`, `space_app_grants`, `space_app_codes`, `space_app_tokens`, `space_app_counters`). Only hashes of sign-in codes and tokens are kept.
+`migrations/0010_account_data.sql` creates openvibe-sdk/account-data's `account_data_events` (the forum-era table of that name is kept as `account_data_events_forum`).
 
 Request telemetry is aggregated by route template, method and status class, never by raw URL. Once a minute one `http.request` sample per key, plus the active-requests, p95 latency and event-loop-lag gauges, is written to this service's own `telemetry_samples` table (openvibe-sdk 0.46 telemetry, the `platform.telemetry-sample@1` shape), which `migrations/0008_telemetry.sql` creates; rows older than 14 days are deleted daily. `/shared` files, static assets, health, readiness and `/metrics` are not counted. `server/app.js` mounts openvibe-sdk's `telemetryMiddleware` (a no-op until init); `server/index.js` calls `telemetry.init()` at production start, runs the 14-day retention and flushes on stop.
 
@@ -105,6 +110,7 @@ Copy `.env.example` to `.env`. Production uses `/etc/openvibe/space.env` (0600).
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `SPACE_PUBLIC_HOSTING` | `off` | Staff-only project creation (and publishing spaces) until launch |
+| `SPACE_EVENTS_SECRET` | unset | Signs OpenVibe.Events deliveries to `/internal/events` (account export and deletion); unset answers 503 |
 | `SPACE_AI`, `OV_AI_INTERNAL_URL` | `on`, `http://127.0.0.1:4700` | The space builder and spaces' AI through OpenVibe.AI |
 | `SPACE_SPACES_PER_OWNER`, `SPACE_AI_BUILDS_PER_DAY`, `SPACE_AI_ASKS_PER_SPACE_PER_DAY` | 25, 20, 500 | Spaces per person, AI builds per person a day, AI answers per space a day (more `SPACE_SPACE_*` limits in `server/hosting-config.js`) |
 | `SPACE_SITES_DOMAIN` | `openvibe.website` | Tenant names |

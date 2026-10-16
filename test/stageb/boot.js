@@ -67,7 +67,7 @@ async function boot(opts = {}) {
         Object.assign(process.env, env);
         for (const k of Object.keys(require.cache)) if (k.includes('/server/')) delete require.cache[k];
         const { createApp } = require('../../server/app');
-        const app = await createApp({ db, hostingConfig: config, now: clock.now, log: quiet, resolver, fetchImpl: opts.fetchImpl, indexnow: opts.indexnow, spacesAiClient: opts.spacesAiClient });
+        const app = await createApp({ db, hostingConfig: config, now: clock.now, log: quiet, resolver, fetchImpl: opts.fetchImpl, indexnow: opts.indexnow, spacesAiClient: opts.spacesAiClient, accountSend: opts.accountSend });
         await app.locals.auth.ensureKey();
         built = { app, ctx: app.locals.hosting };
         server = await new Promise((resolve) => { const s = http.createServer(built.app); s.listen(0, '127.0.0.1', () => resolve(s)); });
