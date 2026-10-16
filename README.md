@@ -9,11 +9,12 @@ Space owns static hosting. The Stage B engine moved here from OpenVibe.Host as c
 Public hosting remains off by default (`SPACE_PUBLIC_HOSTING=off`). Only OpenVibe staff can create projects. Abuse handling and a designated DMCA agent precede public launch.
 
 **Spaces** (plan T20 step 2; `server/spaces/`, `docs/spaces.md`) are small web apps people make here: described to the AI
-builder (OpenVibe.AI `space.app.build`), started from a template (guestbook, AI buddy, poll, reaction game, private
-to-dos, blank) or forked, then edited in a browser editor with a live preview. A space uses the visitor's OpenVibe
-account through the space SDK (`/_openvibe/sdk.js`): sign-in that the visitor approves once, shared lists
-(`OV.items`), private storage (`OV.kv`) and the space's own AI (`OV.ai.ask`, OpenVibe.AI `space.app.ask` on behalf of
-the visitor). Making, editing, previewing and the AI builder work for everyone signed in. Publishing deploys a space to
+builder (OpenVibe.AI `space.app.build`), started from a template (guestbook, AI buddy, poll, reaction game, trivia,
+private to-dos, blank) or forked, then edited in a browser editor with a live preview. A space uses the visitor's
+OpenVibe account through the space SDK (`/_openvibe/sdk.js`): sign-in that the visitor approves once, shared lists
+(`OV.items`), private storage (`OV.kv`), the space's own AI (`OV.ai.ask`, OpenVibe.AI `space.app.ask` on behalf of
+the visitor) and its own server code (`functions/<name>.js`, run in a QuickJS WebAssembly sandbox at `/api/<name>`
+and from `OV.fn`). Making, editing, previewing and the AI builder work for everyone signed in. Publishing deploys a space to
 a site of its maker's Spaces project at `<slug>.openvibe.website`, so it follows the same launch switch: staff until
 `SPACE_PUBLIC_HOSTING=on`.
 

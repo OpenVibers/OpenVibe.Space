@@ -129,6 +129,22 @@ function baseHeaders(res, { sandbox = false } = {}) {
     if (sandbox) res.setHeader('X-Robots-Tag', 'noindex, nofollow');
 }
 
+const FN_PATH = /^\/api\/([a-z0-9][a-z0-9-]{0,39})\/?$/;
+const FN_MAX_SOURCE = 64 * 1024;
+const FN_MAX_BODY = 64 * 1024;
+
+/** A request body up to `max` bytes, or null when it is longer (the rest is drained, not kept). */
+function readBody(req, max) {
+    return new Promise((resolve, reject) => {
+        const chunks = [];
+        let size = 0;
+        let over = false;
+        req.on('data', (chunk) => { size += chunk.length; if (size > max) over = true; else chunks.push(chunk); });
+        req.on('end', () => resolve(over ? null : Buffer.concat(chunks)));
+        req.on('error', reject);
+    });
+}
+
 function plain(res, status, text, extra = {}) {
     res.statusCode = status;
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
@@ -249,6 +265,53 @@ function createTenantServer({ store, config, blobs, takedowns = null, siteConfig
         stream.pipe(res);
     }
 
+    /**
+     * GET/HEAD/POST /api/<name> on a published space: functions/<name>.js of the deploy the site serves, run in the
+     * functions sandbox (server/spaces/functions.js) for this request. The page's Bearer token (the space SDK sends it)
+     * signs the visitor in; cookies, the address and other headers never reach the function. An answer to a signed-in
+     * visitor or to a POST is never cached; otherwise the function may choose its Cache-Control.
+     */
+    async function spaceFunction(req, res, site, space, name, rawPath, search) {
+        const row = site.active_deploy_id ? await q.file.get(site.active_deploy_id, `functions/${name}.js`) : null;
+        if (!row || row.project_id !== site.project_id) {
+            if (req.method === 'POST') return plain(res, 404, `This space has no function named ${name}.`);
+            return await notFound(req, res, site, 'missing');
+        }
+        if (row.size > FN_MAX_SOURCE) return plain(res, 500, 'This function is too large to run.');
+        let code;
+        try { code = await fs.promises.readFile(await blobs.ensure(row.project_id, row.sha256), 'utf8'); } catch (err) {
+            log.error('[Space] function unreadable:', row.project_id, row.sha256, err.code || err.message);
+            return plain(res, 500, 'This function could not be read. Try again later.');
+        }
+        let body = null;
+        if (req.method === 'POST') {
+            const raw = await readBody(req, FN_MAX_BODY);
+            if (raw === null) return plain(res, 413, `A request to a space function is at most ${FN_MAX_BODY / 1024} KB.`);
+            const type = String(req.headers['content-type'] || '').toLowerCase();
+            const text = raw.toString('utf8');
+            if (/^application\/json/.test(type)) { try { body = JSON.parse(text || 'null'); } catch { return plain(res, 400, 'The request body is not valid JSON.'); } }
+            else if (/^application\/x-www-form-urlencoded/.test(type)) body = Object.fromEntries(new URLSearchParams(text));
+            else body = text;
+        }
+        const headers = {};
+        for (const h of ['content-type', 'accept', 'accept-language', 'user-agent']) if (typeof req.headers[h] === 'string') headers[h] = req.headers[h].slice(0, 300);
+        const auth = /^Bearer\s+([A-Za-z0-9_-]{20,100})$/.exec(String(req.headers.authorization || ''));
+        const request = { method: req.method === 'HEAD' ? 'GET' : req.method, path: rawPath, query: Object.fromEntries(new URLSearchParams(search)), headers, body };
+        let out;
+        try {
+            out = await apps().runFunction(space, name, code, request, { bearer: auth ? auth[1] : null, caller: req.ip || (req.socket && req.socket.remoteAddress) || '' });
+        } catch (err) {
+            if (err && Number.isInteger(err.status) && err.status < 500) return plain(res, err.status, err.message);
+            log.error('[Space] function failed:', space.id, name, err && err.stack ? err.stack : err);
+            return plain(res, 500, 'This function could not run. Try again later.');
+        }
+        res.statusCode = out.status;
+        res.setHeader('Content-Type', out.headers['content-type'] || 'text/plain; charset=utf-8');
+        res.setHeader('Cache-Control', auth || req.method === 'POST' || !out.headers['cache-control'] ? 'private, no-store' : out.headers['cache-control']);
+        res.setHeader('Content-Length', Buffer.byteLength(out.body));
+        return res.end(req.method === 'HEAD' ? undefined : out.body);
+    }
+
     /** The absolute origin for the host this request arrived on (tenant hosts are https in production). */
     function originOf(req) {
         const host = normaliseHost(req.headers.host);
@@ -344,7 +407,8 @@ function createTenantServer({ store, config, blobs, takedowns = null, siteConfig
         // A published space: the app policy, and the space SDK at /_openvibe/sdk.js (never one of its files).
         const space = apps && apps() ? await apps().forSite(site.id) : null;
         if (space) res.setHeader('Content-Security-Policy', appCsp(config));
-        if (req.method !== 'GET' && req.method !== 'HEAD') {
+        // A space's function (/api/<name>) also answers POST; everything else here is static.
+        if (req.method !== 'GET' && req.method !== 'HEAD' && !(space && req.method === 'POST' && FN_PATH.test(String(req.url || '').split('?')[0]))) {
             return plain(res, 405, 'Static site: only GET and HEAD are supported.', { Allow: 'GET, HEAD' });
         }
         // Taken down by staff: nothing of the tenant's is served, on any of its hosts, until lifted.
@@ -370,6 +434,10 @@ function createTenantServer({ store, config, blobs, takedowns = null, siteConfig
             res.setHeader('Cache-Control', 'no-cache');
             return res.end(req.method === 'HEAD' ? undefined : apps().sdk(space));
         }
+        if (space) {
+            const fn = FN_PATH.exec(rawPath);
+            if (fn) return await spaceFunction(req, res, site, space, fn[1], rawPath, search);
+        }
         // A configured redirect: an exact path to a local path (validated on write, never an open redirect).
         // It does not need an active deploy, and it is checked before anything is read from one.
         if (cfg && cfg.redirects.length) {
@@ -385,6 +453,8 @@ function createTenantServer({ store, config, blobs, takedowns = null, siteConfig
         const c = candidates(rawPath);
         if (!c) return await notFound(req, res, site, 'invalid');
         const deployId = site.active_deploy_id;
+        // A space's functions/ are its server code: they run at /api/<name> and are never served as files.
+        if (space) c.list = c.list.filter((p) => !/^functions(\/|$)/i.test(p));
         for (const p of c.list) {
             const row = await q.file.get(deployId, p);
             if (row && row.project_id === site.project_id) {
@@ -396,7 +466,7 @@ function createTenantServer({ store, config, blobs, takedowns = null, siteConfig
                 return send(req, res, site, row, { cache: hashed ? 'public, max-age=31536000, immutable' : 'public, max-age=0, must-revalidate' });
             }
         }
-        if (!c.dir && c.dirIndex && await q.file.get(deployId, c.dirIndex)) {
+        if (!c.dir && c.dirIndex && !(space && /^functions(\/|$)/i.test(c.dirIndex)) && await q.file.get(deployId, c.dirIndex)) {
             // /docs → /docs/ so relative links inside docs/index.html resolve; built from the raw path.
             res.statusCode = 301;
             res.setHeader('Location', `${rawPath}/${search}`);

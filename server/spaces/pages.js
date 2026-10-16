@@ -199,6 +199,22 @@ function createSpacesPages(ctx) {
         const space = await own(req);
         const b = req.body || {};
         const person = spaces.personOf(req.viewer);
+        // OV.fn in the preview: the editor's copy of functions/<name>.js (unsaved changes too), run as the maker.
+        if (b.op === 'fn.call') {
+            const a = b.args && typeof b.args === 'object' ? b.args : {};
+            const name = String(a.name || '');
+            if (!ctx.spaceFunctions.NAME_RE.test(name)) throw new ApiError(404, 'space.function_not_found', 'function names are 1-40 characters: a-z, 0-9 and "-"');
+            const saved = (await spaces.files(space)).find((f) => f.path === `functions/${name}.js`);
+            const source = typeof a.source === 'string' ? a.source : saved && saved.content;
+            if (typeof source !== 'string') throw new ApiError(404, 'space.function_not_found', `this space has no functions/${name}.js`);
+            const query = {};
+            if (a.query && typeof a.query === 'object') for (const [k, v] of Object.entries(a.query).slice(0, 50)) query[String(k).slice(0, 100)] = String(v).slice(0, 1000);
+            const request = { method: a.method === 'POST' ? 'POST' : 'GET', path: `/api/${name}`, query, headers: {}, body: a.body === undefined ? null : a.body };
+            return { result: await ctx.spaceFunctions.call(space, name, source, request, {
+                visitor: { person, capabilities: spaces.CAPABILITIES }, caller: person.subject,
+                perMinute: limits.fnCallsPerMinute, perCallerPerMinute: limits.fnCallsPerCallerPerMinute,
+            }) };
+        }
         return { result: await data.run(String(b.op || ''), b.args || {}, { space, person, capabilities: spaces.CAPABILITIES, owner: true }) };
     }));
 

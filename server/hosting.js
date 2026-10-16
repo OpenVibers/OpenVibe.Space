@@ -68,6 +68,7 @@ function createHosting(app, { db, auth, config: suppliedConfig, now, resolver, f
     ctx.spaces = require('./spaces/spaces').createSpaces({ store, config, projects, sites, deploys, takedowns, log });
     ctx.spacesAi = require('./spaces/ai').createSpacesAi({ config, client: spacesAiClient, log });
     ctx.spaceData = require('./spaces/data').createSpaceData({ store, config, spaces: ctx.spaces, ai: ctx.spacesAi });
+    ctx.spaceFunctions = require('./spaces/functions').createSpaceFunctions({ data: ctx.spaceData, workers: config.spaces.fnWorkers, log });
     {
         const { sdkSource } = require('./spaces/sdk');
         const bySite = new Map();
@@ -83,6 +84,14 @@ function createHosting(app, { db, auth, config: suppliedConfig, now, resolver, f
             },
             forget(siteId) { bySite.delete(siteId); },
             sdk: (space) => sdkSource({ mode: 'live', space, api: new URL(config.baseUrl).origin, avatar: `${config.networkUrl}/avatar/{username}` }),
+            // functions/<name>.js of a published space, for one request to https://<slug>.<sitesDomain>/api/<name>.
+            async runFunction(space, name, code, request, { bearer = null, caller = '' } = {}) {
+                const visitor = bearer ? await ctx.spaceData.verify(space, bearer) : null;
+                return await ctx.spaceFunctions.call(space, name, code, request, {
+                    visitor, caller: visitor ? visitor.person.subject : `ip:${caller}`,
+                    perMinute: config.spaces.fnCallsPerMinute, perCallerPerMinute: config.spaces.fnCallsPerCallerPerMinute,
+                });
+            },
         };
     }
     if (app.locals.metrics && typeof app.locals.metrics.gauge === 'function') {
