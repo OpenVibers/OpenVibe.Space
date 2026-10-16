@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My to-dos</title>
+<style>
+  :root { --bg: #fffdf5; --card: #ffffff; --ink: #1f1d17; --muted: #77705f; --accent: #ca8a04; --line: #eee6cf; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #14130e; --card: #1e1c15; --ink: #f3efe2; --muted: #ada58f; --accent: #facc15; --line: #34301f; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 560px; margin: 0 auto; padding: 40px 16px; }
+  h1 { margin: 0 0 4px; font-size: 2rem; } .sub { color: var(--muted); margin: 0 0 20px; }
+  form { display: flex; gap: 8px; }
+  input[type=text] { flex: 1; min-width: 0; border: 1px solid var(--line); background: var(--card); color: inherit; border-radius: 12px; padding: 12px 14px; font: inherit; }
+  button { border: 0; border-radius: 12px; padding: 10px 16px; background: var(--accent); color: #1f1d17; font: 600 .95rem system-ui, sans-serif; cursor: pointer; }
+  :focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 55%, transparent); outline-offset: 2px; }
+  ul { list-style: none; padding: 0; margin: 20px 0 0; display: grid; gap: 8px; }
+  li { display: flex; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+  li label { flex: 1; display: flex; gap: 10px; align-items: center; cursor: pointer; overflow-wrap: anywhere; }
+  li input { width: 20px; height: 20px; accent-color: var(--accent); }
+  li.done span { text-decoration: line-through; color: var(--muted); }
+  .x { background: transparent; color: var(--muted); padding: 4px 8px; font-size: 1.1rem; }
+  .center { text-align: center; color: var(--muted); padding: 32px 0; }
+  .foot { display: flex; justify-content: space-between; color: var(--muted); font-size: .9rem; margin-top: 14px; }
+  .foot button { background: none; color: var(--muted); padding: 0; text-decoration: underline; font-weight: 400; }
+</style>
+</head>
+<body>
+<main>
+  <h1>My to-dos</h1>
+  <p class="sub">A private list, saved to your OpenVibe account. Only you can see it.</p>
+  <div id="app"><p class="center">Loading…</p></div>
+</main>
+<script src="/_openvibe/sdk.js"></script>
+<script>
+  const app = document.getElementById('app');
+  let todos = [];
+  const save = () => OV.kv.set('todos', todos).catch((err) => alert('Could not save: ' + err.message));
+  function render() {
+    app.replaceChildren();
+    if (!OV.user) {
+      const p = document.createElement('p'); p.className = 'center'; p.textContent = 'Sign in to keep your list. ';
+      const b = document.createElement('button'); b.type = 'button'; b.textContent = 'Sign in with OpenVibe'; b.onclick = () => OV.signIn();
+      p.append(document.createElement('br'), document.createElement('br'), b); app.append(p); return;
+    }
+    const form = document.createElement('form');
+    const input = document.createElement('input'); input.type = 'text'; input.maxLength = 200; input.placeholder = 'Add something to do'; input.setAttribute('aria-label', 'New to-do');
+    const add = document.createElement('button'); add.type = 'submit'; add.textContent = 'Add';
+    form.append(input, add);
+    form.onsubmit = (e) => { e.preventDefault(); const t = input.value.trim(); if (!t) return; todos.unshift({ id: Date.now(), text: t, done: false }); input.value = ''; save(); render(); app.querySelector('input[type=text]').focus(); };
+    const ul = document.createElement('ul');
+    todos.forEach((t) => {
+      const li = document.createElement('li'); if (t.done) li.className = 'done';
+      const label = document.createElement('label'); const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = t.done;
+      cb.onchange = () => { t.done = cb.checked; save(); render(); };
+      const span = document.createElement('span'); span.textContent = t.text; label.append(cb, span);
+      const x = document.createElement('button'); x.type = 'button'; x.className = 'x'; x.textContent = '×'; x.setAttribute('aria-label', 'Delete "' + t.text + '"');
+      x.onclick = () => { todos = todos.filter((o) => o !== t); save(); render(); };
+      li.append(label, x); ul.append(li);
+    });
+    if (!todos.length) { const li = document.createElement('li'); li.style.justifyContent = 'center'; li.style.color = 'var(--muted)'; li.textContent = 'Nothing to do. Nice!'; ul.append(li); }
+    const left = todos.filter((t) => !t.done).length;
+    const foot = document.createElement('div'); foot.className = 'foot';
+    const out = document.createElement('button'); out.type = 'button'; out.textContent = 'Sign out'; out.onclick = () => OV.signOut();
+    foot.append(left === 1 ? '1 left' : left + ' left', out);
+    app.append(form, ul, foot);
+  }
+  async function load() { todos = OV.user ? (await OV.kv.get('todos').catch(() => null)) || [] : []; render(); }
+  OV.on('user', load);
+  OV.ready.then(load);
+</script>
+</body>
+</html>

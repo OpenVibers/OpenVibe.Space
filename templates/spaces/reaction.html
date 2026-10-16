@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reaction time</title>
+<style>
+  :root { --bg: #0b0b12; --panel: #151522; --ink: #f3f3fa; --muted: #9a9ab4; --wait: #dc2626; --go: #16a34a; --line: #26263a; --gold: #fbbf24; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 900px; margin: 0 auto; padding: 24px 16px 48px; display: grid; gap: 20px; grid-template-columns: 1fr; }
+  @media (min-width: 760px) { main { grid-template-columns: 1.4fr 1fr; align-items: start; } }
+  h1 { margin: 0; font-size: 1.6rem; } .sub { margin: 2px 0 0; color: var(--muted); }
+  #pad { border: 0; width: 100%; aspect-ratio: 4 / 3; border-radius: 22px; color: #fff; font: 700 clamp(1.4rem, 4vw, 2.2rem)/1.2 system-ui, sans-serif; cursor: pointer; background: #2a2a40; display: grid; place-items: center; padding: 16px; text-align: center; transition: background .08s; user-select: none; touch-action: manipulation; }
+  #pad.wait { background: var(--wait); } #pad.go { background: var(--go); }
+  #pad:focus-visible { outline: 4px solid #818cf8; outline-offset: 3px; }
+  .small { display: block; font-size: .95rem; font-weight: 500; opacity: .85; margin-top: 8px; }
+  aside { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 18px; }
+  aside h2 { margin: 0 0 10px; font-size: 1.05rem; }
+  ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; counter-reset: r; }
+  li { display: grid; grid-template-columns: 28px 1fr auto; gap: 8px; align-items: center; padding: 6px 8px; border-radius: 10px; counter-increment: r; }
+  li::before { content: counter(r); color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; }
+  li:nth-child(1)::before { content: '🥇'; } li:nth-child(2)::before { content: '🥈'; } li:nth-child(3)::before { content: '🥉'; }
+  li.muted::before { content: none; }
+  li.me { background: #22223a; } .ms { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--gold); }
+  .muted { color: var(--muted); font-size: .9rem; }
+  button.link { border: 0; background: none; color: #a5b4fc; font: inherit; cursor: pointer; padding: 0; text-decoration: underline; }
+</style>
+</head>
+<body>
+<main>
+  <section>
+    <h1>Reaction time</h1>
+    <p class="sub">Click when it turns green. Your best time goes on the board.</p>
+    <p></p>
+    <button id="pad" type="button">Click to start</button>
+    <p class="muted" id="status"></p>
+  </section>
+  <aside aria-live="polite"><h2>Leaderboard</h2><ol id="board"><li class="muted" style="display:block">Loading…</li></ol></aside>
+</main>
+<script src="/_openvibe/sdk.js"></script>
+<script>
+  const pad = document.getElementById('pad'), status = document.getElementById('status');
+  let state = 'idle', timer = null, shownAt = 0, best = null;
+  function show(cls, text, small) { pad.className = cls; pad.replaceChildren(text); if (small) { const s = document.createElement('span'); s.className = 'small'; s.textContent = small; pad.append(s); } }
+  function start() { state = 'wait'; show('wait', 'Wait for green…'); timer = setTimeout(() => { state = 'go'; shownAt = performance.now(); show('go', 'CLICK!'); }, 1200 + Math.random() * 2600); }
+  async function finish(ms) {
+    state = 'idle';
+    const isBest = best === null || ms < best;
+    show('', ms + ' ms', isBest ? 'New personal best! Click to go again.' : 'Best: ' + best + ' ms. Click to go again.');
+    if (!isBest) return;
+    best = ms;
+    if (!OV.user) { status.replaceChildren('Sign in to put ' + ms + ' ms on the board. '); const b = document.createElement('button'); b.className = 'link'; b.textContent = 'Sign in with OpenVibe'; b.onclick = () => OV.signIn(); status.append(b); return; }
+    try { await OV.items.set('scores', { ms }); status.textContent = 'Saved to the leaderboard.'; await board(); }
+    catch (err) { status.textContent = 'Could not save: ' + err.message; }
+  }
+  pad.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    if (state === 'idle') return start();
+    if (state === 'wait') { clearTimeout(timer); state = 'idle'; show('', 'Too soon!', 'Wait for green. Click to try again.'); return; }
+    if (state === 'go') return finish(Math.round(performance.now() - shownAt));
+  });
+  pad.addEventListener('keydown', (e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); pad.dispatchEvent(new PointerEvent('pointerdown')); } });
+  async function board() {
+    const list = document.getElementById('board');
+    try {
+      const scores = (await OV.items.list('scores', { limit: 100 })).filter((s) => s.value && Number.isFinite(s.value.ms) && s.value.ms > 50).sort((a, b) => a.value.ms - b.value.ms).slice(0, 15);
+      const mine = scores.find((s) => s.mine); if (mine && (best === null || mine.value.ms < best)) best = mine.value.ms;
+      list.replaceChildren();
+      if (!scores.length) { const li = document.createElement('li'); li.className = 'muted'; li.style.display = 'block'; li.textContent = 'No scores yet. Set the first one!'; list.append(li); return; }
+      for (const s of scores) {
+        const li = document.createElement('li'); if (s.mine) li.className = 'me';
+        const name = document.createElement('span'); name.textContent = s.author.display_name;
+        const ms = document.createElement('span'); ms.className = 'ms'; ms.textContent = s.value.ms + ' ms';
+        li.append(name, ms); list.append(li);
+      }
+    } catch (err) { list.textContent = 'Could not load the board: ' + err.message; }
+  }
+  OV.on('user', board);
+  OV.ready.then(board);
+</script>
+</body>
+</html>

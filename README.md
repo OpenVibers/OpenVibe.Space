@@ -1,17 +1,28 @@
 # OpenVibe.Space
 
-**https://openvibe.space — static hosting for the OpenVibe network.**
+**https://openvibe.space — spaces (apps people make on their OpenVibe account) and static hosting for the OpenVibe network.**
 
 ## Purpose and status
 
 Space owns static hosting. The Stage B engine moved here from OpenVibe.Host as code; production had no projects, sites or deploys to migrate. It supports projects and members, immutable content-addressed deploys, activation and one-step rollback, private previews, CI Git ingest, per-site configuration, verified custom domains, takedowns, Media-backed objects, Host-header tenant serving, and a resource index. Tenant names serve at `<name>.openvibe.website`.
 
-Public hosting remains off by default (`SPACE_PUBLIC_HOSTING=off`). Only OpenVibe staff can create projects. Abuse handling and a designated DMCA agent precede public launch. Dynamic pages and spaces (small apps on a person's OpenVibe account) are planned and not built.
+Public hosting remains off by default (`SPACE_PUBLIC_HOSTING=off`). Only OpenVibe staff can create projects. Abuse handling and a designated DMCA agent precede public launch.
+
+**Spaces** (plan T20 step 2; `server/spaces/`, `docs/spaces.md`) are small web apps people make here: described to the AI
+builder (OpenVibe.AI `space.app.build`), started from a template (guestbook, AI buddy, poll, reaction game, private
+to-dos, blank) or forked, then edited in a browser editor with a live preview. A space uses the visitor's OpenVibe
+account through the space SDK (`/_openvibe/sdk.js`): sign-in that the visitor approves once, shared lists
+(`OV.items`), private storage (`OV.kv`) and the space's own AI (`OV.ai.ask`, OpenVibe.AI `space.app.ask` on behalf of
+the visitor). Making, editing, previewing and the AI builder work for everyone signed in. Publishing deploys a space to
+a site of its maker's Spaces project at `<slug>.openvibe.website`, so it follows the same launch switch: staff until
+`SPACE_PUBLIC_HOSTING=on`.
 
 OpenVibe.Host is the hosting price comparison; its copy of the engine is being removed, and its old hosting URLs will answer 410 with a link here.
 
 ## Owns
 
+- Spaces: their source files and settings, the gallery, the editor, the space SDK and its API, each space's shared lists,
+  its visitors' private storage, the sign-ins visitors approved, and the daily AI allowances of spaces and builders.
 - Static hosting: projects and members, sites, immutable content-addressed deploys, activation and rollback,
   previews, Git ingest, per-site configuration, custom domains with TXT verification, and takedowns.
 - Serving tenant sites by Host header at `<name>.openvibe.website` and on verified custom domains.
@@ -30,6 +41,8 @@ OpenVibe.Host is the hosting price comparison; its copy of the engine is being r
 - **OpenVibe.Media:** tenant objects, when `SPACE_OBJECT_STORE=media`.
 - **OpenVibe.Billing:** storage readings, when `SPACE_BILLING_INTERVAL_MS` is on.
 - **OpenVibe.Services:** reads the resource index and sends control requests.
+- **OpenVibe.AI:** the space builder and a space's own AI (`space.*` workflows; Network grants `ai.run.create` and
+  `ai.run.read` on `space.*`).
 
 ## The forum moved to OpenVibe.Community
 
@@ -53,7 +66,12 @@ Nothing that is not a forum path redirects.
 
 | Route | Purpose |
 | --- | --- |
-| `/` | Public status and static hosting description |
+| `/` | Spaces and static hosting |
+| `/spaces`, `/spaces/new`, `/spaces/mine`, `/spaces/:slug` | The gallery and templates, making a space (template or AI builder), your spaces, a space's page |
+| `/spaces/:slug/edit` and its JSON calls (`files`, `settings`, `ai`, `publish`, `unpublish`, `delete`, `preview`) | The editor (maker or staff; same origin with the form token in `X-CSRF-Token`) |
+| `/spaces/:slug/fork`, `/spaces/:slug/connect` | Fork a space; the sign-in a visitor approves for a published space |
+| `/_openvibe/sdk.js` | The space SDK: live on a space's own address, preview mode on openvibe.space |
+| `/api/v1/apps/:id/token`, `/api/v1/apps/:id/run`, `/api/v1/apps/:id/items/:collection` | The space SDK's API, from the space's own origin only (CORS for that origin, Bearer space token, never cookies) |
 | `/dashboard`, `/projects/:id`, `/sites/:id`, `/deploys/:id` | Signed-in hosting dashboard and forms |
 | `/preview/:deployId/*` | Private, sandboxed deploy preview |
 | `/api/v1/projects`, `/api/v1/sites`, `/api/v1/deploys`, `/api/v1/domains` | Hosting API (Bearer tokens, no cookie auth) |
@@ -78,13 +96,17 @@ The transactional outbox emits `space.deploy.created`, `space.deploy.activated`,
 
 `migrations/0002_initial.sql` through `0005_git_sources.sql` create the hosting tables, `0006_billing_readings.sql` the usage-reading outbox,, indexes and immutable-artifact triggers from Host Stage B with `space_` names. They run through `openvibe-sdk/db` at boot; tables are never created by a request. `0001_initial.sql` remains the historical forum schema, which this release does not drop. This is a code move, with no data copy.
 
+`migrations/0009_spaces.sql` creates the spaces tables (`space_apps`, `space_app_files`, `space_app_projects`, `space_app_items`, `space_app_kv`, `space_app_grants`, `space_app_codes`, `space_app_tokens`, `space_app_counters`). Only hashes of sign-in codes and tokens are kept.
+
 Request telemetry is aggregated by route template, method and status class, never by raw URL. Once a minute one `http.request` sample per key, plus the active-requests, p95 latency and event-loop-lag gauges, is written to this service's own `telemetry_samples` table (openvibe-sdk 0.46 telemetry, the `platform.telemetry-sample@1` shape), which `migrations/0008_telemetry.sql` creates; rows older than 14 days are deleted daily. `/shared` files, static assets, health, readiness and `/metrics` are not counted. `server/app.js` mounts openvibe-sdk's `telemetryMiddleware` (a no-op until init); `server/index.js` calls `telemetry.init()` at production start, runs the 14-day retention and flushes on stop.
 
 Copy `.env.example` to `.env`. Production uses `/etc/openvibe/space.env` (0600). Important values:
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `SPACE_PUBLIC_HOSTING` | `off` | Staff-only project creation until launch |
+| `SPACE_PUBLIC_HOSTING` | `off` | Staff-only project creation (and publishing spaces) until launch |
+| `SPACE_AI`, `OV_AI_INTERNAL_URL` | `on`, `http://127.0.0.1:4700` | The space builder and spaces' AI through OpenVibe.AI |
+| `SPACE_SPACES_PER_OWNER`, `SPACE_AI_BUILDS_PER_DAY`, `SPACE_AI_ASKS_PER_SPACE_PER_DAY` | 25, 20, 500 | Spaces per person, AI builds per person a day, AI answers per space a day (more `SPACE_SPACE_*` limits in `server/hosting-config.js`) |
 | `SPACE_SITES_DOMAIN` | `openvibe.website` | Tenant names |
 | `SPACE_STORAGE_DIR` | `./data/objects` | Content-addressed local object store |
 | `SPACE_OBJECT_STORE` | `local` | Set `media` for Media write-through and cache |

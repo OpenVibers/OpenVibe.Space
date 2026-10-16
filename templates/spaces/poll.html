@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quick poll</title>
+<style>
+  :root { --bg: #effaf5; --card: #ffffff; --ink: #0f2a1f; --muted: #557566; --accent: #059669; --bar: #a7f3d0; --line: #d3ebe0; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #08150f; --card: #10231a; --ink: #e2f5ec; --muted: #8fb5a4; --accent: #34d399; --bar: #065f46; --line: #1d3a2d; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--bg); color: var(--ink); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; padding: 24px 16px; }
+  .card { width: 100%; max-width: 520px; background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 24px; box-shadow: 0 20px 50px -30px rgba(0,0,0,.35); }
+  .eyebrow { text-transform: uppercase; letter-spacing: .12em; font-size: .75rem; color: var(--accent); font-weight: 700; margin: 0; }
+  h1 { font-size: 1.6rem; line-height: 1.25; margin: 6px 0 18px; }
+  .options { display: grid; gap: 10px; }
+  .opt { position: relative; overflow: hidden; display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; text-align: left; border: 1px solid var(--line); background: transparent; color: inherit; border-radius: 12px; padding: 12px 14px; font: inherit; cursor: pointer; }
+  .opt .fill { position: absolute; inset: 0 auto 0 0; background: var(--bar); z-index: 0; transition: width .5s ease; }
+  .opt span { position: relative; z-index: 1; }
+  .opt.chosen { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .opt:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 45%, transparent); outline-offset: 2px; }
+  .pct { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .foot { margin-top: 16px; color: var(--muted); font-size: .9rem; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .foot button { border: 0; background: none; color: var(--accent); font: inherit; cursor: pointer; padding: 0; text-decoration: underline; }
+</style>
+</head>
+<body>
+<main class="card">
+  <p class="eyebrow">Quick poll</p>
+  <h1 id="question"></h1>
+  <div class="options" id="options" role="group" aria-labelledby="question"></div>
+  <div class="foot"><span id="total">Loading votes…</span><span id="who"></span></div>
+</main>
+<script src="/_openvibe/sdk.js"></script>
+<script>
+  // Change the question and the answers here.
+  const POLL = { question: 'Which pizza topping wins?', options: ['Pepperoni', 'Mushrooms', 'Pineapple', 'Extra cheese'] };
+
+  document.getElementById('question').textContent = POLL.question;
+  let votes = [];
+  async function loadVotes() {
+    const all = [];
+    let before = 0;
+    for (let page = 0; page < 10; page++) {
+      const batch = await OV.items.list('votes', { limit: 100, before });
+      all.push(...batch);
+      if (batch.length < 100) break;
+      before = Number(batch[batch.length - 1].id);
+    }
+    votes = all;
+  }
+  function render() {
+    const counts = POLL.options.map(() => 0);
+    let mine = null;
+    for (const v of votes) { const i = v.value && v.value.option; if (Number.isInteger(i) && i >= 0 && i < counts.length) counts[i]++; if (v.mine) mine = i; }
+    const total = counts.reduce((a, b) => a + b, 0);
+    const box = document.getElementById('options'); box.replaceChildren();
+    POLL.options.forEach((label, i) => {
+      const pct = total ? Math.round(counts[i] * 100 / total) : 0;
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'opt' + (mine === i ? ' chosen' : '');
+      b.setAttribute('aria-pressed', mine === i ? 'true' : 'false');
+      const fill = document.createElement('span'); fill.className = 'fill'; fill.style.width = (mine !== null ? pct : 0) + '%';
+      const name = document.createElement('span'); name.textContent = label + (mine === i ? '  ✓' : '');
+      const p = document.createElement('span'); p.className = 'pct'; p.textContent = mine !== null ? pct + '%' : '';
+      b.append(fill, name, p);
+      b.onclick = () => vote(i);
+      box.append(b);
+    });
+    document.getElementById('total').textContent = total === 1 ? '1 vote' : total + ' votes';
+    const who = document.getElementById('who'); who.replaceChildren();
+    if (OV.user) who.textContent = mine !== null ? 'You can change your vote.' : 'Pick one to see the results.';
+    else { const s = document.createElement('button'); s.textContent = 'Sign in with OpenVibe to vote'; s.onclick = () => OV.signIn(); who.append(s); }
+  }
+  async function vote(i) {
+    if (!OV.user) return OV.signIn();
+    try { await OV.items.set('votes', { option: i }); await loadVotes(); render(); }
+    catch (err) { alert(err.code === 'quota' ? 'Too many votes at once; wait a minute.' : err.message); }
+  }
+  async function refresh() { try { await loadVotes(); } catch (err) { document.getElementById('total').textContent = 'Could not load the votes: ' + err.message; } render(); }
+  OV.on('user', refresh);
+  OV.ready.then(refresh);
+</script>
+</body>
+</html>

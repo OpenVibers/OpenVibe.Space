@@ -22,7 +22,7 @@ const { boot, check, done, DASHBOARD } = require('./stageb/boot');
         assert.match(r.text, /<link rel="canonical" href="https:\/\/openvibe\.space\/">/);
         const map = await t.get(DASHBOARD, '/sitemap.xml');
         assert.strictEqual(map.status, 200);
-        assert.deepStrictEqual([...map.text.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]), ['https://openvibe.space/']);
+        assert.deepStrictEqual([...map.text.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]), ['https://openvibe.space/', 'https://openvibe.space/spaces']);
     });
     await t.close();
     done();
