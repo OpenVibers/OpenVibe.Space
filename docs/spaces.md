@@ -72,6 +72,9 @@ async function handle(request, ov) {
 }
 ```
 
+- **How to write it:** a plain script. `export function handle`, `export default function (…)` and
+  `module.exports = { handle }` work too; there is no `import` or `require`. An error answers 500 with its message and
+  line number.
 - **Where it runs:** on a published space at `https://<slug>.openvibe.website/api/<name>` (GET, HEAD and POST; it is
   the published copy that runs, so a saved change waits for the next publish). The page calls it with
   `OV.fn('hello')`, and a link or form may point at `/api/hello` directly. In the editor, the preview runs the copy in

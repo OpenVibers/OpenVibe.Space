@@ -24,6 +24,9 @@ const __call = async (op, args) => {
   if (r.error) { const e = new Error(r.error.message); e.code = r.error.code; throw e; }
   return r.result;
 };
+// CommonJS spellings work too: module.exports = { handle } or module.exports = async (request, ov) => …
+globalThis.module = { exports: {} };
+globalThis.exports = globalThis.module.exports;
 const __ctx = JSON.parse(__context);
 globalThis.ov = Object.freeze({
   user: __ctx.user ? Object.freeze(__ctx.user) : null,
@@ -93,7 +96,7 @@ async function run({ id, name, code, request, context, limits }) {
         let loaded;
         try {
             vm.unwrapResult(vm.evalCode(PRELUDE, 'prelude.js')).dispose();
-            loaded = vm.evalCode(code, `functions/${name}.js`);
+            loaded = vm.evalCode(code, `functions/${name}.js`, { type: 'global' });
         } finally { leave(); }
         if (loaded.error) {
             const e = vm.dump(loaded.error); loaded.error.dispose();
@@ -104,10 +107,15 @@ async function run({ id, name, code, request, context, limits }) {
         let started;
         try {
             started = vm.evalCode(`(async () => {
-  if (typeof handle !== 'function') throw new Error('it must define handle(request, ov)');
-  const out = await handle(JSON.parse(__request), ov);
+  const m = globalThis.module.exports;
+  const fn = typeof handle === 'function' ? handle : typeof m === 'function' ? m : m && (typeof m.handle === 'function' ? m.handle : typeof m.default === 'function' ? m.default : null);
+  if (!fn) throw new Error('it must define handle(request, ov)');
+  const out = await fn(JSON.parse(__request), ov);
   return JSON.stringify({ out: out === undefined ? null : out, logs: __logs });
-})().catch((e) => JSON.stringify({ failed: String((e && e.message) || e), logs: __logs }))`, 'run.js');
+})().catch((e) => {
+  const at = new RegExp('functions/[^:)]+:([0-9]+)').exec(String((e && e.stack) || ''));
+  return JSON.stringify({ failed: String((e && e.message) || e) + (at ? ' (line ' + at[1] + ')' : ''), logs: __logs });
+})`, 'run.js');
         } finally { leave(); }
         const promiseHandle = vm.unwrapResult(started);
         const settled = vm.resolvePromise(promiseHandle);
