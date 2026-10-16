@@ -64,7 +64,8 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, log 
         forked: db.prepare('UPDATE space_apps SET forks = forks + 1 WHERE id = ?'),
         published: db.prepare('UPDATE space_apps SET site_id = ?, published_at = ?, updated_at = ? WHERE id = ?'),
         unpublished: db.prepare('UPDATE space_apps SET site_id = NULL, published_at = NULL, updated_at = ? WHERE id = ?'),
-        remove: db.prepare("UPDATE space_apps SET status = 'deleted', site_id = NULL, deleted_at = ?, updated_at = ? WHERE id = ?"),
+        // Deleting is for good: its files, lists, everyone's private storage and sign-ins in it go too (ON DELETE CASCADE).
+        remove: db.prepare('DELETE FROM space_apps WHERE id = ?'),
         project: db.prepare('SELECT project_id FROM space_app_projects WHERE owner_subject = ?'),
         addProject: db.prepare('INSERT INTO space_app_projects (owner_subject, project_id, created_at) VALUES (?, ?, ?) ON CONFLICT (owner_subject) DO NOTHING'),
         gallery: db.prepare(`SELECT * FROM space_apps WHERE status = 'active' AND site_id IS NOT NULL AND visibility = 'public'
@@ -257,8 +258,7 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, log 
 
     async function remove(viewer, space) {
         if (space.site_id) await unpublish(viewer, space);
-        const now = store.now();
-        await q.remove.run(now, now, space.id);
+        await q.remove.run(space.id);
     }
 
     async function gallery({ q: query = '', sort = 'new', limit = 48 } = {}) {
