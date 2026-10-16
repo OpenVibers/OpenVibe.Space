@@ -10,6 +10,9 @@
  *                                         origin with no storage), so every call is a postMessage to the editor,
  *                                         which runs it as the signed-in maker.
  *
+ * OV.fn(name, body) runs the space's functions/<name>.js (server/spaces/functions.js): at /api/<name> on the space's
+ * own address when live, through the editor (its unsaved copy) in the preview.
+ *
  * The API is the one the AI builder is told about (OpenVibe.AI server/workflows/space.js SDK_REFERENCE).
  */
 const SDK = String.raw`(function () {
@@ -23,7 +26,7 @@ const SDK = String.raw`(function () {
   function fail(code, message) { var e = new Error(message || code); e.code = code; return e; }
   OV.on = function (name, fn) { if (name === 'user' && typeof fn === 'function') listeners.push(fn); return OV; };
 
-  var call;
+  var call, fnCall;
   if (CFG.mode === 'preview') {
     var seq = 0, waiting = {};
     window.addEventListener('message', function (ev) {
@@ -37,6 +40,10 @@ const SDK = String.raw`(function () {
         var id = ++seq; waiting[id] = { resolve: resolve, reject: reject };
         window.parent.postMessage({ ovSpacePreview: 1, id: id, op: op, args: args || {} }, '*');
       });
+    };
+    fnCall = function (name, method, body, query) {
+      return call('fn.call', { name: name, method: method, body: method === 'POST' ? body : undefined, query: query })
+        .then(function (r) { return fnResult(r.status, r.headers && r.headers['content-type'], r.body); });
     };
     OV.signIn = function () { return call('me').then(function (u) { setUser(u); return u; }); };
     OV.signOut = function () { setUser(null); return Promise.resolve(); };
@@ -63,6 +70,15 @@ const SDK = String.raw`(function () {
         }); }, function () { throw fail('network', 'Could not reach OpenVibe. Check the connection and try again.'); });
     }
     call = function (op, args) { return api('/run', 'POST', { op: op, args: args || {} }).then(function (j) { return j.result; }); };
+    // The space's own functions answer on its own address (/api/<name>), with the visitor's token when signed in.
+    fnCall = function (name, method, body, query) {
+      var headers = {}; var t = token(); if (t) headers.Authorization = 'Bearer ' + t;
+      if (method === 'POST') headers['Content-Type'] = 'application/json';
+      var qs = query ? '?' + new URLSearchParams(query).toString() : '';
+      return fetch('/api/' + name + qs, { method: method, headers: headers, body: method === 'POST' ? JSON.stringify(body === undefined ? null : body) : undefined, credentials: 'omit' })
+        .then(function (r) { return r.text().then(function (text) { return fnResult(r.status, r.headers.get('content-type'), text); }); },
+          function () { throw fail('network', 'Could not reach the space. Check the connection and try again.'); });
+    };
     OV.signIn = function () {
       var verifier = random(), state = random();
       store.set(':verifier', verifier); store.set(':state', state);
@@ -108,6 +124,22 @@ const SDK = String.raw`(function () {
     set: guard(function (k, value) { return call('kv.set', { key: named('key', k), value: value }); }),
     remove: guard(function (k) { return call('kv.remove', { key: named('key', k) }); }),
   };
+  function fnResult(status, type, text) {
+    var value = text;
+    if (/application\/json/i.test(type || '')) { try { value = JSON.parse(text); } catch (e) { /* keep the text */ } }
+    if (status >= 400) {
+      var e = fail(status === 429 ? 'quota' : 'fn.failed', typeof value === 'string' && value ? value.slice(0, 300) : 'The function failed (' + status + ')');
+      e.status = status; e.body = value; throw e;
+    }
+    return status === 204 ? null : value;
+  }
+  // OV.fn(name[, body][, { method, query }]): run functions/<name>.js on the server (POST when there is a body).
+  OV.fn = guard(function (name, body, o) {
+    if (typeof name !== 'string' || !/^[a-z0-9][a-z0-9-]{0,39}$/.test(name)) throw fail('space.invalid_name', 'function names are 1-40 characters: a-z, 0-9 and "-"');
+    o = o || {};
+    var method = String(o.method || (body === undefined ? 'GET' : 'POST')).toUpperCase() === 'POST' ? 'POST' : 'GET';
+    return fnCall(name, method, body, o.query || null);
+  });
   OV.ai = { ask: function (input) { return call('ai.ask', { input: input }).then(function (r) { return r.text; }); } };
   OV.me = function () { return call('me'); };
   window.OV = OV;

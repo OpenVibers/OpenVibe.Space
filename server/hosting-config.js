@@ -166,6 +166,10 @@ function load(env = process.env) {
             aiBuildsPerDay: int(env.SPACE_AI_BUILDS_PER_DAY, 20),
             aiAsksPerMinute: int(env.SPACE_AI_ASKS_PER_MINUTE, 6),
             aiAsksPerSpacePerDay: int(env.SPACE_AI_ASKS_PER_SPACE_PER_DAY, 500),
+            // Space functions (server/spaces/functions.js): worker threads, and calls per minute per space and per caller.
+            fnWorkers: int(env.SPACE_FN_WORKERS, 2),
+            fnCallsPerMinute: int(env.SPACE_FN_CALLS_PER_MINUTE, 240),
+            fnCallsPerCallerPerMinute: int(env.SPACE_FN_CALLS_PER_CALLER_PER_MINUTE, 60),
             ai: {
                 enabled: String(env.SPACE_AI || 'on').trim().toLowerCase() !== 'off',
                 url: trim(env.OV_AI_INTERNAL_URL || env.OV_AI_URL || 'http://127.0.0.1:4700'),

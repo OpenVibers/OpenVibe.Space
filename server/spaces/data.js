@@ -69,6 +69,8 @@ function createSpaceData({ store, config, spaces, ai, now: clock = null }) {
         if (windows.size > 5000) for (const [k, v] of windows) if (!v.some((x) => t - x < 60000)) windows.delete(k);
     }
 
+    // The space's own writes (its functions, as `space:<id>`) serve every visitor at once: ten times one person's.
+    const writeLimit = (person) => (String(person.subject).startsWith('space:') ? limits.writesPerMinute * 10 : limits.writesPerMinute);
     const checkName = (kind, v) => {
         if (typeof v !== 'string' || !NAME_RE.test(v)) throw new ApiError(422, 'space.invalid_name', `${kind} names are 1-64 characters: letters, digits, ".", "-" and "_"`);
         return v;
@@ -101,7 +103,7 @@ function createSpaceData({ store, config, spaces, ai, now: clock = null }) {
     async function addItem(space, person, collection, value) {
         checkName('collection', collection);
         const v = jsonOf(value, limits.itemBytes);
-        throttle(`w:${space.id}:${person.subject}`, limits.writesPerMinute);
+        throttle(`w:${space.id}:${person.subject}`, writeLimit(person));
         if ((await q.count.get(space.id)).n >= limits.itemsPerSpace) throw new ApiError(429, 'quota', `this space holds ${limits.itemsPerSpace} items at most`);
         const t = now();
         const r = await q.add.get(space.id, collection, person.subject, person.username, person.name, v, t, t);
@@ -110,7 +112,7 @@ function createSpaceData({ store, config, spaces, ai, now: clock = null }) {
     async function setItem(space, person, collection, value) {
         checkName('collection', collection);
         const v = jsonOf(value, limits.itemBytes);
-        throttle(`w:${space.id}:${person.subject}`, limits.writesPerMinute);
+        throttle(`w:${space.id}:${person.subject}`, writeLimit(person));
         const t = now();
         const r = await q.setMine.get(space.id, collection, person.subject, person.username, person.name, v, t, t);
         return itemOut({ id: r.id, author_subject: person.subject, author_username: person.username, author_name: person.name, value: v, created_at: r.created_at, updated_at: t }, person);
@@ -133,7 +135,7 @@ function createSpaceData({ store, config, spaces, ai, now: clock = null }) {
     async function kvSet(space, person, key, value) {
         checkName('key', key);
         const v = jsonOf(value, limits.kvBytes);
-        throttle(`w:${space.id}:${person.subject}`, limits.writesPerMinute);
+        throttle(`w:${space.id}:${person.subject}`, writeLimit(person));
         if (!(await q.kvGet.get(space.id, person.subject, key)) && (await q.kvCount.get(space.id, person.subject)).n >= limits.kvKeysPerPerson) {
             throw new ApiError(429, 'quota', `a person keeps ${limits.kvKeysPerPerson} keys at most in one space`);
         }
@@ -221,7 +223,7 @@ function createSpaceData({ store, config, spaces, ai, now: clock = null }) {
     }
     async function revoke(bearer) { if (typeof bearer === 'string') await q.dropToken.run(sha(bearer)); }
 
-    return { run, listItems, grantedFor, approve, exchange, verify, revoke, CODE_TTL, TOKEN_TTL };
+    return { run, listItems, addItem, setItem, removeItem, kvGet, kvSet, kvRemove, grantedFor, approve, exchange, verify, revoke, CODE_TTL, TOKEN_TTL };
 }
 
 module.exports = { createSpaceData, NAME_RE };

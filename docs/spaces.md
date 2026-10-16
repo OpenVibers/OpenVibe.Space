@@ -51,10 +51,49 @@ Load it before your own script:
 | `OV.items.remove(collection, id)` | Removes the visitor's own item (the space's maker may remove any). |
 | `OV.kv.get(key)`, `OV.kv.set(key, value)`, `OV.kv.remove(key)` | The visitor's private storage in this space (up to 16 KB a value, 200 keys). |
 | `OV.ai.ask(text \| { messages })` | An answer from OpenVibe AI that follows the space's instructions, on behalf of the visitor. |
+| `OV.fn(name[, body][, { method, query }])` | Runs the space's `functions/<name>.js` on the server (POST when there is a body) and resolves with what it answered: JSON parsed, anything else as text. |
 
 Every call returns a Promise. A failure is an `Error` with `.code`: `auth.required` (call `OV.signIn()`), `quota`
 (try later), `space.capability` (the space did not ask for it), and so on. Collection names and keys are 1-64
 characters of letters, digits, `.`, `-` and `_`.
+
+## Functions (server code)
+
+A space may keep code that runs on the server instead of in the visitor's browser: answers nobody should see, a
+counter every visitor shares, a check before something is saved, a page put together per request. Each file
+`functions/<name>.js` (a name of 1-40 characters: `a-z`, `0-9`, `-`) defines one handler:
+
+```js
+// functions/hello.js
+async function handle(request, ov) {
+  const visits = ((await ov.store.get('visits')) || 0) + 1;
+  await ov.store.set('visits', visits);
+  return { hello: ov.user ? ov.user.display_name : 'stranger', visits };
+}
+```
+
+- **Where it runs:** on a published space at `https://<slug>.openvibe.website/api/<name>` (GET, HEAD and POST; it is
+  the published copy that runs, so a saved change waits for the next publish). The page calls it with
+  `OV.fn('hello')`, and a link or form may point at `/api/hello` directly. In the editor, the preview runs the copy in
+  the editor (unsaved changes too) as the maker, and each call's status and console lines show in **Function log**
+  under the preview. The files under `functions/` are never served as files, so their source stays private.
+- **`request`:** `{ method, path, query, headers, body }`. `headers` carries only `content-type`, `accept`,
+  `accept-language` and `user-agent`; `body` is parsed JSON, a form as an object, or text (64 KB at most). The
+  visitor's address and cookies never reach a function.
+- **`ov`:** `ov.user` (the visitor signed in through the SDK, or `null`), `ov.space` (`{ id, slug, name }`),
+  `ov.items.list/add/set/remove` (the shared lists: an add or set is the visitor's when they approved "data", otherwise
+  the space's own; a function may remove any item), `ov.store.get/set/remove` (the space's own storage on the server,
+  which no visitor reads directly), `ov.ai.ask` (for a signed-in visitor who approved "ai") and
+  `console.log/warn/error`.
+- **What it returns** becomes the answer: a string (HTML when it starts with `<`, text otherwise), any other value as
+  JSON, nothing as 204, or `{ status, headers, body }` (only `content-type` and `cache-control` headers are kept). An
+  answer to a signed-in visitor or to a POST is never cached.
+- **The sandbox:** each call runs in a fresh QuickJS runtime compiled to WebAssembly, on a worker thread: no network,
+  no files, no timers, no Node. It has 32 MB of memory, 1 s of its own computing and 5 s in all (time spent waiting on
+  `ov` is not computing), and at most 100 `ov` calls. A call that overstays answers 504; a thrown error answers 500
+  with its message.
+
+Starting from the **Trivia** template gives a working example: its answers live in `functions/check.js`.
 
 ## Sign-in, step by step
 
@@ -76,6 +115,8 @@ These are per person or per space, set in `server/hosting-config.js`:
 - 25 spaces per person, 20 files and 1 MB per space.
 - 20,000 list items per space, 30 writes a minute per person and space.
 - 20 AI builds per person a day, 6 AI questions a minute per person and space, 500 AI answers per space a day.
+- Functions: 240 calls a minute per space and 60 per caller (a signed-in visitor, or an address), two worker threads
+  (`SPACE_FN_WORKERS`), and 300 writes a minute for the space's own writes (ten times a person's).
 - Each OpenVibe AI run also counts against the person's own daily allowance in OpenVibe.AI.
 
 ## Code
@@ -87,7 +128,8 @@ These are per person or per space, set in `server/hosting-config.js`:
 | `server/spaces/api.js` | The API a space's page calls. |
 | `server/spaces/pages.js` and `render.js` | The pages, the editor's calls and the connect flow. |
 | `server/spaces/sdk.js` | The SDK. |
+| `server/spaces/functions.js`, `functions-worker.js` | Space functions: the worker pool, the `ov` calls and limits, and the QuickJS sandbox. |
 | `server/spaces/ai.js` | The OpenVibe.AI client. |
 | `server/spaces/templates.js` | The templates. |
 | `public/js/space-editor.js`, `public/css/spaces.css` | The editor and the styles. |
-| `test/spaces.test.js` | The tests. |
+| `test/spaces.test.js`, `test/space-functions.test.js` | The tests. |

@@ -36,9 +36,11 @@
   function fileOf(path) { return files.find(function (f) { return f.path === path; }); }
   function stash() { var f = fileOf(current); if (f) f.content = getText(); }
 
+  // Tabs: index.html, then the other top-level files, then folders (functions/…), each by name.
+  function tabRank(p) { return p === 'index.html' ? 0 : p.indexOf('/') < 0 ? 1 : 2; }
   function renderTabs() {
     tabs.replaceChildren();
-    files.forEach(function (f) {
+    files.slice().sort(function (a, b) { return tabRank(a.path) - tabRank(b.path) || (a.path < b.path ? -1 : a.path > b.path ? 1 : 0); }).forEach(function (f) {
       var b = document.createElement('button');
       b.type = 'button'; b.className = 'sp-ed-tab'; b.setAttribute('role', 'tab'); b.setAttribute('aria-selected', f.path === current ? 'true' : 'false');
       b.append(f.path);
@@ -87,9 +89,44 @@
     var d = ev.data;
     if (ev.source !== frame.contentWindow || !d || d.ovSpacePreview !== 1 || typeof d.op !== 'string') return;
     var reply = function (msg) { try { frame.contentWindow.postMessage(Object.assign({ ovSpacePreview: 1, id: d.id }, msg), '*'); } catch (e) { /* the frame reloaded */ } };
-    call('POST', '/preview', { op: d.op, args: d.args || {} })
-      .then(function (j) { reply({ ok: true, result: j.result }); }, function (e) { reply({ ok: false, code: e.code || 'error', message: e.message }); });
+    var args = d.args || {};
+    if (d.op === 'fn.call' && typeof args.name === 'string') {
+      // The function as it is in the editor now, saved or not.
+      stash();
+      var src = fileOf('functions/' + args.name + '.js');
+      if (src) args = Object.assign({}, args, { source: src.content });
+    }
+    var started = Date.now();
+    call('POST', '/preview', { op: d.op, args: args })
+      .then(function (j) {
+        if (d.op === 'fn.call') fnLog(args.name, j.result, Date.now() - started);
+        reply({ ok: true, result: j.result });
+      }, function (e) {
+        if (d.op === 'fn.call') fnLog(args.name, { status: e.status || 0, body: e.message, logs: [] }, Date.now() - started);
+        reply({ ok: false, code: e.code || 'error', message: e.message });
+      });
   });
+
+  // ── The function log: each OV.fn call in the preview, newest first, with what it logged ──
+  var fnLogBox = $('ed-fnlog'), fnLogList = $('ed-fnlog-list');
+  function fnLog(name, r, ms) {
+    if (!fnLogBox || !r) return;
+    var lines = [];
+    var head = document.createElement('li');
+    head.className = 'is-call' + (r.status >= 400 || !r.status ? ' is-error' : '');
+    head.textContent = 'functions/' + name + '.js → ' + (r.status || 'error') + ' · ' + ms + ' ms' + (r.status >= 400 || !r.status ? ' · ' + String(r.body || '').slice(0, 300) : '');
+    lines.push(head);
+    (r.logs || []).forEach(function (l) {
+      var li = document.createElement('li');
+      li.className = l[0] === 'warn' ? 'is-warn' : l[0] === 'error' ? 'is-error' : '';
+      li.textContent = l[1];
+      lines.push(li);
+    });
+    for (var i = lines.length - 1; i >= 0; i--) fnLogList.insertBefore(lines[i], fnLogList.firstChild);
+    while (fnLogList.children.length > 200) fnLogList.removeChild(fnLogList.lastChild);
+    $('ed-fnlog-last').textContent = '· ' + name + ' → ' + (r.status || 'error');
+    fnLogBox.hidden = false;
+  }
 
   // ── Saving ──
   function save() {
