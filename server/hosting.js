@@ -25,7 +25,7 @@ const { createWorker } = require('./worker');
 const { createSpaceBilling } = require('./billing');
 const { createStore } = require('./db');
 
-function createHosting(app, { db, auth, config: suppliedConfig, now, resolver, fetchImpl, indexnow: injectedIndexNow, log = console, storageDir, valkey, forumRedirect } = {}) {
+function createHosting(app, { db, auth, config: suppliedConfig, now, resolver, fetchImpl, indexnow: injectedIndexNow, log = console, storageDir, valkey, forumRedirect, spacesAiClient = null } = {}) {
     const config = suppliedConfig || load();
     const store = createStore(db, { now });
     const media = config.objectStore.mode === 'media' ? {
@@ -56,13 +56,35 @@ function createHosting(app, { db, auth, config: suppliedConfig, now, resolver, f
     const siteConfig = createSiteConfig({ store });
     const siteSources = createSiteSources({ store, sites });
     const viewers = createViewerResolver({ auth, config, log });
-    const tenant = createTenantServer({ store, config, blobs, takedowns, siteConfig, access, log });
+    const tenant = createTenantServer({ store, config, blobs, takedowns, siteConfig, access, apps: () => app.locals.ctx && app.locals.ctx.apps, log });
     const uploadGate = createUploadGate(config.uploads.maxConcurrent);
     const worker = createWorker({ config, store, domains, blobs, outbox, log });
     const billing = createSpaceBilling({ db, config, now: store.now, ...(fetchImpl ? { fetchImpl } : {}), log });
     const ctx = { config, store, blobs, outbox, billing, access, takedowns, projects, sites, deploys, domains, siteConfig, siteSources, auth, viewers, tenant, worker, uploadGate, indexnow, log, valkey: valkey || null };
     ctx.actorLimits = require('./http/actor-limits').createHostActorLimits({ registry: app.locals.metrics, valkey: ctx.valkey });
     app.locals.ctx = ctx;
+
+    // Spaces (server/spaces/): apps people make here and publish as sites of their Spaces project.
+    ctx.spaces = require('./spaces/spaces').createSpaces({ store, config, projects, sites, deploys, takedowns, log });
+    ctx.spacesAi = require('./spaces/ai').createSpacesAi({ config, client: spacesAiClient, log });
+    ctx.spaceData = require('./spaces/data').createSpaceData({ store, config, spaces: ctx.spaces, ai: ctx.spacesAi });
+    {
+        const { sdkSource } = require('./spaces/sdk');
+        const bySite = new Map();
+        ctx.apps = {
+            // The space a site serves (cached briefly: every request to a tenant asks).
+            async forSite(siteId) {
+                const hit = bySite.get(siteId);
+                if (hit && store.now() - hit.at < 15000) return hit.space;
+                const space = await ctx.spaces.forSite(siteId);
+                bySite.set(siteId, { space, at: store.now() });
+                if (bySite.size > 2000) bySite.clear();
+                return space;
+            },
+            forget(siteId) { bySite.delete(siteId); },
+            sdk: (space) => sdkSource({ mode: 'live', space, api: new URL(config.baseUrl).origin, avatar: `${config.networkUrl}/avatar/{username}` }),
+        };
+    }
     if (app.locals.metrics && typeof app.locals.metrics.gauge === 'function') {
         app.locals.metrics.gauge({
             name: 'space_sites', help: 'Active tenant sites',
@@ -94,8 +116,14 @@ function createHosting(app, { db, auth, config: suppliedConfig, now, resolver, f
         if (forumRedirect) app.use(forumRedirect);
         app.use(contracts.http.middleware());
         app.use('/api/v1/resources', rateLimit({ windowMs: 60_000, max: 240, standardHeaders: true, legacyHeaders: false }), viewers.middleware('api'), require('./registry/resource-control').router({ guard: guard('space.resource.control') }), resourceIndex.router({ guard: guard('space.resource.read') }));
+        app.use('/api/v1/apps', require('./spaces/api').createSpacesApi({ config, spaces: ctx.spaces, data: ctx.spaceData, sites, takedowns, log }));
         app.use('/api/v1', rateLimit({ windowMs: 60_000, max: 240, standardHeaders: true, legacyHeaders: false }), createApi(ctx));
         app.use('/preview', rateLimit({ windowMs: 60_000, max: 300, standardHeaders: true, legacyHeaders: false }), viewers.middleware('dashboard'), (req, res, next) => Promise.resolve(tenant.preview(req, res)).catch(next));
+        {
+            const spacesPages = require('./spaces/pages').createSpacesPages(ctx);
+            const spacesLimit = rateLimit({ windowMs: 60_000, max: 300, standardHeaders: true, legacyHeaders: false });
+            app.use((req, res, next) => (req.path === '/spaces' || req.path.startsWith('/spaces/') || req.path === '/_openvibe/sdk.js' ? spacesLimit(req, res, () => spacesPages(req, res, next)) : next()));
+        }
         app.use(rateLimit({ windowMs: 60_000, max: 300, standardHeaders: true, legacyHeaders: false }), createDashboard(ctx));
         require('./limits').mountLimits(app, config);
     };

@@ -29,15 +29,22 @@ function homePage() {
     const q = defaultQuotas();
     const row = (label, key, fmt = String) => ({ label, values: [fmt(q.production[key]), fmt(q.sandbox[key])] });
     const body = sc.hero({
-        eyebrow: 'OpenVibe.Space · static hosting',
-        title: 'Publish a static site.',
-        accent: 'Keep every deploy.',
-        lede: 'Static site hosting is built and tested: immutable, content-addressed deploys, one-step rollback, previews, Git ingest and verified custom domains. It is open to OpenVibe staff only until public launch.',
+        eyebrow: 'OpenVibe.Space · spaces',
+        title: 'Make a space.',
+        accent: 'An app on your OpenVibe account.',
+        lede: 'Describe what you want and OpenVibe AI builds it, or start from a template and change anything in the editor. A space signs visitors in with OpenVibe, keeps shared lists and private data, and talks to OpenVibe AI.',
         actions: [
-            { label: 'Hosting dashboard', href: '/dashboard', primary: true, icon: 'fa-globe' },
-            { label: 'How it works', href: '#how', icon: 'fa-route' },
+            { label: 'Make a space', href: '/spaces/new', primary: true, icon: 'fa-wand-magic-sparkles' },
+            { label: 'Browse spaces', href: '/spaces', icon: 'fa-shapes' },
         ],
-        note: 'Public hosting follows abuse handling and a designated DMCA agent. Until then only OpenVibe staff can create projects.',
+        note: 'The builder, the editor and the preview work for everyone signed in. Publishing a space at its own address opens with public hosting.',
+    }) + sc.cta({
+        title: 'Static hosting: publish a site, keep every deploy.',
+        text: 'Static site hosting is built and tested: immutable, content-addressed deploys, one-step rollback, previews, Git ingest and verified custom domains. It is open to OpenVibe staff only until public launch. Public hosting follows abuse handling and a designated DMCA agent. Until then only OpenVibe staff can create projects.',
+        actions: [
+            { label: 'Hosting dashboard', href: '/dashboard', primary: true },
+            { label: 'How it works', href: '#how' },
+        ],
     }) + sc.steps({
         id: 'how',
         title: 'How a deploy works',

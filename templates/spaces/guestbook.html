@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guestbook</title>
+<style>
+  :root { --bg: #fdf8f1; --card: #ffffff; --ink: #2b2118; --muted: #7a6a5a; --accent: #c2410c; --line: #eadfd2; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #17120e; --card: #221a14; --ink: #f4ebe1; --muted: #b3a291; --accent: #fb923c; --line: #3a2d22; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 Georgia, "Iowan Old Style", serif; }
+  main { max-width: 640px; margin: 0 auto; padding: 40px 16px 64px; }
+  h1 { font-size: 2.4rem; margin: 0 0 4px; letter-spacing: -0.02em; }
+  .sub { color: var(--muted); margin: 0 0 28px; }
+  form, .signin { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: grid; gap: 10px; }
+  label { font: 600 0.85rem system-ui, sans-serif; color: var(--muted); }
+  textarea { width: 100%; min-height: 84px; resize: vertical; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font: inherit; background: transparent; color: inherit; }
+  button { justify-self: start; border: 0; border-radius: 999px; padding: 10px 18px; background: var(--accent); color: #fff; font: 600 0.95rem system-ui, sans-serif; cursor: pointer; }
+  button:focus-visible, textarea:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 45%, transparent); outline-offset: 2px; }
+  .row { display: flex; justify-content: space-between; align-items: center; gap: 12px; font: 0.85rem system-ui, sans-serif; color: var(--muted); }
+  ol { list-style: none; margin: 28px 0 0; padding: 0; display: grid; gap: 14px; }
+  li { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; display: grid; grid-template-columns: 40px 1fr; gap: 12px; }
+  li img { width: 40px; height: 40px; border-radius: 50%; background: var(--line); object-fit: cover; }
+  .who { font: 600 0.9rem system-ui, sans-serif; } .when { color: var(--muted); font-weight: 400; margin-left: 6px; }
+  .note { margin: 2px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .empty, .error { color: var(--muted); text-align: center; padding: 24px; }
+  .error { color: var(--accent); }
+  .link { background: none; color: var(--muted); padding: 0; text-decoration: underline; font-weight: 400; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Guestbook</h1>
+  <p class="sub">Say hello and leave a note for everyone who visits.</p>
+  <div id="composer"></div>
+  <ol id="notes" aria-live="polite"><li class="empty" style="display:block">Loading notes…</li></ol>
+</main>
+<script src="/_openvibe/sdk.js"></script>
+<script>
+  const $ = (s) => document.querySelector(s);
+  const ago = (iso) => { const s = Math.max(1, (Date.now() - new Date(iso)) / 1000); const u = [[86400, 'd'], [3600, 'h'], [60, 'm']].find(([n]) => s >= n); return u ? Math.floor(s / u[0]) + u[1] + ' ago' : 'just now'; };
+  function el(tag, attrs, ...kids) { const e = document.createElement(tag); Object.assign(e, attrs || {}); kids.forEach((k) => e.append(k)); return e; }
+
+  function renderComposer() {
+    const box = $('#composer'); box.replaceChildren();
+    if (!OV.user) {
+      const b = el('button', { type: 'button', textContent: 'Sign in with OpenVibe to sign the guestbook' });
+      b.onclick = () => OV.signIn();
+      box.append(el('div', { className: 'signin' }, b));
+      return;
+    }
+    const text = el('textarea', { id: 'note', maxLength: 280, required: true, placeholder: 'Write something nice…' });
+    const count = el('span', { textContent: '280 left' });
+    text.oninput = () => { count.textContent = (280 - text.value.length) + ' left'; };
+    const out = el('button', { type: 'button', className: 'link', textContent: 'Sign out' });
+    out.onclick = () => OV.signOut();
+    const form = el('form', {},
+      el('label', { htmlFor: 'note', textContent: 'Signing as ' + OV.user.display_name }), text,
+      el('div', { className: 'row' }, el('button', { type: 'submit', textContent: 'Sign the guestbook' }), count), out);
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const value = text.value.trim(); if (!value) return;
+      form.querySelector('[type=submit]').disabled = true;
+      try { await OV.items.add('notes', { text: value }); text.value = ''; count.textContent = '280 left'; await load(); }
+      catch (err) { alert(err.code === 'quota' ? 'Slow down a little and try again in a minute.' : err.message); }
+      finally { form.querySelector('[type=submit]').disabled = false; }
+    };
+    box.append(form);
+  }
+
+  async function load() {
+    const list = $('#notes');
+    try {
+      const notes = await OV.items.list('notes', { limit: 100 });
+      list.replaceChildren();
+      if (!notes.length) { list.append(el('li', { className: 'empty', style: 'display:block', textContent: 'No notes yet. Be the first to sign!' })); return; }
+      for (const n of notes) {
+        const img = el('img', { alt: '', loading: 'lazy', src: 'https://openvibe.network/avatar/' + encodeURIComponent(n.author.username) });
+        img.onerror = () => { img.removeAttribute('src'); };
+        list.append(el('li', {}, img, el('div', {},
+          el('div', { className: 'who' }, n.author.display_name, el('span', { className: 'when', textContent: ago(n.created_at) })),
+          el('p', { className: 'note', textContent: String((n.value && n.value.text) || '') }))));
+      }
+    } catch (err) { list.replaceChildren(el('li', { className: 'error', style: 'display:block', textContent: 'Could not load the notes: ' + err.message })); }
+  }
+
+  OV.on('user', renderComposer);
+  OV.ready.then(() => { renderComposer(); load(); });
+</script>
+</body>
+</html>

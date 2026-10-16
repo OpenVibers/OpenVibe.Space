@@ -84,7 +84,7 @@ async function createApp(opts = {}) {
     app.locals.auth = auth;
     app.locals.config = config;
     app.locals.db = db;
-    const hosting = require('./hosting').createHosting(app, { db, auth, config: opts.hostingConfig, now: opts.now, resolver: opts.resolver, fetchImpl: opts.fetchImpl, indexnow: opts.indexnow, log: opts.log, storageDir: opts.storageDir, forumRedirect });
+    const hosting = require('./hosting').createHosting(app, { db, auth, config: opts.hostingConfig, now: opts.now, resolver: opts.resolver, fetchImpl: opts.fetchImpl, indexnow: opts.indexnow, log: opts.log, storageDir: opts.storageDir, forumRedirect, spacesAiClient: opts.spacesAiClient || null });
     app.locals.hosting = hosting;
     hosting.mountDispatch(app);
     app.get('/metrics', sharedMetrics.metricsHandler(registry));
@@ -158,7 +158,7 @@ async function createApp(opts = {}) {
         .send(seo.llmsFull({ site: SITE_NAME, summary: discovery.SUMMARY, base: config.baseUrl, sections: await discovery.llmsFullSections(), maxBytes: 512 * 1024 }))));
     app.get('/sitemap.xml', async (_req, res) => {
         let rows;
-        try { rows = await discovery.sitemapRows(release.full().released_at === release.full().booted_at ? undefined : release.full().released_at); } catch { return res.status(503).end(); }
+        try { rows = await discovery.sitemapRows(release.full().released_at === release.full().booted_at ? undefined : release.full().released_at, db); } catch { return res.status(503).end(); }
         res.type('application/xml').set('Cache-Control', cache.htmlHeaders({ maxAge: 3600 })).send(seo.sitemapXml(rows));
     });
 

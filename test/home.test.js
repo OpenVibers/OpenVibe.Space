@@ -2,7 +2,7 @@
 /**
  * What Space says about itself while it is rebuilt: the home page is honest (code and dynamic pages,
  * and "spaces" apps; nothing published yet) and links the forum on OpenVibe.Community; the discovery
- * files describe the same site and the sitemap holds the home page alone; health and readiness answer.
+ * files describe the same site and the sitemap holds the home page and the spaces gallery; health and readiness answer.
  */
 const assert = require('assert');
 
@@ -21,10 +21,12 @@ const { boot, check, done } = require('./helpers/app');
 (async () => {
     const t = await boot();
 
-    await check('the home page describes staff static hosting and links the forum on OpenVibe.Community', async () => {
+    await check('the home page leads with spaces, describes staff static hosting and links the forum on OpenVibe.Community', async () => {
         const r = await t.get('/');
         assert.strictEqual(r.status, 200);
-        assert.match(r.text, /<h1>Publish a static site\.<span class="sc-accent"> Keep every deploy\.<\/span><\/h1>/);
+        assert.match(r.text, /<h1>Make a space\.<span class="sc-accent"> An app on your OpenVibe account\.<\/span><\/h1>/);
+        assert.match(r.text, /href="\/spaces\/new"/, 'the home page starts a space');
+        assert.match(r.text, /<h2[^>]*>Static hosting: publish a site, keep every deploy\.<\/h2>/);
         assert.match(r.text, /Static site hosting is built and tested/);
         assert.match(r.text, /OpenVibe staff only until public launch/);
         assert.match(r.text, /What works now/);
@@ -51,12 +53,12 @@ const { boot, check, done } = require('./helpers/app');
         assert.doesNotMatch(r.text, /\/s\/feed\.xml/, 'no forum feed is advertised');
     });
 
-    await check('the sitemap holds the home page alone', async () => {
+    await check('the sitemap holds the home page and the spaces gallery (no published space yet)', async () => {
         const r = await t.get('/sitemap.xml');
         assert.strictEqual(r.status, 200);
         const locs = [...r.text.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
-        assert.deepStrictEqual(locs, ['https://openvibe.space/']);
-        assert.strictEqual(assertSitemapLastmods(r.text).length, 1);
+        assert.deepStrictEqual(locs, ['https://openvibe.space/', 'https://openvibe.space/spaces']);
+        assert.strictEqual(assertSitemapLastmods(r.text).length, 2);
     });
 
     await check('health and readiness answer, and readiness names the store', async () => {

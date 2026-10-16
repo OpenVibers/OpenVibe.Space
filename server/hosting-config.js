@@ -147,6 +147,28 @@ function load(env = process.env) {
 
         sites: { extraReservedNames: list(env.SPACE_RESERVED_SITE_NAMES).map((d) => d.toLowerCase()) },
 
+        // Spaces (server/spaces/): apps people make here. Making, editing, previewing and the AI builder are open to
+        // everyone signed in; publishing follows publicHosting (or staff). The limits keep one person or one space from
+        // filling the database or spending everyone's AI.
+        spaces: {
+            maxPerOwner: int(env.SPACE_SPACES_PER_OWNER, 25),
+            maxFiles: int(env.SPACE_SPACE_MAX_FILES, 20),
+            maxBytes: int(env.SPACE_SPACE_MAX_BYTES, 1 * MiB),
+            itemsPerSpace: int(env.SPACE_SPACE_ITEMS, 20000),
+            itemBytes: int(env.SPACE_SPACE_ITEM_BYTES, 8 * 1024),
+            kvKeysPerPerson: int(env.SPACE_SPACE_KV_KEYS, 200),
+            kvBytes: int(env.SPACE_SPACE_KV_BYTES, 16 * 1024),
+            writesPerMinute: int(env.SPACE_SPACE_WRITES_PER_MINUTE, 30),
+            apiPerMinute: int(env.SPACE_SPACE_API_PER_MINUTE, 300),
+            aiBuildsPerDay: int(env.SPACE_AI_BUILDS_PER_DAY, 20),
+            aiAsksPerMinute: int(env.SPACE_AI_ASKS_PER_MINUTE, 6),
+            aiAsksPerSpacePerDay: int(env.SPACE_AI_ASKS_PER_SPACE_PER_DAY, 500),
+            ai: {
+                enabled: String(env.SPACE_AI || 'on').trim().toLowerCase() !== 'off',
+                url: trim(env.OV_AI_INTERNAL_URL || env.OV_AI_URL || 'http://127.0.0.1:4700'),
+            },
+        },
+
         worker: {
             enabled: env.SPACE_WORKER !== 'off',
             id: env.SPACE_WORKER_ID || `space-${process.pid}`,

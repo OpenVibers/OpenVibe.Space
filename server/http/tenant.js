@@ -52,6 +52,29 @@ const TENANT_CSP = [
     'upgrade-insecure-requests',
 ].join('; ');
 
+/**
+ * A published space (server/spaces/) is an app, not only a static site: its own inline scripts, pinned CDN libraries,
+ * fonts, and calls to Space's API for the space SDK. It still runs only on its own registrable origin, so the network's
+ * cookies and pages stay out of its reach; the details page on openvibe.space may embed it.
+ */
+function appCsp(config) {
+    const api = new URL(config.baseUrl).origin;
+    return [
+        "default-src 'self'",
+        "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com",
+        "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com https://fonts.googleapis.com",
+        "img-src 'self' data: blob: https:",
+        "font-src 'self' data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://fonts.gstatic.com",
+        "media-src 'self' data: blob: https:",
+        `connect-src 'self' ${api}`,
+        "object-src 'none'",
+        "base-uri 'self'",
+        `form-action 'self' ${api}`,
+        `frame-ancestors 'self' ${api}`,
+        'upgrade-insecure-requests',
+    ].join('; ');
+}
+
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '::1', '[::1]']);
 
 /**
@@ -123,7 +146,7 @@ function applyConfiguredHeaders(res, headers) {
     }
 }
 
-function createTenantServer({ store, config, blobs, takedowns = null, siteConfig = null, access = null, log = console }) {
+function createTenantServer({ store, config, blobs, takedowns = null, siteConfig = null, access = null, apps = null, log = console }) {
     const { db } = store;
     const q = {
         siteByName: db.prepare("SELECT s.*, p.environment FROM space_sites s JOIN space_projects p ON p.id = s.project_id WHERE s.name = ? AND s.status = 'active' AND p.status = 'active'"),
@@ -318,6 +341,9 @@ function createTenantServer({ store, config, blobs, takedowns = null, siteConfig
         // tenant can never weaken CSP/HSTS/nosniff or set a cookie.
         if (cfg) applyConfiguredHeaders(res, cfg.headers);
         baseHeaders(res, { sandbox: site.environment === 'sandbox' });
+        // A published space: the app policy, and the space SDK at /_openvibe/sdk.js (never one of its files).
+        const space = apps && apps() ? await apps().forSite(site.id) : null;
+        if (space) res.setHeader('Content-Security-Policy', appCsp(config));
         if (req.method !== 'GET' && req.method !== 'HEAD') {
             return plain(res, 405, 'Static site: only GET and HEAD are supported.', { Allow: 'GET, HEAD' });
         }
@@ -338,6 +364,12 @@ function createTenantServer({ store, config, blobs, takedowns = null, siteConfig
         const q0 = target.indexOf('?');
         const rawPath = q0 >= 0 ? target.slice(0, q0) : target;
         const search = q0 >= 0 ? target.slice(q0) : '';
+        if (space && rawPath === '/_openvibe/sdk.js') {
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+            res.setHeader('Cache-Control', 'no-cache');
+            return res.end(req.method === 'HEAD' ? undefined : apps().sdk(space));
+        }
         // A configured redirect: an exact path to a local path (validated on write, never an open redirect).
         // It does not need an active deploy, and it is checked before anything is read from one.
         if (cfg && cfg.redirects.length) {
@@ -436,4 +468,4 @@ function createTenantServer({ store, config, blobs, takedowns = null, siteConfig
     return { resolve, handle, preview, unknownHost, normaliseHost, candidates, TENANT_CSP };
 }
 
-module.exports = { createTenantServer, normaliseHost, TENANT_CSP };
+module.exports = { createTenantServer, normaliseHost, TENANT_CSP, appCsp };

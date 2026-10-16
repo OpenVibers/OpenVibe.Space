@@ -66,6 +66,7 @@ function navbarInit(opts) {
         // decision, 2026-10-08), so its link points there rather than at a /s that redirects.
         links: [
             { label: 'Home', href: '/', active: opts.active === 'home' },
+            { label: 'Spaces', href: '/spaces', active: opts.active === 'spaces' },
             { label: 'Hosting', href: '/dashboard' },
             { label: 'The forum', href: `${config.communityUrl}/s` },
         ],
@@ -122,7 +123,7 @@ function renderPage(o) {
     // with the navbar init, the noscript nav and the SSR footer; the rest of the head is this site's own.
     const html = shell.page({
         name: SITE_NAME, service: 'space', lang: 'en',
-        title: o.title || `${SITE_NAME} — static hosting`,
+        title: o.title || `${SITE_NAME} — spaces and static hosting`,
         titleSuffix: o.title ? ` · ${SITE_NAME}` : undefined,
         siteName: SITE_NAME, description, canonical, robots: o.robots || 'index,follow',
         type: o.ogType || 'website', image: o.ogImage || DEFAULT_OG_IMAGE, imageAlt: o.imageAlt,

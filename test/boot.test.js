@@ -67,8 +67,8 @@ async function check(name, fn) {
             const r = await fetch(`${base}/`);
             assert.strictEqual(r.status, 200);
             const html = await r.text();
-            assert.match(html, /<title>OpenVibe\.Space — static hosting<\/title>/);
-            assert.match(html, /<h1>Publish a static site\.<span class="sc-accent"> Keep every deploy\.<\/span><\/h1>/);
+            assert.match(html, /<title>OpenVibe\.Space — spaces and static hosting<\/title>/);
+            assert.match(html, /<h1>Make a space\.<span class="sc-accent"> An app on your OpenVibe account\.<\/span><\/h1>/);
             assert.match(html, /The forum moved to OpenVibe\.Community/);
             assert.match(html, /href="https:\/\/openvibe\.community\/s"/);
         });
