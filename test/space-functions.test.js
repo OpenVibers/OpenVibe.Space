@@ -58,6 +58,26 @@ const b64url = (buf) => buf.toString('base64').replace(/\+/g, '-').replace(/\//g
         assert.strictEqual((await run('function handle() { return "still fine"; }')).body, 'still fine', 'the worker survives all of it');
     });
 
+    await check('the module and CommonJS spellings of a handler work (models write them)', async () => {
+        const spellings = {
+            'export async function handle(r, ov) {\n  return "a";\n}': 'a',
+            'export default async function handle() { return "b"; }': 'b',
+            'export default function (r) { return "c" + r.method; }': 'cGET',
+            'const handle = async () => "d";\nexport { handle };': 'd',
+            'async function handle() { return "e"; }\nexport default handle;': 'e',
+            'module.exports = { handle: async () => "f" };': 'f',
+            'module.exports = async () => "g";': 'g',
+            'exports.handle = () => "h";': 'h',
+            'export const handle = () => "i";': 'i',
+        };
+        for (const [code, want] of Object.entries(spellings)) assert.strictEqual((await run(code)).body, want, code);
+        const err = await run('// one\n// two\nexport function handle() { return nope; }');
+        assert.match(err.body, /'?nope'? is not defined \(line 3\)/, 'the error and its line');
+        const { asScript } = require('../server/spaces/functions');
+        assert.strictEqual(asScript('a\nexport function handle() {}\nb').split('\n').length, 3, 'lines keep their numbers');
+        assert.strictEqual(asScript('const s = "export function x";'), 'const s = "export function x";', 'only at the start of a line');
+    });
+
     await check('one run makes at most 100 ov calls; a caller makes a limited number of calls a minute', async () => {
         const many = await run('async function handle(r, ov) { for (let i = 0; i < 150; i++) await ov.store.get("k"); return "done"; }');
         assert.deepStrictEqual([many.status, /at most 100 ov calls/.test(many.body)], [500, true]);

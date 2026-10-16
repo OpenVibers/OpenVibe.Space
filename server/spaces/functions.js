@@ -143,7 +143,7 @@ function createSpaceFunctions({ data, workers = 2, queueMax = 32, log = console,
             user: visitor ? { username: visitor.person.username, display_name: visitor.person.name || visitor.person.username } : null,
             space: { id: space.id, slug: space.slug, name: space.name },
         };
-        const r = await submit({ name, code, request, context, ops_: opsFor(space, visitor) });
+        const r = await submit({ name, code: asScript(code), request, context, ops_: opsFor(space, visitor) });
         const fail = (status, text, logs = []) => ({ status, headers: { 'content-type': 'text/plain; charset=utf-8' }, body: text, logs });
         if (r.busy) return fail(503, 'Space functions are busy right now; try again in a moment.');
         if (r.error) {
@@ -165,6 +165,21 @@ function createSpaceFunctions({ data, workers = 2, queueMax = 32, log = console,
     return { call, close, NAME_RE };
 }
 
+/**
+ * The function as a plain script: the module spellings people (and models) write still work. `export` goes from
+ * `export [async] function|const|let|var|class`, `export default [async] function handle`, `export { … }` and
+ * `export default handle;`; an anonymous `export default [async] function (…)` becomes the handler. Lines keep their
+ * numbers, so errors still point at the right one.
+ */
+function asScript(code) {
+    return code
+        .replace(/^([ \t]*)export[ \t]+default[ \t]+(async[ \t]+)?function[ \t]*\(/m, (m, i, a) => `${i}globalThis.handle = ${a || ''}function (`)
+        .replace(/^([ \t]*)export[ \t]+default[ \t]+(async[ \t]+)?function[ \t]+handle\b/m, (m, i, a) => `${i}${a || ''}function handle`)
+        .replace(/^([ \t]*)export[ \t]+(?=(?:async[ \t]+)?function\b|const\b|let\b|var\b|class\b)/gm, '$1')
+        .replace(/^([ \t]*)export[ \t]*\{[^}\n]*\}[ \t]*;?/gm, '$1')
+        .replace(/^([ \t]*)export[ \t]+default[ \t]+handle[ \t]*;?/gm, '$1');
+}
+
 /** What handle returned → { status, headers, body (string) }. */
 function toResponse(out) {
     const kind = (s) => (/^\s*</.test(s) ? 'text/html; charset=utf-8' : 'text/plain; charset=utf-8');
@@ -184,4 +199,4 @@ function toResponse(out) {
     return { status: 200, headers: { 'content-type': 'application/json; charset=utf-8' }, body: JSON.stringify(out) };
 }
 
-module.exports = { createSpaceFunctions, toResponse, NAME_RE, FN_DEADLINE_MS, FN_CPU_MS, MAX_SOURCE };
+module.exports = { createSpaceFunctions, toResponse, asScript, NAME_RE, FN_DEADLINE_MS, FN_CPU_MS, MAX_SOURCE };
