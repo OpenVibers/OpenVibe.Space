@@ -15,7 +15,7 @@ const { createPgTelemetrySink, startTelemetryRetention } = require('openvibe-sdk
     const app = await createApp();
     const server = app.listen(config.port, config.host, () => {
         console.log(`[Space] ${config.nodeEnv} on http://${config.host}:${config.port} → ${config.baseUrl}`);
-        console.log(`[Space] static hosting for staff; dynamic pages and spaces planned; the forum is on ${config.communityUrl}; identity via ${config.networkUrl}`);
+        console.log(`[Space] spaces and static hosting (publishing for staff until launch); the forum is on ${config.communityUrl}; identity via ${config.networkUrl}`);
     });
     server.keepAliveTimeout = 65_000;
     // Request telemetry (openvibe-sdk/service, plan T1): one aggregated sample per route template, method and status
@@ -25,6 +25,14 @@ const { createPgTelemetrySink, startTelemetryRetention } = require('openvibe-sdk
     app.locals.hosting.worker.start();
     app.locals.hosting.outbox.start();
     app.locals.hosting.billing.start();   // off unless SPACE_BILLING_INTERVAL_MS > 0
+    // The two account subscriptions at OpenVibe.Events (ADR-033), created when missing; off without EVENTS_URL,
+    // SPACE_EVENTS_SECRET or the client secret.
+    const hc = app.locals.hosting.config;
+    const { startSubscriptions, TOPICS } = require('openvibe-sdk/account-data');
+    const subscriptions = startSubscriptions({
+        topics: TOPICS, eventsUrl: hc.events.url, endpoint: `http://127.0.0.1:${config.port}/internal/events`, secret: hc.events.secrets[0],
+        networkInternalUrl: hc.networkInternalUrl, clientId: hc.oauth.clientId, clientSecret: hc.oauth.clientSecret,
+    });
 
     // ── Stop (roadmap WS-P lifecycle; openvibe-sdk/service) ──────
     // SIGTERM: the server stops taking connections, closes idle keep-alive ones (it keeps them 65 s
@@ -34,7 +42,7 @@ const { createPgTelemetrySink, startTelemetryRetention } = require('openvibe-sdk
     gracefulStop({
         name: 'Space', server,
         drainMs: 4000, deadlineMs: 5000, deadlineExitCode: 1,
-        stop: [async () => { app.locals.hosting.worker.stop(); await app.locals.hosting.outbox.stop(); await app.locals.hosting.billing.stop(); }],
+        stop: [async () => { if (subscriptions) subscriptions.stop(); app.locals.hosting.worker.stop(); await app.locals.hosting.outbox.stop(); await app.locals.hosting.billing.stop(); }],
         close: [
             async () => { if (telemetryRetention) await telemetryRetention.stop(); await telemetry.stop(); },
             async () => {
