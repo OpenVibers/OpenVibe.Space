@@ -266,6 +266,10 @@ function fakeAi() {
         assert.strictEqual((await t.api('GET', `/spaces/${slug}`, { session: bob })).status, 404, 'a draft again');
         await edit(alice, 'POST', `/spaces/${slug}/delete`);
         assert.strictEqual((await t.api('GET', `/spaces/${slug}`, { session: alice })).status, 404);
+        for (const table of ['space_apps', 'space_app_files', 'space_app_items', 'space_app_kv', 'space_app_grants']) {
+            const n = (await t.ctx.store.db.prepare(`SELECT count(*) AS n FROM ${table} WHERE ${table === 'space_apps' ? 'id' : 'space_id'} = ?`).get(space.id)).n;
+            assert.strictEqual(Number(n), 0, `${table}: deleting is for good`);
+        }
     });
 
     await t.close();
