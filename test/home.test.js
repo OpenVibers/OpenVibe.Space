@@ -37,6 +37,15 @@ const { boot, check, done } = require('./helpers/app');
         assert.doesNotMatch(r.text, /href="\/s"/, 'nothing links a /s that only redirects');
     });
 
+    await check('/updates is this site\'s own update log, and the footer links it', async () => {
+        const r = await t.get('/updates');
+        assert.strictEqual(r.status, 200);
+        assert.ok(r.text.includes('What shipped on OpenVibe.Space'));
+        assert.ok(r.text.includes('data-ov-shipped') && r.text.includes('data-service="space"'), 'the shared log, for space');
+        const home = await t.get('/');
+        assert.ok(!home.text.includes('openvibe.community/updates'), 'the footer no longer sends readers to the community\'s log');
+    });
+
     await check('robots.txt points at the sitemap and keeps the private paths out', async () => {
         const r = await t.get('/robots.txt');
         assert.strictEqual(r.status, 200);
