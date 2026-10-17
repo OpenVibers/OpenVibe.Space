@@ -40,7 +40,7 @@ function homePage() {
         note: 'The builder, the editor and the preview work for everyone signed in. Publishing a space at its own address opens with public hosting.',
     }) + sc.cta({
         title: 'Static hosting: publish a site, keep every deploy.',
-        text: 'Static site hosting is built and tested: immutable, content-addressed deploys, one-step rollback, previews, Git ingest and verified custom domains. It is open to OpenVibe staff only until public launch. Public hosting follows abuse handling and a designated DMCA agent. Until then only OpenVibe staff can create projects.',
+        text: 'Immutable, content-addressed deploys with one-step rollback, previews, Git deploys and verified custom domains. OpenVibe staff host here today; it opens to everyone once abuse handling and a designated DMCA agent are in place.',
         actions: [
             { label: 'Hosting dashboard', href: '/dashboard', primary: true },
             { label: 'How it works', href: '#how' },
