@@ -87,7 +87,7 @@ function footerInit(opts) {
         variant: opts.footerVariant || 'full',
         mount: '#ov-footer',
         brandName: SITE_NAME,
-        updates: `${config.communityUrl}/updates`,   // this site ships with the community's log for now
+        updates: '/updates',
         tagline: 'Static hosting for the people of OpenVibe.',
         legalBase: config.liveUrl,
         links: [{
@@ -130,7 +130,7 @@ function renderPage(o) {
         jsonLd: o.jsonLd, alternates: o.alternates,
         summary: description, url: canonical, updated: o.modified,
         navbar: nav, home: '/', navLinks: nav.links.map(({ label, href }) => ({ label, href })),
-        footer: { service: 'space', variant: 'full', updates: `${config.communityUrl}/updates` },
+        footer: { service: 'space', variant: 'full', updates: '/updates' },
         head: [
             o.published ? `<meta property="article:published_time" content="${escapeHtml(o.published)}">` : '',
             o.modified ? `<meta property="article:modified_time" content="${escapeHtml(o.modified)}">` : '',

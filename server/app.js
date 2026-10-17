@@ -139,8 +139,14 @@ async function createApp(opts = {}) {
     app.use('/auth', createAuthRoutes(config, auth));
     { const legal = require('openvibe-shared/legal'); app.get(legal.PATHS, legal.handler({ id: 'space', service: 'space', host: 'openvibe.space', name: 'OpenVibe.Space', profile: 'ugc' })); app.get('/tos', (_req, res) => res.redirect(301, '/terms')); }
 
-    // /updates: Space ships with the community's log until it has one of its own.
-    app.get('/updates', (_req, res) => res.redirect(302, `${config.communityUrl}/updates`));
+    // /updates: what shipped on OpenVibe.Space, the shared update log every OpenVibe site has (it pointed at the
+    // community's log, which lists the community's changes, not this site's).
+    app.get('/updates', (req, res) => {
+        const { renderPage } = require('./render/layout');
+        const frame = require('openvibe-shared/frame');
+        const body = frame.updatesBody({ service: 'space', siteName: 'OpenVibe.Space' }) + `<script src="${require('openvibe-shared/serve').url('shipped.js')}" defer></script>`;
+        res.type('html').send(renderPage({ title: 'What shipped on OpenVibe.Space', description: 'Every change deployed to OpenVibe.Space, newest first, from the OpenVibe network\'s shared update log.', canonicalPath: '/updates', body, viewer: req.viewer, config, path: req.originalUrl, indexable: true }));
+    });
 
     app.get('/api/health', (_req, res) => res.json({ status: 'ok', service: 'openvibe-space', version: VERSION }));
     // GET /release.json (ADR-016) and POST /release-metrics: open tabs' update reports (a same-origin
