@@ -125,7 +125,7 @@
 .hd-url i { font-size: 11px; opacity: .7; }
 .hd-url:hover { color: var(--hd-text) !important; text-decoration: underline; }
 .hd-url--big { font-size: 15px; font-weight: 600; color: var(--accent-light, var(--hd-accent)) !important; }
-.hd-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; margin: 0 0 20px; }
+.hd-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); gap: 14px; margin: 0 0 20px; }
 .hd-tile { display: flex; gap: 14px; align-items: flex-start; padding: 18px; border: 1px solid var(--hd-line); border-radius: 16px; background: var(--hd-card); color: var(--hd-text) !important; text-decoration: none; transition: border-color .15s; }
 .hd-tile:hover, .hd-tile:focus-visible { border-color: var(--hd-accent); outline: 0; }
 .hd-tile__icon { display: grid; place-items: center; flex: none; width: 40px; height: 40px; border-radius: 12px; background: color-mix(in srgb, var(--hd-accent) 16%, transparent); color: var(--accent-light, var(--hd-accent)); }
