@@ -56,7 +56,7 @@ function galleryPage({ viewer, spaces, templates, q, sort, csrf }) {
         eyebrow: 'OpenVibe.Space · spaces',
         title: 'Make a space.',
         accent: 'An app on your OpenVibe account.',
-        lede: 'Describe it and OpenVibe AI builds it, or start from a template and change anything in the editor. Spaces sign visitors in with OpenVibe, keep shared lists and private data, and can talk to OpenVibe AI.',
+        lede: 'Describe it and OpenVibe AI builds it, or start from a template and change anything in the editor. Spaces sign visitors in with OpenVibe, keep shared lists and private data, talk to OpenVibe AI and run their own server code.',
         actions: [
             { label: 'Make a space', href: viewer ? '/spaces/new' : signInHref('/spaces/new'), primary: true, icon: 'fa-wand-magic-sparkles' },
             ...(viewer ? [{ label: 'Your spaces', href: '/spaces/mine', icon: 'fa-shapes' }] : []),
