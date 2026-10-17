@@ -18,7 +18,7 @@ const { boot, check, done, DASHBOARD } = require('./stageb/boot');
     await check('the public page and sitemap stay on Space', async () => {
         const r = await t.get(DASHBOARD, '/');
         assert.strictEqual(r.status, 200);
-        assert.match(r.text, /Static site hosting is built and tested/);
+        assert.match(r.text, /Immutable, content-addressed deploys with one-step rollback/);
         assert.match(r.text, /<link rel="canonical" href="https:\/\/openvibe\.space\/">/);
         const map = await t.get(DASHBOARD, '/sitemap.xml');
         assert.strictEqual(map.status, 200);

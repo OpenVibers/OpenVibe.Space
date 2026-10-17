@@ -10,8 +10,8 @@ const { boot, check, done } = require('./stageb/boot');
     await check('the public front page explains the tested engine and launch gate', async () => {
         const r = await t.api('GET', '/');
         assert.strictEqual(r.status, 200);
-        assert.match(r.text, /Static site hosting is built and tested/);
-        assert.match(r.text, /OpenVibe staff only until public launch/);
+        assert.match(r.text, /Immutable, content-addressed deploys with one-step rollback/);
+        assert.match(r.text, /OpenVibe staff host here today; it opens to everyone once abuse handling/);
         assert.match(r.text, /designated DMCA agent/);
         assert.doesNotMatch(r.text, /Planned|not built/, 'the home shows what works, never what is planned');
     });
