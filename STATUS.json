@@ -2,7 +2,7 @@
   "repository": "OpenVibers/OpenVibe.Space",
   "stage": "alpha",
   "code": true,
-  "plan": "T20 step 2: static hosting engine moved into Space; public launch remains gated",
+  "plan": "T20 step 2: spaces (apps on an OpenVibe account) and the static hosting engine; publishing at a public address remains gated",
   "runtime": "node 22, express, PostgreSQL 18 (openvibe-sdk/db, async)",
   "port": 4940,
   "domain": "openvibe.space",
@@ -24,14 +24,18 @@
     "tenant serving at <name>.openvibe.website",
     "permanent forum redirects to OpenVibe.Community",
     "Network OAuth sign-in, discovery, health and readiness",
-    "usage readings (storage, local mode): daily gb-month readings to OpenVibe.Billing, off unless SPACE_BILLING_INTERVAL_MS > 0"
+    "usage readings (storage, local mode): daily gb-month readings to OpenVibe.Billing, off unless SPACE_BILLING_INTERVAL_MS > 0",
+    "spaces at /spaces: an app made by the AI builder (OpenVibe.AI space.app.build) or from a template (guestbook, AI buddy, poll, reaction game, trivia, private to-dos, blank), forked, and edited in a browser editor with a sandboxed live preview",
+    "the space SDK (/_openvibe/sdk.js): OpenVibe sign-in the visitor approves once (PKCE), shared lists, private storage, the space's own AI (space.app.ask on behalf of the visitor) and OV.fn",
+    "space functions: functions/<name>.js run in a QuickJS WebAssembly sandbox on worker threads (1 s CPU, 5 s, 32 MB, 100 ov calls; no network, files or Node) at <slug>.openvibe.website/api/<name> and in the editor's preview",
+    "account export and deletion for spaces (ADR-033, openvibe-sdk/account-data)"
   ],
   "knownGaps": [
+    "Publishing a space at its own address waits for the public hosting launch (SPACE_PUBLIC_HOSTING, staff until then); making, editing and previewing spaces work for everyone signed in",
     "Public project creation is off until abuse handling and a designated DMCA agent are in place",
-    "Dynamic pages and spaces apps are not built",
     "The historical forum tables remain in ov_space; this code move copies no production hosting data",
     "No app or agent holds a space.* grant on OpenVibe.Network yet; staff use the dashboard"
   ],
   "hostingDeployed": false,
-  "updated": "2026-10-15"
+  "updated": "2026-10-17"
 }
