@@ -7,7 +7,7 @@
   "port": 4940,
   "domain": "openvibe.space",
   "contracts": "openvibe-contracts v0.200.0",
-  "sdk": "openvibe-sdk v0.50.1",
+  "sdk": "openvibe-sdk v0.60.0",
   "shared": "openvibe-shared v4.4.0",
   "capabilities": [
     "space.site.manage",
@@ -37,5 +37,5 @@
     "No app or agent holds a space.* grant on OpenVibe.Network yet; staff use the dashboard"
   ],
   "hostingDeployed": false,
-  "updated": "2026-10-17"
+  "updated": "2026-10-20"
 }
