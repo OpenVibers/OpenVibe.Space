@@ -69,3 +69,9 @@ body {
 .sc-note a {
   overflow-wrap: anywhere;
 }
+
+/* The home's questions, in the kit's tokens. */
+.space-faq { border: 1px solid var(--border, #1f2d47); border-radius: 10px; padding: 4px 16px; margin: 8px 0; background: var(--bg-card, #131c2e); }
+.space-faq[open] { padding-bottom: 12px; }
+.space-faq summary { cursor: pointer; font-weight: 600; padding: 8px 0; }
+.space-faq p { margin: 4px 0 0; color: var(--text-secondary, #96a7c2); }

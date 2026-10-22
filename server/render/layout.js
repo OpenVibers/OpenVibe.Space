@@ -21,7 +21,7 @@ function escapeHtml(s) {
 
 const SITE_NAME = 'OpenVibe.Space';
 const NETWORK_URL = 'https://openvibe.network';
-const DEFAULT_DESCRIPTION = 'OpenVibe.Space hosts static sites for OpenVibe staff, with immutable deploys, rollback, previews, Git ingest and custom domains. Dynamic pages and spaces are planned.';
+const DEFAULT_DESCRIPTION = 'OpenVibe.Space: apps on your OpenVibe account, built with OpenVibe AI or from a template, and static hosting with immutable deploys and rollback.';
 const DEFAULT_OG_IMAGE = `${config.baseUrl}/og-default.png`;
 
 // Content-hashed asset URLs so browsers and nginx can cache them for a year and still pick up
