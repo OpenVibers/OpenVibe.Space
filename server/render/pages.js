@@ -14,6 +14,18 @@ const { renderPage, escapeHtml: esc } = require('./layout');
 const FORUM_URL = `${config.communityUrl}/s`;
 const FORUM_LABEL = FORUM_URL.replace(/^https?:\/\//, '');
 const SERVICES_URL = 'https://openvibe.services/';
+const TEMPLATES = require('../spaces/templates').list();
+
+const HOME_DESCRIPTION = 'Make an app on your OpenVibe account: describe it and OpenVibe AI builds it, or start from a template. Sign-in, shared data and AI are built in.';
+/** The home's questions: shown on the page and given to search engines as FAQPage data (the same text). */
+const HOME_FAQ = [
+    { q: 'What is a space?', a: 'A small app on your OpenVibe account: a page with your own code that signs visitors in with OpenVibe, keeps shared lists and each visitor\'s private data, can call OpenVibe AI, and can run server functions.' },
+    { q: 'Do I need to know how to code?', a: 'No. Describe what you want and OpenVibe AI builds a first version, or start from a template. Everything is editable in the editor, with a live preview beside it.' },
+    { q: 'Who can use a space I make?', a: 'Anyone you share it with signs in with their OpenVibe account. Each visitor\'s private data is theirs; shared lists are what everyone in the space sees.' },
+    { q: 'Can I publish a space at its own address?', a: 'Publishing at its own address opens with public hosting, once abuse handling and a designated DMCA agent are in place. The builder, the editor and the preview work for everyone signed in today.' },
+    { q: 'What is static hosting?', a: 'Immutable deploys of a built site with previews, one-step rollback, Git deploys and verified custom domains under openvibe.website. OpenVibe staff host on it today; it opens to everyone with public hosting.' },
+    { q: 'Where did the forum go?', a: 'The forum moved to OpenVibe.Community; old links redirect there.' },
+];
 
 const MiB = 1024 * 1024;
 const size = (n) => (n >= 1024 * MiB ? `${n / (1024 * MiB)} GB` : `${Math.round(n / MiB)} MB`);
@@ -38,6 +50,19 @@ function homePage() {
             { label: 'Browse spaces', href: '/spaces', icon: 'fa-shapes' },
         ],
         note: 'The builder, the editor and the preview work for everyone signed in. Publishing a space at its own address opens with public hosting.',
+    }) + sc.features({
+        id: 'templates',
+        title: 'Start from a template',
+        lede: 'Each one is a working space you can open in the editor and change: sign-in, data and AI already wired.',
+        items: TEMPLATES.filter((t) => t.id !== 'blank').map((t) => ({ icon: t.icon, title: t.name, text: t.description, href: '/spaces/new' })),
+    }) + sc.steps({
+        title: 'How a space comes together',
+        items: [
+            { title: 'Describe it, or pick a template', text: 'Say what the app should do and OpenVibe AI writes a first version, or open a template.', href: '/spaces/new' },
+            { title: 'Change anything', text: 'The editor shows your space\'s files with a sandboxed preview beside them, so every change is visible at once.' },
+            { title: 'Sign-in, data and AI built in', text: 'The space SDK gives you the visitor\'s OpenVibe profile, shared lists, private storage, OpenVibe AI and server functions.' },
+            { title: 'Share it', text: 'People open it with their OpenVibe account; publishing at its own address opens with public hosting.' },
+        ],
     }) + sc.cta({
         title: 'Static hosting: publish a site, keep every deploy.',
         text: 'Immutable, content-addressed deploys with one-step rollback, previews, Git deploys and verified custom domains. OpenVibe staff host here today; it opens to everyone once abuse handling and a designated DMCA agent are in place.',
@@ -85,12 +110,19 @@ curl -X POST "https://openvibe.space/api/v1/sites/$SITE_ID/deploys?activate=1" \
             row('Largest file', 'maxFileBytes', size),
         ],
         source: 'https://github.com/OpenVibers/OpenVibe.Space/blob/main/server/hosting-config.js',
-    }) + sc.cta({
+    }) + `<section class="sc-sec" id="questions" aria-labelledby="space-faq-h"><h2 id="space-faq-h">Questions</h2>${HOME_FAQ.map((f) => `<details class="space-faq"><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`).join('')}</section>` + sc.cta({
         title: 'Looking for the forum?',
         text: 'The forum moved to OpenVibe.Community.',
         actions: [{ label: 'Open the forum', href: FORUM_URL, primary: true }],
     });
-    return renderPage({ canonicalPath: '/', active: 'home', styles: [sc.STYLESHEET], body });
+    const site = String(config.publicUrl || config.baseUrl || 'https://openvibe.space').replace(/\/+$/, '');
+    return renderPage({
+        canonicalPath: '/', active: 'home', styles: [sc.STYLESHEET], body, description: HOME_DESCRIPTION,
+        jsonLd: [
+            { '@context': 'https://schema.org', '@type': 'WebSite', name: 'OpenVibe.Space', url: `${site}/`, description: HOME_DESCRIPTION },
+            { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: HOME_FAQ.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) },
+        ],
+    });
 }
 
 // ── Errors ───────────────────────────────────────────────────
