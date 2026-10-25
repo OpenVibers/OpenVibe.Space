@@ -73,7 +73,7 @@
 /* A space's page */
 .sp-frame { margin: 20px 0 8px; border: 1px solid var(--border, #2c3d5c); border-radius: 16px; overflow: hidden; background: #fff; }
 .sp-frame iframe { display: block; width: 100%; height: min(70vh, 640px); border: 0; }
-.sp-caps { list-style: none; padding: 0; margin: 8px 0 16px; display: grid; gap: 8px; }
+.sp-caps { list-style: none; padding: 0; margin: 8px 0 16px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
 .sp-caps li { display: flex; gap: 10px; align-items: baseline; }
 .sp-caps i { color: var(--accent, #60a5fa); width: 18px; text-align: center; }
 
@@ -119,7 +119,7 @@ body[data-page="spaces"] .page:has(.sp-editor) { padding-bottom: 0; }
 /* The preview's server function calls (OV.fn): each call's status and its console lines. */
 .sp-ed-fnlog { border-top: 1px solid var(--border, #2c3d5c); font-size: 0.84rem; max-height: 34vh; overflow: auto; }
 .sp-ed-fnlog summary { cursor: pointer; padding: 6px 10px; }
-.sp-ed-fnlog ol { list-style: none; margin: 0; padding: 0 10px 8px; display: grid; gap: 4px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.sp-ed-fnlog ol { list-style: none; margin: 0; padding: 0 10px 8px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 .sp-ed-fnlog li { white-space: pre-wrap; overflow-wrap: anywhere; }
 .sp-ed-fnlog .is-call { color: var(--text-secondary, #9fb0c8); margin-top: 4px; }
 .sp-ed-fnlog .is-warn { color: #fbbf24; } .sp-ed-fnlog .is-error { color: #f87171; }
