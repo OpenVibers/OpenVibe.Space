@@ -157,10 +157,10 @@
 .hd-details summary { cursor: pointer; font-size: 14px; font-weight: 600; color: var(--hd-dim); }
 .hd-details summary:hover { color: var(--hd-text); }
 .hd-details[open] summary { margin-bottom: 8px; }
-.hd-history { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 14px; }
+.hd-history { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; font-size: 14px; }
 .hd-history li { display: flex; gap: 10px; flex-wrap: wrap; }
 .hd-history time { color: var(--hd-dim); font-variant-numeric: tabular-nums; }
-.hd-log { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
+.hd-log { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
 .hd-log__line { display: flex; gap: 10px; align-items: baseline; padding: 6px 8px; border-radius: 8px; }
 .hd-log__line > span:last-child { overflow-wrap: anywhere; }
 .hd-log__line--error { background: color-mix(in srgb, var(--hd-bad) 9%, transparent); }
