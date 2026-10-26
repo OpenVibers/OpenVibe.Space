@@ -53,7 +53,7 @@ const CUSTOM = 'www.widgets-example.org';
         const r = await t.get(HOST, '/robots.txt');
         assert.strictEqual(r.status, 200);
         assert.match(r.headers['content-type'], /text\/plain/);
-        assert.match(r.text, /^User-agent: \*\nAllow: \/\n/);
+        assert.match(r.text, /^(?:#[^\n]*\n|Content-Signal:[^\n]*\n|\n)*User-agent: \*\nAllow: \/\n/);   // after Shared 4.13's content-signals note
         assert.ok(r.text.includes(`Sitemap: ${origin}/sitemap.xml`), r.text);
     });
 
@@ -94,7 +94,7 @@ const CUSTOM = 'www.widgets-example.org';
         await t.deploy(alice, sb.id, { 'index.html': '<h1>Play</h1>' }, { activate: true });
         const r = await t.get(`${sb.name}.openvibe.website`, '/robots.txt');
         assert.strictEqual(r.status, 200, r.text);
-        assert.match(r.text, /^User-agent: \*\nDisallow: \/\n*$/);
+        assert.match(r.text, /^(?:#[^\n]*\n|Content-Signal:[^\n]*\n|\n)*User-agent: \*\nDisallow: \/\n*$/);
         assert.ok(!r.text.includes('Sitemap'), r.text);
         assert.strictEqual(r.headers['x-robots-tag'], 'noindex, nofollow');
     });
