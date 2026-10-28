@@ -8,7 +8,7 @@
   "domain": "openvibe.space",
   "contracts": "openvibe-contracts v0.222.0",
   "sdk": "openvibe-sdk v0.67.0",
-  "shared": "openvibe-shared v4.19.0",
+  "shared": "openvibe-shared v4.22.0",
   "capabilities": [
     "space.site.manage",
     "space.site.config",
