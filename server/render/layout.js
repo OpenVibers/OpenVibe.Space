@@ -130,7 +130,7 @@ function renderPage(o) {
         jsonLd: o.jsonLd, alternates: o.alternates,
         summary: description, url: canonical, updated: o.modified,
         navbar: nav, home: '/', navLinks: nav.links.map(({ label, href }) => ({ label, href })),
-        footer: { service: 'space', variant: 'full', updates: '/updates' },
+        footer: { service: 'space', variant: 'auto', path: o.canonicalPath, updates: '/updates' },   // full on the front page only (Shared 4.19)
         head: [
             o.published ? `<meta property="article:published_time" content="${escapeHtml(o.published)}">` : '',
             o.modified ? `<meta property="article:modified_time" content="${escapeHtml(o.modified)}">` : '',
