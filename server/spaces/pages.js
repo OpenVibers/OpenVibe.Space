@@ -69,7 +69,9 @@ function createSpacesPages(ctx) {
         // canonical (audit SEO-7). A form still redirects: its session ended, and sign-in brings the person back.
         if (err && err.status === 401) {
             if (req.method !== 'GET') return res.redirect(303, `/auth/login?next=${encodeURIComponent(req.originalUrl)}`);
-            return html(res, 401, render.signInPage({ path: req.path, next: req.originalUrl }));
+            // The link goes back to the path only: a query string on a gated page must never come back in an
+            // anonymous response (the same rule Chat's security suite enforces; SEO-7 review 2026-10-29).
+            return html(res, 401, render.signInPage({ path: req.path, next: req.path }));
         }
         if (!(err instanceof ApiError) && !(err && Number.isInteger(err.status) && err.code)) log.error('[Spaces]', err && err.stack ? err.stack : err);
         const status = err && Number.isInteger(err.status) ? err.status : 500;
