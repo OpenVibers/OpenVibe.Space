@@ -75,3 +75,7 @@ body {
 .space-faq[open] { padding-bottom: 12px; }
 .space-faq summary { cursor: pointer; font-weight: 600; padding: 8px 0; }
 .space-faq p { margin: 4px 0 0; color: var(--text-secondary, #96a7c2); }
+
+/* The shared hero's aura is drawn past its right edge (showcase .sc-hero-vis), so at 390px the home scrolled
+   sideways by ~63px. Clip the page on this axis only; vertical scrolling and sticky stay as they are (2026-10-29). */
+.page { overflow-x: clip; }
