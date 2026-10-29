@@ -235,8 +235,22 @@ function connectPage({ viewer, space, csrf, challenge, state, returnPath }) {
     return page({ title: `Sign in to ${space.name}`, path: `/spaces/${space.slug}/connect`, robots: 'noindex,nofollow', body });
 }
 
+/**
+ * A gated page's answer on this origin (audit SEO-7): noindex, a canonical to the page itself, and a link
+ * to Network sign-in. Never a redirect to sign-in, which handed a crawler openvibe.network's canonical.
+ */
+function signInPage({ path, next, title = 'Sign in to continue' }) {
+    const body = `<div class="sp-wrap">
+  <p class="eyebrow">OpenVibe.Space</p>
+  <h1 class="sp-title">${esc(title)}</h1>
+  <p class="sp-lede">Spaces are made with your OpenVibe account. Sign in and you come straight back here.</p>
+  <p><a class="sp-btn" href="${esc(signInHref(next))}">Sign in with OpenVibe</a></p>
+</div>`;
+    return page({ title, path, robots: 'noindex,nofollow', body });
+}
+
 function errorBody(status, message) {
     return page({ title: status === 404 ? 'Space not found' : 'Spaces', path: '/spaces', robots: 'noindex,nofollow', body: `<div class="sp-wrap"><p class="eyebrow">Error ${Number(status)}</p><h1 class="sp-title">${status === 404 ? 'No such space' : 'That did not work'}</h1><p class="sp-lede">${esc(message)}</p><p><a class="sp-btn" href="/spaces">Back to spaces</a></p></div>` });
 }
 
-module.exports = { galleryPage, newPage, minePage, spacePage, editorPage, connectPage, errorBody, CAP_TEXT };
+module.exports = { galleryPage, newPage, minePage, spacePage, editorPage, connectPage, signInPage, errorBody, CAP_TEXT };
