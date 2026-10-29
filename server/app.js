@@ -142,11 +142,28 @@ async function createApp(opts = {}) {
 
     // /updates: what shipped on OpenVibe.Space, the shared update log every OpenVibe site has (it pointed at the
     // community's log, which lists the community's changes, not this site's).
+    // The agent layer (openvibe-shared/agent-layer): /.well-known/agent.json and the Markdown twins of the
+    // public pages. Only the manifest and a twin request reach it — the layer renders every page signed out,
+    // and the site's own routes answer every browser.
+    {
+        const agentRouter = express.Router();
+        require('openvibe-shared/agent-layer').mount(agentRouter, {
+            descriptor: require('./agent-descriptor'),
+            render: require('./agent-pages').createAgentPages({ pages: require('./render/pages'), config }).renderPublicPage,
+        });
+        app.use((req, res, next) => {
+            if (req.path === '/.well-known/agent.json') return agentRouter(req, res, next);
+            const p = String(req.path || '');
+            if (p.endsWith('.md') || (req.query && req.query.format === 'markdown')
+                || req.accepts(['html', 'text/markdown']) === 'text/markdown') return agentRouter(req, res, next);
+            return next();
+        });
+    }
+
     app.get('/updates', (req, res) => {
-        const { renderPage } = require('./render/layout');
-        const frame = require('openvibe-shared/frame');
-        const body = frame.updatesBody({ service: 'space', siteName: 'OpenVibe.Space' }) + `<script src="${require('openvibe-shared/serve').url('shipped.js')}" defer></script>`;
-        res.type('html').send(renderPage({ title: 'What shipped on OpenVibe.Space', description: 'Every change deployed to OpenVibe.Space, newest first, from the OpenVibe network\'s shared update log.', canonicalPath: '/updates', body, viewer: req.viewer, config, path: req.originalUrl, indexable: true }));
+        const html = require('./render/pages').updatesPage({ config, viewer: req.viewer });
+        res.setHeader('Link', require('openvibe-shared/agent-layer').linkHeaderTags(`${config.baseUrl}/updates`, `${config.baseUrl}/llms.txt`).header);
+        res.type('html').send(html);
     });
 
     app.get('/api/health', (_req, res) => res.json({ status: 'ok', service: 'openvibe-space', version: VERSION }));
@@ -186,7 +203,10 @@ async function createApp(opts = {}) {
 
     // ── Pages ────────────────────────────────────────────────
     // The public home page: what works now and what comes next.
-    app.get('/', (_req, res) => res.type('html').set('Cache-Control', PAGE_CACHE).send(require('./render/pages').homePage()));
+    app.get('/', (_req, res) => {
+        res.setHeader('Link', require('openvibe-shared/agent-layer').linkHeaderTags(`${config.baseUrl}/`, `${config.baseUrl}/llms.txt`).header);
+        res.type('html').set('Cache-Control', PAGE_CACHE).send(require('./render/pages').homePage());
+    });
 
     // ── 404 / errors ─────────────────────────────────────────
     app.use((req, res) => {

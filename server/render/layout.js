@@ -126,6 +126,8 @@ function renderPage(o) {
         title: o.title || `${SITE_NAME} — spaces and static hosting`,
         titleSuffix: o.title ? ` · ${SITE_NAME}` : undefined,
         siteName: SITE_NAME, description, canonical, robots: o.robots || 'index,follow',
+        agentLayer: o.agentLayer,
+        llms: o.llms,
         type: o.ogType || 'website', image: o.ogImage || DEFAULT_OG_IMAGE, imageAlt: o.imageAlt,
         jsonLd: o.jsonLd, alternates: o.alternates,
         summary: description, url: canonical, updated: o.modified,
