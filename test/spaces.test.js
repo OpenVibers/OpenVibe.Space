@@ -55,6 +55,19 @@ function fakeAi() {
         assert.doesNotMatch(r.text, /name="template"/, 'no start form for someone signed out');
     });
 
+    await check('SEO-7: a gated page answers here with noindex and never another origin as its canonical', async () => {
+        const gated = await t.api('GET', '/spaces/new');
+        assert.strictEqual(gated.status, 401);
+        assert.match(gated.text, /<meta name="robots" content="noindex,nofollow">/);
+        assert.match(gated.text, /href="\/auth\/login\?next=%2Fspaces%2Fnew"/, 'one click from signing in');
+        const canon = (/<link rel="canonical" href="([^"]+)"/.exec(gated.text) || [])[1];
+        assert.ok(!canon || new URL(canon).origin === 'https://openvibe.space', `canonical ${canon}`);
+        // The other half of the rule: a public page keeps its own canonical, on its own origin.
+        const pub = await t.api('GET', '/spaces');
+        assert.strictEqual(pub.status, 200);
+        assert.match(pub.text, /<link rel="canonical" href="https:\/\/openvibe\.space\/spaces">/);
+    });
+
     await check('a person starts a space from a template and lands in its editor', async () => {
         const r = await form(alice, '/spaces/new', { template: 'guestbook' });
         assert.strictEqual(r.status, 303, r.text);
@@ -75,7 +88,9 @@ function fakeAi() {
         assert.strictEqual((await t.api('GET', `/spaces/${slug}`, { session: bob })).status, 404, 'a stranger does not see a draft');
         assert.strictEqual((await t.api('GET', `/spaces/${slug}/edit`, { session: bob })).status, 404);
         assert.strictEqual((await t.api('GET', `/spaces/${slug}`, { session: alice })).status, 200);
-        assert.strictEqual((await t.api('GET', `/spaces/${slug}/edit`)).status, 303, 'signed out: to sign-in');
+        const gate = await t.api('GET', `/spaces/${slug}/edit`);
+        assert.strictEqual(gate.status, 401, 'signed out: a gate page here, noindex, not a redirect off the site (SEO-7)');
+        assert.match(gate.text, /<meta name="robots" content="noindex,nofollow">/);
         const forged = await t.api('POST', '/spaces/new', { session: alice, form: { csrf: 'nope', template: 'poll' }, headers: { origin: ORIGIN } });
         assert.strictEqual(forged.status, 403);
         const crossSite = await t.api('PUT', `/spaces/${slug}/files`, { session: alice, json: { files: [] }, headers: { origin: 'https://evil.example', 'x-csrf-token': csrf(alice) } });
@@ -159,7 +174,7 @@ function fakeAi() {
     let bobToken = null;
     await check('a visitor approves the space on the connect page and comes back with a one-time code', async () => {
         const q = `challenge=${challenge}&state=st4te-abc&return=${encodeURIComponent('/game?x=1')}`;
-        assert.strictEqual((await t.api('GET', `/spaces/${slug}/connect?${q}`)).status, 303, 'signed out: to sign-in first');
+        assert.strictEqual((await t.api('GET', `/spaces/${slug}/connect?${q}`)).status, 401, 'signed out: sign in here first (a gate page, never a cross-origin redirect)');
         const page = await t.api('GET', `/spaces/${slug}/connect?${q}`, { session: bob });
         assert.strictEqual(page.status, 200);
         assert.match(page.text, /Ask OpenVibe AI for you/);

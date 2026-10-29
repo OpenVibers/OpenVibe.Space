@@ -65,7 +65,12 @@ function createSpacesPages(ctx) {
     const csrfOf = (req) => (signedIn(req) ? csrfToken(config, req.viewer) : '');
     const html = (res, status, body) => res.status(status).type('html').send(body);
     function failPage(req, res, err) {
-        if (err && err.status === 401) return res.redirect(303, `/auth/login?next=${encodeURIComponent(req.originalUrl)}`);
+        // A gated page answers on this origin with noindex, so a crawler is never handed Network sign-in's
+        // canonical (audit SEO-7). A form still redirects: its session ended, and sign-in brings the person back.
+        if (err && err.status === 401) {
+            if (req.method !== 'GET') return res.redirect(303, `/auth/login?next=${encodeURIComponent(req.originalUrl)}`);
+            return html(res, 401, render.signInPage({ path: req.path, next: req.originalUrl }));
+        }
         if (!(err instanceof ApiError) && !(err && Number.isInteger(err.status) && err.code)) log.error('[Spaces]', err && err.stack ? err.stack : err);
         const status = err && Number.isInteger(err.status) ? err.status : 500;
         return html(res, status, render.errorBody(status, status === 500 ? 'Something went wrong on our side. Try again in a moment.' : err.message));
