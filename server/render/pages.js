@@ -118,6 +118,7 @@ curl -X POST "https://openvibe.space/api/v1/sites/$SITE_ID/deploys?activate=1" \
     const site = String(config.publicUrl || config.baseUrl || 'https://openvibe.space').replace(/\/+$/, '');
     return renderPage({
         canonicalPath: '/', active: 'home', styles: [sc.STYLESHEET], body, description: HOME_DESCRIPTION,
+        agentLayer: true, llms: '/llms.txt',
         jsonLd: [
             { '@context': 'https://schema.org', '@type': 'WebSite', name: 'OpenVibe.Space', url: `${site}/`, description: HOME_DESCRIPTION },
             { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: HOME_FAQ.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) },
@@ -137,4 +138,20 @@ function errorPage({ status = 500, title = 'Something went wrong', message = '',
     return renderPage({ title, description: message || title, canonicalPath: '/', robots: 'noindex,nofollow', footerVariant: 'compact', body });
 }
 
-module.exports = { homePage, errorPage };
+/**
+ * The update log (/updates): the shared update log every OpenVibe site has. The agent layer's twin renders
+ * the same page, signed out (no viewer), so the two cannot drift.
+ */
+function updatesPage({ config, viewer = null } = {}) {
+    const frame = require('openvibe-shared/frame');
+    const body = frame.updatesBody({ service: 'space', siteName: 'OpenVibe.Space' })
+        + `<script src="${require('openvibe-shared/serve').url('shipped.js')}" defer></script>`;
+    return renderPage({
+        title: 'What shipped on OpenVibe.Space',
+        description: 'Every change deployed to OpenVibe.Space, newest first, from the OpenVibe network\'s shared update log.',
+        canonicalPath: '/updates', body, viewer, config, path: '/updates', indexable: true,
+        agentLayer: true, llms: '/llms.txt',
+    });
+}
+
+module.exports = { homePage, updatesPage, errorPage };
