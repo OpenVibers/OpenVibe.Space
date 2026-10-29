@@ -155,3 +155,7 @@ body[data-page="spaces"] .page:has(.sp-editor) { padding-bottom: 0; }
   .sp-editor[data-view="preview"] .sp-ed-code, .sp-editor[data-view="code"] .sp-ed-preview { display: none; }
   .sp-ed-name { max-width: 70vw; }
 }
+
+/* The shared hero draws its aura 54px past its right edge (openvibe-shared showcase, .sc-hero-vis at right:-54px); with no
+   clip a phone scrolls sideways by ~44px. Clip the page on this axis only: vertical scrolling is untouched. */
+.page { overflow-x: clip; }
