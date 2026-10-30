@@ -79,3 +79,6 @@ body {
 /* The shared hero's aura is drawn past its right edge (showcase .sc-hero-vis), so at 390px the home scrolled
    sideways by ~63px. Clip the page on this axis only; vertical scrolling and sticky stay as they are (2026-10-29). */
 .page { overflow-x: clip; }
+
+/* Touch targets on phones (fleet audit 2026-10-29): the touch-only hit area for this group. Nothing moves with a mouse. */
+@media (pointer: coarse) { .space-faq summary { min-height: 44px; box-sizing: border-box; } }
