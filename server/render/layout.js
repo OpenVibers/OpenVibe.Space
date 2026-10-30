@@ -145,6 +145,8 @@ function renderPage(o) {
             '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">',
             `<meta name="ov-boost" content="space@${escapeHtml(RELEASE)}">`,
             `<script src="${ovServe.url('boost.js')}" data-main="#main" defer></script>`,
+            // The rules that show the picked part of a pick block are written for the page, because there is one per part.
+            ...(o.inlineStyles || []).map((css) => `<style>${css}</style>`),
         ].filter(Boolean).join('\n'),
         bodyClass: o.bodyClass,
         bodyAttributes: { 'data-page': o.active || 'page' },
