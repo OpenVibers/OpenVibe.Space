@@ -24,6 +24,14 @@ const TABLES = [
     { table: 'space_app_codes', subject: 'subject', file: null },
     { table: 'space_app_counters', subject: 'scope', value: (usr) => `build:${usr}`, file: null },
     { table: 'space_project_members', subject: 'principal', file: 'hosting-project-roles.json', columns: ['project_id', 'role', 'created_at'] },
+    // The forum spaces this person started: the space stays as the community's record, without its creator.
+    { table: 'spaces', subject: 'created_by', file: 'forum-spaces.json', columns: ['id', 'slug', 'name', 'description', 'visibility', 'created_at'], order: 'id', erase: { anonymize: {} } },
+    // Hosting rows belong to their project; created_by is the audit trail of who acted, kept for accountability.
+    { table: 'space_sites', subject: 'created_by', file: null, erase: { keep: 'the site belongs to its project; created_by is the audit trail of who created it' } },
+    { table: 'space_domains', subject: 'created_by', file: null, erase: { keep: 'the domain belongs to its project; created_by is the audit trail of who added it' } },
+    { table: 'space_deploys', subject: 'created_by', file: null, erase: { keep: 'the deploy belongs to its project; created_by is the audit trail of who made it' } },
+    { table: 'space_site_sources', subject: 'created_by', file: null, erase: { keep: 'the site source belongs to its project; created_by and updated_by are the audit trail' } },
+    { table: 'space_takedowns', subject: 'created_by', file: null, erase: { keep: 'a moderation record stays attributed for accountability' } },
 ];
 
 async function extraExport(db, subject) {

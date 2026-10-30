@@ -9,6 +9,8 @@
 const assert = require('assert');
 const crypto = require('crypto');
 const { boot, check, done } = require('./stageb/boot');
+const { uncovered } = require('openvibe-sdk/account-data');
+const { TABLES } = require('../server/account-data');
 
 const ORIGIN = 'https://openvibe.space';
 const b64url = (buf) => buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -17,6 +19,17 @@ const b64url = (buf) => buf.toString('base64').replace(/\+/g, '-').replace(/\//g
     const sent = [];
     const accountSend = async (path, body) => { sent.push({ path, body }); return { ok: true, status: 200, json: async () => ({}) }; };
     const t = await boot({ accountSend, env: { SPACE_EVENTS_SECRET: 'events-secret-for-tests-0123456789abcdef' } });
+    await check('every table that names a person is covered or exempted with a reason', async () => {
+        const missing = await uncovered(t.ctx.store.db, {
+            tables: TABLES,
+            exempt: {
+                account_data_events: 'the ledger of requests itself: which export and deletion Space applied',
+                account_data_events_forum: 'the forum ledger of requests itself: which export and deletion the Space forum applied',
+            },
+        });
+        assert.deepStrictEqual(missing, [], `a table with a person column is neither covered nor exempted: ${missing.join(', ')}`);
+    });
+
     const { csrfToken } = require('../server/auth/forms');
     const alice = t.user('alice'), bob = t.user('bob');
     const csrf = (u) => csrfToken(t.config, { subject: u.subject });
