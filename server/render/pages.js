@@ -10,6 +10,7 @@
 const config = require('../config');
 const sc = require('openvibe-shared/showcase');
 const { renderPage, escapeHtml: esc } = require('./layout');
+const { pickBlock, pickRules, foldBlock } = require('./short');
 
 const FORUM_URL = `${config.communityUrl}/s`;
 const FORUM_LABEL = FORUM_URL.replace(/^https?:\/\//, '');
@@ -40,6 +41,67 @@ function defaultQuotas() {
 function homePage() {
     const q = defaultQuotas();
     const row = (label, key, fmt = String) => ({ label, values: [fmt(q.production[key]), fmt(q.sandbox[key])] });
+    // The home's six parts, one at a time on a phone (the owner's short-pages rule, 2026-10-30): the chips pick one of
+    // them and every part stays in the page for crawlers. The id of a part is the one the page already links to.
+    const parts = [
+        { id: 'templates', label: 'Templates', html: sc.features({
+            title: 'Start from a template',
+            lede: 'Each one is a working space you can open in the editor and change: sign-in, data and AI already wired.',
+            items: TEMPLATES.filter((t) => t.id !== 'blank').map((t) => ({ icon: t.icon, title: t.name, text: t.description, href: '/spaces/new' })),
+        }) },
+        { id: 'make', label: 'Making one', html: sc.steps({
+            title: 'How a space comes together',
+            items: [
+                { title: 'Describe it, or pick a template', text: 'Say what the app should do and OpenVibe AI writes a first version, or open a template.', href: '/spaces/new' },
+                { title: 'Change anything', text: 'The editor shows your space\'s files with a sandboxed preview beside them, so every change is visible at once.' },
+                { title: 'Sign-in, data and AI built in', text: 'The space SDK gives you the visitor\'s OpenVibe profile, shared lists, private storage, OpenVibe AI and server functions.' },
+                { title: 'Share it', text: 'People open it with their OpenVibe account; publishing at its own address opens with public hosting.' },
+            ],
+        }) },
+        { id: 'how', label: 'Deploys', html: sc.steps({
+            title: 'How a deploy works',
+            items: [
+                { title: 'Make a project and a site', text: 'A project holds sites and the people who may change them. Each site gets its own address under openvibe.website.' },
+                { title: 'Upload, or connect Git', text: 'Upload a folder or a .tar.gz from the dashboard or the API, or deploy from a public Git repository. Nothing is built or executed: the files are served as they are.' },
+                { title: 'Preview, then activate', text: 'Check a deploy at its private preview address, then make it live. Activation switches one pointer, so rolling back is one step too.' },
+            ],
+        }) },
+        { id: 'now', label: 'What works', html: sc.features({
+            title: 'What works now',
+            items: [
+                { icon: 'fa-cubes', title: 'Immutable deploys', text: 'Every deploy is content-addressed and kept: files are stored once by their hash, and a deploy never changes after upload.' },
+                { icon: 'fa-clock-rotate-left', title: 'Previews and rollback', text: 'A private preview for the project\'s members, one-step activation, and a rollback to the deploy that was live before.' },
+                { icon: 'fa-code-branch', title: 'Git deploys', text: 'Point a site at a public repository and branch; each ingest lands as a preview for someone to approve.' },
+                { icon: 'fa-globe', title: 'Your own address', text: 'Sites serve under openvibe.website. A custom domain is served once its TXT record proves it is yours.' },
+                { icon: 'fa-sliders', title: 'Headers and redirects', text: 'Per-site response headers, redirects and a single-page-app fallback. Platform security headers always win.' },
+                { icon: 'fa-users', title: 'Members and roles', text: 'Owners, maintainers and deployers per project; an app can deploy too, with a grant and a role, never as the owner.' },
+                { icon: 'fa-shield-halved', title: 'Takedowns kept for review', text: 'OpenVibe staff can stop serving a site or a whole project while its content is kept for review, and lift it again.' },
+                { icon: 'fa-terminal', title: 'An API for all of it', text: 'Projects, sites, deploys, domains and configuration over /api/v1, with OpenVibe.Network tokens and space.* capabilities.' },
+            ],
+        }) },
+        { id: 'api', label: 'The API', html: sc.code({
+            title: 'The same over the API',
+            lede: 'With a Network token for openvibe.space that holds space.deploy.create and a role in the site\'s project.',
+            samples: [{ label: 'Upload and activate a build', lang: 'bash', code: `tar -czf site.tar.gz -C dist .
+curl -X POST "https://openvibe.space/api/v1/sites/$SITE_ID/deploys?activate=1" \\
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/gzip' \\
+  --data-binary @site.tar.gz` }],
+        }) },
+        { id: 'quotas', label: 'Quotas', html: sc.limits({
+            title: 'Quotas per project',
+            lede: 'What a project may use today; staff can raise a project\'s quota.',
+            columns: ['Production', 'Sandbox'],
+            rows: [
+                row('Storage', 'storageBytes', size),
+                row('Deploys per day', 'deploysPerDay'),
+                row('Sites', 'sites'),
+                row('Custom domains', 'customDomains'),
+                row('Files per deploy', 'maxFiles', (n) => n.toLocaleString('en-US')),
+                row('Largest file', 'maxFileBytes', size),
+            ],
+            source: 'https://github.com/OpenVibers/OpenVibe.Space/blob/main/server/hosting-config.js',
+        }) },
+    ];
     const body = sc.hero({
         eyebrow: 'OpenVibe.Space · spaces',
         title: 'Make a space.',
@@ -50,67 +112,19 @@ function homePage() {
             { label: 'Browse spaces', href: '/spaces', icon: 'fa-shapes' },
         ],
         note: 'The builder, the editor and the preview work for everyone signed in. Publishing a space at its own address opens with public hosting.',
-    }) + sc.features({
-        id: 'templates',
-        title: 'Start from a template',
-        lede: 'Each one is a working space you can open in the editor and change: sign-in, data and AI already wired.',
-        items: TEMPLATES.filter((t) => t.id !== 'blank').map((t) => ({ icon: t.icon, title: t.name, text: t.description, href: '/spaces/new' })),
-    }) + sc.steps({
-        title: 'How a space comes together',
-        items: [
-            { title: 'Describe it, or pick a template', text: 'Say what the app should do and OpenVibe AI writes a first version, or open a template.', href: '/spaces/new' },
-            { title: 'Change anything', text: 'The editor shows your space\'s files with a sandboxed preview beside them, so every change is visible at once.' },
-            { title: 'Sign-in, data and AI built in', text: 'The space SDK gives you the visitor\'s OpenVibe profile, shared lists, private storage, OpenVibe AI and server functions.' },
-            { title: 'Share it', text: 'People open it with their OpenVibe account; publishing at its own address opens with public hosting.' },
-        ],
-    }) + sc.cta({
+    }) + pickBlock({ key: 'parts', label: 'What Space does', head: 'What Space does', panes: parts })
+    + sc.cta({
         title: 'Static hosting: publish a site, keep every deploy.',
         text: 'Immutable, content-addressed deploys with one-step rollback, previews, Git deploys and verified custom domains. OpenVibe staff host here today; it opens to everyone once abuse handling and a designated DMCA agent are in place.',
         actions: [
             { label: 'Hosting dashboard', href: '/dashboard', primary: true },
             { label: 'How it works', href: '#how' },
         ],
-    }) + sc.steps({
-        id: 'how',
-        title: 'How a deploy works',
-        items: [
-            { title: 'Make a project and a site', text: 'A project holds sites and the people who may change them. Each site gets its own address under openvibe.website.' },
-            { title: 'Upload, or connect Git', text: 'Upload a folder or a .tar.gz from the dashboard or the API, or deploy from a public Git repository. Nothing is built or executed: the files are served as they are.' },
-            { title: 'Preview, then activate', text: 'Check a deploy at its private preview address, then make it live. Activation switches one pointer, so rolling back is one step too.' },
-        ],
-    }) + sc.features({
-        title: 'What works now',
-        items: [
-            { icon: 'fa-cubes', title: 'Immutable deploys', text: 'Every deploy is content-addressed and kept: files are stored once by their hash, and a deploy never changes after upload.' },
-            { icon: 'fa-clock-rotate-left', title: 'Previews and rollback', text: 'A private preview for the project\'s members, one-step activation, and a rollback to the deploy that was live before.' },
-            { icon: 'fa-code-branch', title: 'Git deploys', text: 'Point a site at a public repository and branch; each ingest lands as a preview for someone to approve.' },
-            { icon: 'fa-globe', title: 'Your own address', text: 'Sites serve under openvibe.website. A custom domain is served once its TXT record proves it is yours.' },
-            { icon: 'fa-sliders', title: 'Headers and redirects', text: 'Per-site response headers, redirects and a single-page-app fallback. Platform security headers always win.' },
-            { icon: 'fa-users', title: 'Members and roles', text: 'Owners, maintainers and deployers per project; an app can deploy too, with a grant and a role, never as the owner.' },
-            { icon: 'fa-shield-halved', title: 'Takedowns kept for review', text: 'OpenVibe staff can stop serving a site or a whole project while its content is kept for review, and lift it again.' },
-            { icon: 'fa-terminal', title: 'An API for all of it', text: 'Projects, sites, deploys, domains and configuration over /api/v1, with OpenVibe.Network tokens and space.* capabilities.' },
-        ],
-    }) + sc.code({
-        title: 'The same over the API',
-        lede: 'With a Network token for openvibe.space that holds space.deploy.create and a role in the site\'s project.',
-        samples: [{ label: 'Upload and activate a build', lang: 'bash', code: `tar -czf site.tar.gz -C dist .
-curl -X POST "https://openvibe.space/api/v1/sites/$SITE_ID/deploys?activate=1" \\
-  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/gzip' \\
-  --data-binary @site.tar.gz` }],
-    }) + sc.limits({
-        title: 'Quotas per project',
-        lede: 'What a project may use today; staff can raise a project\'s quota.',
-        columns: ['Production', 'Sandbox'],
-        rows: [
-            row('Storage', 'storageBytes', size),
-            row('Deploys per day', 'deploysPerDay'),
-            row('Sites', 'sites'),
-            row('Custom domains', 'customDomains'),
-            row('Files per deploy', 'maxFiles', (n) => n.toLocaleString('en-US')),
-            row('Largest file', 'maxFileBytes', size),
-        ],
-        source: 'https://github.com/OpenVibers/OpenVibe.Space/blob/main/server/hosting-config.js',
-    }) + `<section class="sc-sec" id="questions" aria-labelledby="space-faq-h"><h2 id="space-faq-h">Questions</h2>${HOME_FAQ.map((f) => `<details class="space-faq"><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`).join('')}</section>` + sc.cta({
+    }) + foldBlock({
+        id: 'questions',
+        head: '<h2 id="space-faq-h">Questions</h2>',
+        html: `<section class="sc-sec" id="questions" aria-labelledby="space-faq-h"><h2>Questions</h2>${HOME_FAQ.map((f) => `<details class="space-faq"><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`).join('')}</section>`,
+    }) + sc.cta({
         title: 'Looking for the forum?',
         text: 'The forum moved to OpenVibe.Community.',
         actions: [{ label: 'Open the forum', href: FORUM_URL, primary: true }],
@@ -119,6 +133,8 @@ curl -X POST "https://openvibe.space/api/v1/sites/$SITE_ID/deploys?activate=1" \
     return renderPage({
         canonicalPath: '/', active: 'home', styles: [sc.STYLESHEET], body, description: HOME_DESCRIPTION,
         agentLayer: true, llms: '/llms.txt',
+        // The rule that shows the picked part of the home's pick block: one per part, written for this page.
+        inlineStyles: [`@supports selector(:has(*)){@media (max-width:640px){${pickRules('parts', parts.map((p) => p.id))}}}`],
         jsonLd: [
             { '@context': 'https://schema.org', '@type': 'WebSite', name: 'OpenVibe.Space', url: `${site}/`, description: HOME_DESCRIPTION },
             { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: HOME_FAQ.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) },
