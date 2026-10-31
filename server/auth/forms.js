@@ -24,6 +24,21 @@ function checkCsrf(config, viewer, token) {
     return crypto.timingSafeEqual(Buffer.from(token), Buffer.from(expected));
 }
 
+/**
+ * A form token for something that is not a session: a guest draft, whose maker holds a secret link rather than
+ * an account. It is an HMAC of the scope under the same secret as the session tokens, so a token is only ever
+ * readable by someone who could read the page that carries it.
+ */
+function scopeToken(config, scope) {
+    return crypto.createHmac('sha256', config.formSecret || fallback).update(`space-form-scope:${scope}`).digest('base64url').slice(0, 32);
+}
+
+function checkScopeToken(config, scope, token) {
+    const expected = scopeToken(config, scope);
+    if (!expected || typeof token !== 'string' || token.length !== expected.length) return false;
+    return crypto.timingSafeEqual(Buffer.from(token), Buffer.from(expected));
+}
+
 /** The request came from a dashboard page (not from a tenant page or another site). */
 function sameOrigin(config, req) {
     const expected = new URL(config.baseUrl).origin;
@@ -34,4 +49,4 @@ function sameOrigin(config, req) {
     try { return new URL(referer).origin === expected; } catch { return false; }
 }
 
-module.exports = { csrfToken, checkCsrf, sameOrigin };
+module.exports = { csrfToken, checkCsrf, scopeToken, checkScopeToken, sameOrigin };

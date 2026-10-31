@@ -111,6 +111,41 @@ Starting from the **Trivia** template gives a working example: its answers live 
 5. The token is a day-long Bearer token for that space only, kept in the space's `sessionStorage`. Space stores only
    its hash, and `DELETE /api/v1/apps/:id/token` signs the visitor out.
 
+## Guest drafts (openvibe.website, plan 5.9)
+
+A visitor who is **not signed in** can make a draft on openvibe.space. It has no owner and a random edit secret;
+of the secret only its sha256 is kept (as OpenVibe.Design keeps `guest_hash` for its guest designs). The answer is
+the secret link `/spaces/<id>/edit?key=…`; a cookie scoped to that one draft (host-only, HttpOnly, SameSite=Lax,
+`Path=/spaces/<id>`) remembers it, and the link alone works too.
+
+- `GET /spaces/guest` — the start page: a website template, or a sentence for the AI.
+- `POST /spaces/guest` — make the draft. The answer is a 303 to the secret edit link.
+- `GET /spaces/<id>/edit?key=…` — the editor, exactly as for a maker: the files, the sandboxed preview, the AI.
+- `POST /spaces/<id>/claim` — a signed-in person who holds the secret keeps the draft (`key` and the form token).
+  The draft becomes theirs, with an address from its name, the secret is cleared, and it follows every rule a
+  signed-in person's space does. The claim is logged as `space.app.claimed`.
+
+A guest draft is **static**: it is never published, it keeps no visitor's data (no lists, no private storage) and it
+runs no server functions. In the preview the SDK answers "sign in to use this" where a visitor's account would be
+needed, and `OV.me()` is nobody.
+
+The limits (the abuse screen's first half, `server/hosting-config.js`):
+
+| Limit | Default | Environment |
+| --- | --- | --- |
+| Drafts per address a day | 3 | `SPACE_GUEST_DRAFTS_PER_IP_PER_DAY` |
+| AI builds per address a day | 2 | `SPACE_GUEST_AI_BUILDS_PER_IP_PER_DAY` |
+| AI changes per draft | 20 | `SPACE_GUEST_AI_EDITS_PER_DRAFT` |
+| Drafts the service makes a day | 500 | `SPACE_GUEST_DRAFTS_PER_DAY` |
+| A draft lives after its last edit | 7 days | `SPACE_GUEST_TTL_DAYS` |
+| The job that removes the drafts whose time is up | hourly | `SPACE_GUEST_CLEANUP_INTERVAL_MS` |
+
+`SPACE_GUEST_DRAFTS=off` turns the whole thing off. Every AI prompt and every AI answer passes the same abuse
+screen (`server/spaces/content-check.js`): a brand name next to credential words, or one of the sentences a fake
+login page uses, is refused; and **no form in a guest draft may post to another origin** (a relative action, or one
+on the site's own address, is fine). The off-site form rule is a guest rule — an owner may post to their own payment
+provider.
+
 ## Limits
 
 These are per person or per space, set in `server/hosting-config.js`:
@@ -134,5 +169,7 @@ These are per person or per space, set in `server/hosting-config.js`:
 | `server/spaces/functions.js`, `functions-worker.js` | Space functions: the worker pool, the `ov` calls and limits, and the QuickJS sandbox. |
 | `server/spaces/ai.js` | The OpenVibe.AI client. |
 | `server/spaces/templates.js` | The templates. |
+| `server/spaces/guest.js`, `guest-cleanup.js` | The guest drafts: the secret, the expiry and the job. |
+| `server/spaces/content-check.js` | The abuse screen: phishing and off-site form actions. |
 | `public/js/space-editor.js`, `public/css/spaces.css` | The editor and the styles. |
-| `test/spaces.test.js`, `test/space-functions.test.js` | The tests. |
+| `test/spaces.test.js`, `test/spaces-guest.test.js`, `test/space-functions.test.js` | The tests. |

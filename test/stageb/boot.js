@@ -78,7 +78,7 @@ async function boot(opts = {}) {
     }
     async function stop() {
         if (server) { server.closeAllConnections(); await new Promise((r) => server.close(r)); }
-        if (built) { built.ctx.worker.stop(); await built.ctx.outbox.stop(); }
+        if (built) { built.ctx.worker.stop(); built.ctx.guestCleanup.stop(); await built.ctx.outbox.stop(); }
         server = null; built = null;
     }
 

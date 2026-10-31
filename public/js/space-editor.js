@@ -1,21 +1,27 @@
 /* The space editor (server/spaces/render.js editorPage): files in tabs (CodeMirror when it loaded, a textarea when not),
    a live preview in a sandboxed frame (an opaque origin: the space's code never touches openvibe.space), the preview's
    SDK calls run through this page as the signed-in maker (POST /spaces/:slug/preview), AI changes (POST, then poll
-   GET /spaces/:slug/ai), settings, publishing and deleting. Every call carries the form token in X-CSRF-Token. */
+   GET /spaces/:slug/ai), settings, publishing and deleting. Every call carries the form token in X-CSRF-Token.
+   A guest draft (openvibe.website) is edited the same way: its calls go to the draft's own address and carry the
+   secret from the link (X-Space-Key); it has no Publish button. */
 (function () {
   'use strict';
   var boot = JSON.parse(document.getElementById('sp-boot').textContent);
   var space = boot.space;
+  var guest = boot.guest || null;
   var files = boot.files.map(function (f) { return { path: f.path, content: f.content }; });
   var current = files.some(function (f) { return f.path === 'index.html'; }) ? 'index.html' : (files[0] && files[0].path);
   var dirty = false;
   var $ = function (id) { return document.getElementById(id); };
   var statusEl = $('ed-status'), frame = $('ed-frame'), tabs = $('ed-tabs'), area = $('ed-code');
-  var base = '/spaces/' + encodeURIComponent(space.slug);
+  var base = boot.base || ('/spaces/' + encodeURIComponent(space.slug));
 
   function status(text, kind) { statusEl.textContent = text || ''; statusEl.dataset.kind = kind || ''; }
   function call(method, path, body) {
-    return fetch(base + path, { method: method, credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': boot.csrf }, body: body ? JSON.stringify(body) : undefined })
+    // A guest draft is edited with its secret: the link's key rides along with every call.
+    var headers = { 'Content-Type': 'application/json', 'X-CSRF-Token': boot.csrf };
+    if (guest) headers['X-Space-Key'] = guest.key;
+    return fetch(base + path, { method: method, credentials: 'same-origin', headers: headers, body: body ? JSON.stringify(body) : undefined })
       .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) {
         if (!r.ok) { var e = new Error((j.error && j.error.message) || ('Request failed (' + r.status + ')')); e.code = j.error && j.error.code; e.status = r.status; throw e; }
         return j;
@@ -185,9 +191,10 @@
   });
 
   // ── Publishing ──
+  // A guest draft has no Publish button: it is static until a signed-in person keeps it.
   var publishBtn = $('ed-publish');
-  function publishLabel() { publishBtn.lastChild.textContent = space.published ? ' Update' : ' Publish'; }
-  publishBtn.addEventListener('click', function () {
+  function publishLabel() { if (publishBtn) publishBtn.lastChild.textContent = space.published ? ' Update' : ' Publish'; }
+  if (publishBtn) publishBtn.addEventListener('click', function () {
     var go = function () {
       status('Publishing…');
       return call('POST', '/publish').then(function (j) {
@@ -198,15 +205,16 @@
     };
     if (dirty) save().then(go, function () {}); else go();
   });
-  $('ed-unpublish').addEventListener('click', function () {
+  var unpublishBtn = $('ed-unpublish');
+  if (unpublishBtn) unpublishBtn.addEventListener('click', function () {
     if (!confirm('Unpublish? Its address stops working until you publish again.')) return;
     call('POST', '/unpublish').then(function (j) { space = Object.assign(space, j.space); publishLabel(); dialog.close(); status('Unpublished'); }, function (e) { alert(e.message); });
   });
   $('ed-delete').addEventListener('click', function () {
     if (!confirm('Delete "' + space.name + '" for good? Its files, lists and everyone\'s saved data in it go too.')) return;
-    call('POST', '/delete').then(function () { dirty = false; location.href = '/spaces/mine'; }, function (e) { alert(e.message); });
+    call('POST', '/delete').then(function () { dirty = false; location.href = guest ? '/spaces/guest' : '/spaces/mine'; }, function (e) { alert(e.message); });
   });
-  if (!boot.canPublish) publishBtn.title = 'Publishing at its own address opens with OpenVibe.Space\'s public hosting; the preview runs it now.';
+  if (publishBtn && !boot.canPublish) publishBtn.title = 'Publishing at its own address opens with OpenVibe.Space\'s public hosting; the preview runs it now.';
 
   // Phone: the Preview / Code switch (desktop shows both side by side and hides it).
   var editorEl = $('sp-editor');

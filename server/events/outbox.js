@@ -7,6 +7,7 @@
  *   space.deploy.activated  a site's active deploy changed (payload.rollback marks a rollback)
  *   space.deploy.failed     an upload was refused (payload.code, problem codes; no file contents)
  *   space.domain.verified   a custom domain's TXT record was found; the domain is now served
+ *   space.app.claimed       a guest draft was claimed by a signed-in person (it is theirs now)
  *
  * The SDK writes each row inside the change's own transaction (emit joins the ambient openvibe-sdk/db
  * transaction), so an event exists if and only if its change committed. The relay publishes with
@@ -16,7 +17,7 @@
  */
 const { createServiceOutbox } = require('openvibe-sdk/events');
 
-const EVENT_TYPES = Object.freeze(['space.deploy.created', 'space.deploy.activated', 'space.deploy.failed', 'space.domain.verified']);
+const EVENT_TYPES = Object.freeze(['space.deploy.created', 'space.deploy.activated', 'space.deploy.failed', 'space.domain.verified', 'space.app.claimed']);
 
 function createHostOutbox({ db, config, fetchImpl, now, log = console }) {
     return createServiceOutbox({
