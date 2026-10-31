@@ -217,7 +217,10 @@ function createSpacesPages(ctx) {
     // A visitor who is not signed in makes a draft here, on openvibe.space (never on openvibe.website, which
     // reads no cookie and sets none). The answer is the secret edit link; the cookie only remembers it.
     router.get('/spaces/guest', view(async (req, res) => {
-        html(res, 200, render.guestPage({ templates: templates.sites(), error: null, prompt: '', aiOn: ai.enabled() }));
+        // ?template=<id>: a website template picked on openvibe.website leads the page, one press from a draft.
+        const picked = req.query.template ? templates.get(String(req.query.template)) : null;
+        const pick = picked && picked.kind === 'site' ? picked : null;
+        html(res, 200, render.guestPage({ templates: templates.sites(), error: null, prompt: '', aiOn: ai.enabled(), pick }));
     }));
     router.post('/spaces/guest', ...guestAction(async (req, res) => {
         const body = req.body || {};
