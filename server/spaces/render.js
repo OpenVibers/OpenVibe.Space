@@ -233,7 +233,12 @@ function editorPage({ space, files, csrf, canPublish, url, aiOn, buildsLeft, tem
  * The start page of a guest draft (openvibe.website, plan 5.9): no account, a template or a sentence, and a
  * private link to edit it. Plain forms in the spaces markup; the design is the orchestrator's.
  */
-function guestPage({ templates, error, prompt, aiOn }) {
+function guestPage({ templates, error, prompt, aiOn, pick = null }) {
+    const picked = pick ? `<section class="sp-pick" style="--tpl:${esc(pick.accent)}" aria-labelledby="sp-pick-h">
+  <span class="sp-template-icon"><i class="fa-solid ${esc(pick.icon)}" aria-hidden="true"></i></span>
+  <div class="sp-pick-text"><p class="eyebrow">The template you picked</p><h2 id="sp-pick-h">${esc(pick.name)}</h2><p>${esc(pick.description)}</p></div>
+  <form method="post" action="/spaces/guest"><input type="hidden" name="template" value="${esc(pick.id)}"><button class="sp-btn">Start from this</button></form>
+</section>` : '';
     const cards = templates.map((t) => `<div class="sp-template" style="--tpl:${esc(t.accent)}">
   <span class="sp-template-icon"><i class="fa-solid ${esc(t.icon)}" aria-hidden="true"></i></span>
   <h3>${esc(t.name)}</h3><p>${esc(t.description)}</p>
@@ -244,6 +249,7 @@ function guestPage({ templates, error, prompt, aiOn }) {
   <h1 class="sp-title">Make a site.</h1>
   <p class="sp-lede">No account needed. Start from a template or describe what you want and OpenVibe AI writes it. You get a private link to edit it; sign in later to keep it.</p>
   ${error ? `<p class="sp-flash is-bad" role="alert">${esc(error)}</p>` : ''}
+  ${picked}
   <form class="sp-ai-form" method="post" action="/spaces/guest">
     <label for="sp-prompt">Describe it and OpenVibe AI builds it</label>
     <textarea id="sp-prompt" name="prompt" rows="4" maxlength="4000" placeholder="A bakery site with today&rsquo;s hours, where to find us and how to order…" ${aiOn ? '' : 'disabled'}>${esc(prompt || '')}</textarea>

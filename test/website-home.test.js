@@ -31,9 +31,10 @@ assert.match(hostingSrc, /target\.kind === 'dashboard' \|\| target\.kind === 'we
             assert.strictEqual(sites.length, 5, 'five website templates');
             for (const s of sites) {
                 assert.ok(r.text.includes(`<iframe src="/templates/${s.id}"`) && r.text.includes('sandbox=""'), `${s.id} previews with no script`);
-                assert.ok(r.text.includes(`https://openvibe.space/auth/login?next=${encodeURIComponent(`/spaces/new?template=${s.id}`)}`), `${s.id} is one press from a new space`);
+                assert.ok(r.text.includes(`https://openvibe.space/spaces/guest?template=${s.id}`), `${s.id} starts a draft with no account`);
             }
             assert.match(r.text, /Publishing at your own address opens with public hosting/, 'it claims no publishing it does not have');
+            assert.match(r.text, /No account needed to start/, 'and says what is true now: no account to start');
             assert.match(r.text, /<link rel="canonical" href="https:\/\/openvibe\.website\/">/);
             assert.strictEqual((r.text.match(/<h1[\s>]/g) || []).length, 1, 'one h1');
             assert.ok(r.text.includes('"@type":"FAQPage"'), 'its questions are structured data');
@@ -78,6 +79,14 @@ assert.match(hostingSrc, /target\.kind === 'dashboard' \|\| target\.kind === 'we
             const llms = (await t.get('openvibe.website', '/llms.txt')).text;
             assert.match(llms, /^# OpenVibe\.Website/);
             for (const s of templates.sites()) assert.ok(llms.includes(`https://openvibe.website/templates/${s.id}`), s.id);
+        });
+
+        await check('the guest start page leads with a website template picked on the front door', async () => {
+            const r = await t.request({ method: 'GET', host: 'openvibe.space', path: '/spaces/guest?template=site-event' });
+            assert.strictEqual(r.status, 200, r.text.slice(0, 200));
+            assert.match(r.text, /<section class="sp-pick"[^>]*>[\s\S]*?<h2 id="sp-pick-h">Event page<\/h2>[\s\S]*?name="template" value="site-event"/);
+            const app = await t.request({ method: 'GET', host: 'openvibe.space', path: '/spaces/guest?template=poll' });
+            assert.ok(!app.text.includes('class="sp-pick"'), 'an app template is not a website to start from here');
         });
 
         await check('openvibe.space leads with a template picked on the front door', async () => {

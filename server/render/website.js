@@ -19,12 +19,13 @@ const { asset, escapeHtml: esc } = require('./layout');
 const SPACE = 'https://openvibe.space';
 const NAME = 'OpenVibe.Website';
 const DESCRIPTION = 'Websites that look finished from the first preview: start from a real shop, portfolio, event, link page or launch page, or describe yours, and change anything with the preview beside it.';
-const startHref = (id) => `${SPACE}/auth/login?next=${encodeURIComponent(`/spaces/new${id ? `?template=${id}` : ''}`)}`;
+// No account to start (guest drafts, Space #150): a private edit link, and an OpenVibe account only to keep it.
+const startHref = (id) => `${SPACE}/spaces/guest${id ? `?template=${encodeURIComponent(id)}` : '#sp-prompt'}`;
 
 const FAQ = [
     ['Do I need to know how to code?', 'No. Pick a template and change the words, colours and pictures, or describe the site and OpenVibe AI writes a first version. The code is all there when you want it.'],
     ['When can I put it on my own address?', 'Publishing at yourname.openvibe.website or on your own domain opens with public hosting, once the automatic abuse checks, a designated DMCA agent and the domain\'s Public Suffix List entry are in place. Until then you build, edit and preview, and OpenVibe staff publish.'],
-    ['Why do I sign in on openvibe.space?', 'Your sites are kept with your OpenVibe account on OpenVibe.Space, the engine that builds and hosts them. openvibe.website itself keeps no cookies, so no site here can ever touch your sign-in.'],
+    ['Do I need an account?', 'Not to start. Pick a template or describe your site and you get a private link to edit it, good for a week. Sign in with OpenVibe on openvibe.space to keep it; openvibe.website itself keeps no cookies, so no site here can touch your sign-in.'],
     ['Can I take my site somewhere else?', 'Yes. A site is plain HTML, CSS and JavaScript; copy its files out of the editor whenever you like.'],
 ];
 
@@ -70,7 +71,7 @@ ${sc.hero({
             { label: 'Pick a template', href: '#templates', primary: true },
             { label: 'Describe your site', href: startHref('') },
         ],
-        note: 'Building and previewing are open to everyone with an OpenVibe account. Publishing at your own address opens with public hosting.',
+        note: 'No account needed to start: you get a private link to edit your site, and keep it with an OpenVibe account. Publishing at your own address opens with public hosting.',
         aside: { html: stage() },
     })}
 <section class="sc-sec" id="templates" aria-labelledby="wb-tpl-h">
