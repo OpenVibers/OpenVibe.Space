@@ -152,22 +152,31 @@ function spacePage({ viewer, space, owner, url, csrf, forkedFrom }) {
     });
 }
 
-function editorPage({ space, files, csrf, canPublish, url, aiOn, buildsLeft, templates }) {
+function editorPage({ space, files, csrf, canPublish, url, aiOn, buildsLeft, templates, guest = null }) {
     const boot = {
         space: { id: space.id, slug: space.slug, name: space.name, description: space.description, instructions: space.instructions, capabilities: caps(space), visibility: space.visibility, published: Boolean(space.site_id), url, building: Boolean(space.building_run_id), building_prompt: space.building_prompt || '' },
         files, csrf, canPublish, aiOn, buildsLeft, templates: templates.map((t) => ({ id: t.id, name: t.name })),
+        // Where the editor's calls go: a guest draft is edited by its id (its address is a secret link), an
+        // owned space by its slug. A guest carries its secret with every call.
+        base: `/spaces/${guest ? space.id : space.slug}`,
+        guest: guest ? { id: space.id, key: guest.key } : null,
     };
+    // The claim (openvibe.website, plan 5.9): a signed-in person who holds the secret keeps the draft.
+    const claim = guest ? (guest.signedIn
+        ? `<form method="post" action="/spaces/${esc(guest.id)}/claim"><input type="hidden" name="key" value="${esc(guest.key)}"><input type="hidden" name="csrf" value="${esc(guest.claimCsrf || '')}"><button class="sp-btn" type="submit"><i class="fa-solid fa-bookmark" aria-hidden="true"></i> Keep this site</button></form>`
+        : `<p class="sp-muted">This draft is yours until you sign in. <a class="sp-btn sp-btn-quiet" href="${esc(`/auth/login?next=${encodeURIComponent(`/spaces/${guest.id}/edit?key=${guest.key}`)}`)}">Sign in to keep it</a></p>`) : '';
     const body = `<div class="sp-editor" id="sp-editor" data-view="preview">
   <header class="sp-ed-bar">
-    <a class="sp-ed-back" href="/spaces/${esc(space.slug)}" aria-label="Back to the space's page"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a>
+    <a class="sp-ed-back" href="${guest ? '/spaces/guest' : `/spaces/${esc(space.slug)}`}" aria-label="Back"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a>
     <h1 class="sp-ed-name" id="ed-name">${esc(space.name)}</h1>
     <span class="sp-ed-status" id="ed-status" role="status"></span>
     <div class="sp-ed-actions">
       <button class="sp-btn sp-btn-quiet" id="ed-settings" type="button"><i class="fa-solid fa-sliders" aria-hidden="true"></i> Settings</button>
       <button class="sp-btn sp-btn-quiet" id="ed-save" type="button"><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> Save</button>
-      <button class="sp-btn" id="ed-publish" type="button"><i class="fa-solid fa-globe" aria-hidden="true"></i> ${space.site_id ? 'Update' : 'Publish'}</button>
+      ${guest ? '' : `<button class="sp-btn" id="ed-publish" type="button"><i class="fa-solid fa-globe" aria-hidden="true"></i> ${space.site_id ? 'Update' : 'Publish'}</button>`}
     </div>
   </header>
+  ${claim ? `<div class="sp-ed-claim"><p><strong>Keep this site</strong> — sign in and it becomes yours, with an address of its own.</p>${claim}</div>` : ''}
   <div class="sp-ed-ai">
     <form id="ed-ai-form"><label class="sr-only" for="ed-ai">Ask OpenVibe AI to change this space</label>
       <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
@@ -193,7 +202,7 @@ function editorPage({ space, files, csrf, canPublish, url, aiOn, buildsLeft, tem
       <label>Name<input name="name" maxlength="40" required></label>
       <label>Description<textarea name="description" rows="2" maxlength="400" placeholder="What it does, for the gallery"></textarea></label>
       <label>Its AI's instructions<textarea name="instructions" rows="4" maxlength="4000" placeholder="Who the space's AI is and how it answers (used by OV.ai.ask)"></textarea></label>
-      <fieldset><legend>What it may ask visitors for</legend>
+      ${guest ? '' : `<fieldset><legend>What it may ask visitors for</legend>
         <label class="sp-check"><input type="checkbox" name="cap" value="profile"> Their username</label>
         <label class="sp-check"><input type="checkbox" name="cap" value="data"> Adding to shared lists (OV.items)</label>
         <label class="sp-check"><input type="checkbox" name="cap" value="kv"> Their private storage (OV.kv)</label>
@@ -201,11 +210,11 @@ function editorPage({ space, files, csrf, canPublish, url, aiOn, buildsLeft, tem
       </fieldset>
       <fieldset><legend>Who can find it</legend>
         <label class="sp-check"><input type="radio" name="visibility" value="public"> Public: in the gallery</label>
-        <label class="sp-check"><input type="radio" name="visibility" value="unlisted"> Unlisted: only with the link</label>
-      </fieldset>
+        <label class="sp-check"><input type="radio" name="visibility" value="unlisted"> Unlisted: only with its link</label>
+      </fieldset>`}
       <div class="sp-row sp-dialog-actions"><button class="sp-btn" value="save">Save settings</button><button class="sp-btn sp-btn-quiet" value="cancel" formnovalidate>Cancel</button></div>
       <hr>
-      <div class="sp-row"><button class="sp-btn sp-btn-quiet sp-btn-sm" id="ed-unpublish" type="button" ${space.site_id ? '' : 'hidden'}>Unpublish</button><button class="sp-btn sp-btn-danger sp-btn-sm" id="ed-delete" type="button">Delete this space</button></div>
+      <div class="sp-row">${guest ? '' : `<button class="sp-btn sp-btn-quiet sp-btn-sm" id="ed-unpublish" type="button" ${space.site_id ? '' : 'hidden'}>Unpublish</button>`}<button class="sp-btn sp-btn-danger sp-btn-sm" id="ed-delete" type="button">Delete this space</button></div>
     </form>
   </dialog>
 </div>
@@ -217,7 +226,34 @@ function editorPage({ space, files, csrf, canPublish, url, aiOn, buildsLeft, tem
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/htmlmixed/htmlmixed.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="${asset('js/space-editor.js')}" defer></script>`;
-    return page({ title: `Edit ${space.name}`, path: `/spaces/${space.slug}/edit`, robots: 'noindex,nofollow', body });
+    return page({ title: `Edit ${space.name}`, path: guest ? `/spaces/${space.id}/edit` : `/spaces/${space.slug}/edit`, robots: 'noindex,nofollow', body });
+}
+
+/**
+ * The start page of a guest draft (openvibe.website, plan 5.9): no account, a template or a sentence, and a
+ * private link to edit it. Plain forms in the spaces markup; the design is the orchestrator's.
+ */
+function guestPage({ templates, error, prompt, aiOn }) {
+    const cards = templates.map((t) => `<div class="sp-template" style="--tpl:${esc(t.accent)}">
+  <span class="sp-template-icon"><i class="fa-solid ${esc(t.icon)}" aria-hidden="true"></i></span>
+  <h3>${esc(t.name)}</h3><p>${esc(t.description)}</p>
+  <form method="post" action="/spaces/guest"><input type="hidden" name="template" value="${esc(t.id)}"><button class="sp-btn">Start from this</button></form>
+</div>`).join('');
+    const body = `<div class="sp-wrap">
+  <p class="eyebrow">OpenVibe.Space</p>
+  <h1 class="sp-title">Make a site.</h1>
+  <p class="sp-lede">No account needed. Start from a template or describe what you want and OpenVibe AI writes it. You get a private link to edit it; sign in later to keep it.</p>
+  ${error ? `<p class="sp-flash is-bad" role="alert">${esc(error)}</p>` : ''}
+  <form class="sp-ai-form" method="post" action="/spaces/guest">
+    <label for="sp-prompt">Describe it and OpenVibe AI builds it</label>
+    <textarea id="sp-prompt" name="prompt" rows="4" maxlength="4000" placeholder="A bakery site with today&rsquo;s hours, where to find us and how to order…" ${aiOn ? '' : 'disabled'}>${esc(prompt || '')}</textarea>
+    <div class="sp-row"><button class="sp-btn" ${aiOn ? '' : 'disabled'}><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> Build it</button>
+      <span class="sp-muted">${aiOn ? 'It takes about a minute; you can change everything after.' : 'OpenVibe AI is not available right now; start from a template instead.'}</span></div>
+  </form>
+  <h2 class="sp-subtitle">Or start from a template</h2>
+  <div class="sp-templates is-compact">${cards}</div>
+</div>`;
+    return page({ title: 'Make a site', path: '/spaces/guest', robots: 'noindex,nofollow', body });
 }
 
 function connectPage({ viewer, space, csrf, challenge, state, returnPath }) {
@@ -259,4 +295,4 @@ function errorBody(status, message) {
     return page({ title: status === 404 ? 'Space not found' : 'Spaces', path: '/spaces', robots: 'noindex,nofollow', body: `<div class="sp-wrap"><p class="eyebrow">Error ${Number(status)}</p><h1 class="sp-title">${status === 404 ? 'No such space' : 'That did not work'}</h1><p class="sp-lede">${esc(message)}</p><p><a class="sp-btn" href="/spaces">Back to spaces</a></p></div>` });
 }
 
-module.exports = { galleryPage, newPage, minePage, spacePage, editorPage, connectPage, signInPage, errorBody, CAP_TEXT };
+module.exports = { galleryPage, newPage, minePage, spacePage, editorPage, guestPage, connectPage, signInPage, errorBody, CAP_TEXT };

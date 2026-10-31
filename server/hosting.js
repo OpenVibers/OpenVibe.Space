@@ -65,10 +65,12 @@ function createHosting(app, { db, auth, config: suppliedConfig, now, resolver, f
     app.locals.ctx = ctx;
 
     // Spaces (server/spaces/): apps people make here and publish as sites of their Spaces project.
-    ctx.spaces = require('./spaces/spaces').createSpaces({ store, config, projects, sites, deploys, takedowns, log });
+    ctx.spaces = require('./spaces/spaces').createSpaces({ store, config, projects, sites, deploys, takedowns, outbox, log });
     ctx.spacesAi = require('./spaces/ai').createSpacesAi({ config, client: spacesAiClient, log });
     ctx.spaceData = require('./spaces/data').createSpaceData({ store, config, spaces: ctx.spaces, ai: ctx.spacesAi });
     ctx.spaceFunctions = require('./spaces/functions').createSpaceFunctions({ data: ctx.spaceData, workers: config.spaces.fnWorkers, log });
+    // Guest drafts (openvibe.website, plan 5.9): the job that removes the drafts whose week is up.
+    ctx.guestCleanup = require('./spaces/guest-cleanup').createGuestCleanup({ store, config, log });
     {
         const { sdkSource } = require('./spaces/sdk');
         const bySite = new Map();

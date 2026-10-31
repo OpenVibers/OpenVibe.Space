@@ -174,6 +174,19 @@ function load(env = process.env) {
                 enabled: String(env.SPACE_AI || 'on').trim().toLowerCase() !== 'off',
                 url: trim(env.OV_AI_INTERNAL_URL || env.OV_AI_URL || 'http://127.0.0.1:4700'),
             },
+            // Guest drafts (openvibe.website, plan 5.9): a visitor who is not signed in makes a draft with a
+            // secret edit link and claims it later. These limits are the abuse screen's first half: what one
+            // address may make a day, what one draft may ask the AI, how many drafts the service makes a day,
+            // and how long a draft lives after its last edit (a job removes it).
+            guest: {
+                enabled: String(env.SPACE_GUEST_DRAFTS || 'on').trim().toLowerCase() !== 'off',
+                draftsPerIpPerDay: int(env.SPACE_GUEST_DRAFTS_PER_IP_PER_DAY, 3),
+                aiBuildsPerIpPerDay: int(env.SPACE_GUEST_AI_BUILDS_PER_IP_PER_DAY, 2),
+                aiEditsPerDraft: int(env.SPACE_GUEST_AI_EDITS_PER_DRAFT, 20),
+                draftsPerDay: int(env.SPACE_GUEST_DRAFTS_PER_DAY, 500),
+                ttlDays: int(env.SPACE_GUEST_TTL_DAYS, 7),
+                cleanupIntervalMs: int(env.SPACE_GUEST_CLEANUP_INTERVAL_MS, 60 * 60 * 1000),
+            },
         },
 
         worker: {

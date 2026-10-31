@@ -14,6 +14,7 @@
 const crypto = require('crypto');
 const { ids } = require('openvibe-contracts');
 const { ApiError } = require('../http/errors');
+const guest = require('./guest');
 
 const SPACE_RE = /^spc_[0-9A-HJKMNP-TV-Z]{26}$/;
 const SLUG_RE = /^[a-z0-9](?:[a-z0-9]|-(?=[a-z0-9])){2,39}$/;
@@ -41,7 +42,7 @@ function slugBase(name) {
     return s.length >= 3 ? s : `space-${s}`.replace(/-+$/, '');
 }
 
-function createSpaces({ store, config, projects, sites, deploys, takedowns, log = console }) {
+function createSpaces({ store, config, projects, sites, deploys, takedowns, outbox = null, log = console }) {
     const { db } = store;
     const limits = config.spaces;
     const q = {
@@ -74,6 +75,14 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, log 
         counter: db.prepare(`INSERT INTO space_app_counters (scope, day, n) VALUES (?, ?, 1)
                              ON CONFLICT (scope, day) DO UPDATE SET n = space_app_counters.n + 1 RETURNING n`),
         counterGet: db.prepare('SELECT n FROM space_app_counters WHERE scope = ? AND day = ?'),
+        // Guest drafts (openvibe.website, plan 5.9): no owner yet, a secret of their own, and a time they live until.
+        insertGuest: db.prepare(`INSERT INTO space_apps (id, slug, owner_subject, owner_username, owner_name, name, description, instructions, capabilities,
+                                 template, forked_from, visibility, status, created_at, updated_at, guest_hash, guest_ip, guest_expires_at)
+                                 VALUES (?, ?, NULL, '', '', ?, ?, '', '[]', ?, NULL, 'unlisted', 'active', ?, ?, ?, ?, ?)`),
+        touchGuest: db.prepare('UPDATE space_apps SET updated_at = ?, guest_expires_at = ? WHERE id = ? AND guest_hash IS NOT NULL'),
+        claimGuest: db.prepare(`UPDATE space_apps SET owner_subject = ?, owner_username = ?, owner_name = ?, slug = ?, visibility = 'public',
+                                 guest_hash = NULL, guest_ip = NULL, guest_expires_at = NULL, updated_at = ?
+                                 WHERE id = ? AND guest_hash IS NOT NULL`),
     };
 
     const isSpaceId = (v) => typeof v === 'string' && SPACE_RE.test(v);
@@ -147,6 +156,15 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, log 
         throw new ApiError(503, 'space.slug_unavailable', 'could not find a free address for the space; try another name');
     }
 
+    /** A guest draft's address: a plain name, not something a visitor chose (it is claimed later). */
+    async function uniqueGuestSlug() {
+        for (let i = 0; i < 8; i++) {
+            const slug = `guest-${crypto.randomBytes(3).toString('hex')}`;
+            if (!(await q.slugUsed.get(slug, slug))) return slug;
+        }
+        throw new ApiError(503, 'space.slug_unavailable', 'could not find a free address for the draft; try again');
+    }
+
     /** A new space owned by the viewer: from given files (a template, a fork, an AI build) and settings. */
     async function create(viewer, input = {}) {
         const person = personOf(viewer);
@@ -168,6 +186,88 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, log 
         const checked = checkFiles(list);
         await writeFiles(space, checked, store.now());
         return checked;
+    }
+
+    // ── Guest drafts (openvibe.website, plan 5.9) ────────────────────────────────────────────────────────
+    // A visitor who is not signed in makes a draft: no owner, a random secret of which only the hash is kept,
+    // and an address of its own. The secret opens /spaces/<id>/edit?key=…; a signed-in person who holds it can
+    // claim the draft, and then it is an ordinary space of theirs.
+
+    /** A guest draft: a space with no owner and a secret of its own. */
+    const isGuest = (space) => Boolean(space && !space.owner_subject && space.guest_hash);
+    /** The draft is up: seven days after its last edit (the job removes it). */
+    const guestExpired = (space, now) => Boolean(space && space.guest_expires_at && Number(space.guest_expires_at) < Number(now));
+    /** The key opens the draft. The comparison is in constant time (server/spaces/guest.js). */
+    const guestKeyOk = (space, key) => guest.keyMatches(space && space.guest_hash, key);
+    /** Push the draft's time up: it lives seven days after its last edit. */
+    async function touchGuest(space) {
+        const now = store.now();
+        await q.touchGuest.run(now, now + limits.guest.ttlDays * DAY, space.id);
+        return now;
+    }
+
+    /**
+     * A new guest draft. The secret is returned once, in the link; only its hash is stored.
+     * A guest draft has no capabilities: there is no visitor to ask anything of.
+     */
+    async function createGuest({ ip = '', name = 'Untitled site', description = '', template = null, files }) {
+        const now = store.now();
+        const id = `spc_${ids.ulid(now)}`;
+        const slug = await uniqueGuestSlug();
+        const key = guest.newKey();
+        const list = checkFiles(files);
+        await store.tx(async () => {
+            await q.insertGuest.run(id, slug, text(name, 40), text(description, 400), template, now, now, guest.keyHash(key), String(ip || '').slice(0, 64), now + limits.guest.ttlDays * DAY);
+            for (const f of list) await q.addFile.run(id, f.path, f.content, now);
+        });
+        return { space: await get(id), key };
+    }
+
+    /**
+     * The claim: a signed-in person who holds the secret takes the draft. It becomes theirs, with an address
+     * from its name, the secret is cleared, and it follows every rule a signed-in person's space does.
+     * Claiming twice, or with the wrong secret, is refused.
+     */
+    async function claimGuest(space, key, person) {
+        if (!isGuest(space)) throw new ApiError(409, 'space.already_claimed', 'this space already belongs to someone');
+        if (!guest.keyMatches(space.guest_hash, key)) throw new ApiError(403, 'space.forbidden', 'that is not this draft\'s secret');
+        if ((await q.ownedCount.get(person.subject)).n >= limits.maxPerOwner) throw new ApiError(429, 'quota.spaces', `you have ${limits.maxPerOwner} spaces already; delete one to make another`);
+        const now = store.now();
+        const slug = await uniqueSlug(space.name);
+        const claimed = await store.tx(async () => {
+            const r = await q.claimGuest.run(person.subject, person.username, person.name, slug, now, space.id);
+            if (!r.changes) return false;
+            // The claim is a status event: the draft now belongs to a person.
+            if (outbox) {
+                await outbox.emit({
+                    event_type: 'space.app.claimed', actor: { type: 'user', id: person.subject },
+                    visibility: 'internal', priority: 'important',
+                    subject: { type: 'space', id: space.id },
+                    payload: { space_id: space.id, slug, name: space.name, ...(space.template ? { template: space.template } : {}) },
+                });
+            }
+            return true;
+        });
+        if (!claimed) throw new ApiError(409, 'space.already_claimed', 'this space already belongs to someone');
+        if (outbox) outbox.kick();
+        return await get(space.id);
+    }
+
+    /**
+     * The abuse screen's counters (the guest half): what one address may make a day, what the service makes a
+     * day, and what one draft may ask the AI. Returns { ok } or { ok: false, reason }.
+     */
+    async function spendGuestDraft(ip) {
+        const g = limits.guest;
+        if (!(await spend('guest-draft:day', g.draftsPerDay))) return { ok: false, reason: 'service' };
+        if (!(await spend(`guest-draft:ip:${ip}`, g.draftsPerIpPerDay))) return { ok: false, reason: 'ip' };
+        return { ok: true };
+    }
+    async function spendGuestAi(ip, spaceId) {
+        const g = limits.guest;
+        if (!(await spend(`guest-ai:ip:${ip}`, g.aiBuildsPerIpPerDay))) return { ok: false, reason: 'ip' };
+        if (spaceId && !(await spend(`guest-ai:${spaceId}`, g.aiEditsPerDraft))) return { ok: false, reason: 'draft' };
+        return { ok: true };
     }
 
     async function updateSettings(viewer, space, input = {}) {
@@ -278,6 +378,8 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, log 
         CAPABILITIES, isSpaceId, get, getBySlug, forSite, load, isOwner, files, create, saveFiles, updateSettings, fork,
         startBuild, finishBuild, failBuild, spend, used, canPublish, publish, unpublish, remove, gallery, mine, hostnameOf, urlOf,
         personOf, capsOf, checkFiles, DAY,
+        // Guest drafts (openvibe.website, plan 5.9)
+        isGuest, guestExpired, guestKeyOk, touchGuest, createGuest, claimGuest, spendGuestDraft, spendGuestAi,
     };
 }
 

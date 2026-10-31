@@ -4,7 +4,8 @@
  *
  *   build(person, { prompt, name, current })   space.app.build, the AI builder: starts a run on behalf of the person
  *                                               building and answers its id (a whole app takes longer than one request
- *                                               may wait, so the editor polls result(id)).
+ *                                               may wait, so the editor polls result(id)). A guest draft has no
+ *                                               person: its run is Space's own (person is null).
  *   result(runId)                               { status: 'running' | 'succeeded' | 'failed', output, error }
  *   ask(space, person, { transcript, message }) space.app.ask, a space's own AI, on behalf of the visitor: the text.
  *
@@ -32,13 +33,17 @@ function createSpacesAi({ config, client: injected = null, log = console }) {
     const unavailable = () => new ApiError(503, 'space.ai_unavailable', 'OpenVibe AI is not available here right now');
     const subjectRef = (person) => ({ type: 'user', id: person.subject });
 
+    /**
+     * The AI builder. `person` is the signed-in maker the run acts for; a guest draft has none, so its run is
+     * Space's own (server/spaces/pages.js, the guest drafts of openvibe.website).
+     */
     async function build(person, { prompt, name, current, spaceId }) {
         if (!enabled()) throw unavailable();
         const input = { prompt: String(prompt || '').slice(0, 4000), ...(name ? { name: String(name).slice(0, 40) } : {}), ...(current && current.length ? { current } : {}) };
         let body;
         try {
             body = await client().runs.create('space.app.build', input, {
-                wait: 0, onBehalfOf: subjectRef(person),
+                wait: 0, ...(person ? { onBehalfOf: subjectRef(person) } : {}),
                 ...(spaceId ? { attribution: { service: 'space', type: 'space', id: spaceId } } : {}),
             });
         } catch (err) {

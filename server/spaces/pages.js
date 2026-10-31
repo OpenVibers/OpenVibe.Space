@@ -11,16 +11,28 @@
  *   GET  /spaces/:slug/connect · POST the sign-in a visitor approves for a published space; back to the space with a code
  *   GET  /_openvibe/sdk.js            the SDK in preview mode (the editor's sandboxed frame loads it from here)
  *
+ * Guest drafts (openvibe.website, plan 5.9: "making websites and code without needing OpenVibe logins"):
+ *
+ *   GET  /spaces/guest                the start page: a website template, or a sentence for the AI
+ *   POST /spaces/guest                make a draft; the answer is the secret edit link
+ *   GET  /spaces/:id/edit             the editor of a guest draft (?key=…, or the cookie that remembers it)
+ *   POST /spaces/:id/claim            a signed-in person who holds the key keeps the draft
+ *
  * The editor's JSON calls (same origin, the form token in X-CSRF-Token):
  *   PUT /spaces/:slug/files · PUT /spaces/:slug/settings · POST /spaces/:slug/ai · GET /spaces/:slug/ai
  *   POST /spaces/:slug/publish · POST /spaces/:slug/unpublish · POST /spaces/:slug/delete
  *   POST /spaces/:slug/preview        { op, args }: an SDK call from the preview, run as the maker
+ *
+ * A guest draft is edited with the same calls: the secret opens them, and the form token is one made for the
+ * draft (server/auth/forms.js, scopeToken). A guest never publishes, never keeps a visitor's data and never
+ * runs server functions.
  */
 const express = require('express');
 const { ApiError } = require('../http/errors');
-const { csrfToken, checkCsrf, sameOrigin } = require('../auth/forms');
+const { csrfToken, checkCsrf, scopeToken, checkScopeToken, sameOrigin } = require('../auth/forms');
 const templates = require('./templates');
 const render = require('./render');
+const contentCheck = require('./content-check');
 const { sdkSource } = require('./sdk');
 
 const BUILD_STALE = 10 * 60 * 1000;
@@ -84,12 +96,48 @@ function createSpacesPages(ctx) {
         if (!sameOrigin(config, req) || !checkCsrf(config, req.viewer, req.body && req.body.csrf)) throw new ApiError(403, 'form.invalid', 'this form expired or did not come from this site; reload the page and try again');
         await fn(req, res);
     })];
+    /**
+     * A guest's form POST: no session, but it must come from this site (the Origin), so a page elsewhere
+     * cannot make drafts here.
+     */
+    const guestAction = (fn) => [urlencoded, view(async (req, res) => {
+        if (!sameOrigin(config, req)) throw new ApiError(403, 'form.invalid', 'this form did not come from this site; reload the page and try again');
+        await fn(req, res);
+    })];
+    /**
+     * Who is editing this space: its maker (signed in, own space) or a guest holding the draft's secret.
+     * The parameter is a space id (a guest draft) or a slug (an owned space).
+     * Throws 404 when there is no such space (or a guest draft whose week is up), 403 when the secret is wrong.
+     */
+    async function editorOf(req) {
+        const param = req.params.slug;
+        const space = (await spaces.get(param)) || (await spaces.getBySlug(param));
+        if (!space) throw new ApiError(404, 'space.not_found', 'no such space');
+        if (spaces.isGuest(space)) {
+            if (spaces.guestExpired(space, ctx.store.now())) throw new ApiError(404, 'space.not_found', 'this draft is gone');
+            const key = guestKeyOf(req, space);
+            if (!spaces.guestKeyOk(space, key)) throw new ApiError(403, 'space.forbidden', 'this draft needs the secret from its link');
+            return { space, guest: true, key };
+        }
+        if (!signedIn(req)) throw new ApiError(401, 'auth.required', 'sign in first');
+        const owner = spaces.isOwner(req.viewer, space) || Boolean(req.viewer && req.viewer.staff);
+        // A published space says who may change it; a draft is nobody's but its maker's, so it is simply not there.
+        if (!owner) {
+            if (space.site_id) throw new ApiError(403, 'space.not_owner', 'only the space\'s maker can change it');
+            throw new ApiError(404, 'space.not_found', 'no such space');
+        }
+        return { space, guest: false, key: null };
+    }
     /** An editor JSON call: signed in, same origin, the form token in X-CSRF-Token. */
     const api = (fn) => [json, async (req, res) => {
         try {
-            if (!signedIn(req)) throw new ApiError(401, 'auth.required', 'sign in again');
-            if (!sameOrigin(config, req) || !checkCsrf(config, req.viewer, req.get('x-csrf-token'))) throw new ApiError(403, 'form.invalid', 'this page expired; reload it');
-            res.json(await fn(req, res));
+            const who = await editorOf(req);
+            // A guest draft is edited with its own form token (one made for the draft) and its own secret.
+            const ok = who.guest
+                ? checkScopeToken(config, `guest:${who.space.id}`, req.get('x-csrf-token'))
+                : checkCsrf(config, req.viewer, req.get('x-csrf-token'));
+            if (!sameOrigin(config, req) || !ok) throw new ApiError(403, 'form.invalid', 'this page expired; reload it');
+            res.json(await fn(req, res, who));
         } catch (err) {
             if (!(err instanceof ApiError) && !(err && Number.isInteger(err.status) && err.code)) log.error('[Spaces editor]', err && err.stack ? err.stack : err);
             const status = err && Number.isInteger(err.status) ? err.status : 500;
@@ -98,6 +146,34 @@ function createSpacesPages(ctx) {
     }];
     const buildsLeft = async (req) => (signedIn(req) ? Math.max(0, limits.aiBuildsPerDay - await spaces.used(`build:${req.viewer.subject}`)) : 0);
     const settingsOut = (s) => ({ id: s.id, slug: s.slug, name: s.name, description: s.description, instructions: s.instructions, capabilities: spaces.capsOf(s.capabilities), visibility: s.visibility, published: Boolean(s.site_id), url: spaces.urlOf(s), building: Boolean(s.building_run_id) });
+
+    // ── Guest drafts (openvibe.website, plan 5.9) ────────────────────────────────────────────────────────────
+    // A visitor who is not signed in makes a draft on openvibe.space. The draft has no owner and a random
+    // secret; only the secret's hash is stored (server/spaces/guest.js). The secret opens the draft's editor
+    // and is what a signed-in person needs to claim it.
+    const guestLimits = limits.guest;
+    const guestCookie = (id) => `spc_key_${id}`;
+    /** The form token of a guest draft: one made for the draft, not for a session. */
+    const guestCsrf = (id) => scopeToken(config, `guest:${id}`);
+    /** The address the request came from: the abuse screen counts what one address makes. */
+    const ipOf = (req) => String(req.ip || (req.socket && req.socket.remoteAddress) || '').replace(/^::ffff:/, '').slice(0, 64);
+    /** The draft's secret: from the link, from the cookie that remembers it, or from the editor's header. */
+    const guestKeyOf = (req, space) => {
+        const q = req.query && req.query.key;
+        if (typeof q === 'string' && q) return q;
+        const h = req.get('x-space-key');
+        if (typeof h === 'string' && h) return h;
+        const c = req.cookies && req.cookies[guestCookie(space.id)];
+        return typeof c === 'string' ? c : '';
+    };
+    /** Remember the secret for this one draft (host-only, so only openvibe.space ever sees it). */
+    const setGuestCookie = (res, space, key) => res.cookie(guestCookie(space.id), key, {
+        httpOnly: true, sameSite: 'lax', secure: config.cookies.secure, path: `/spaces/${space.id}`,
+        maxAge: guestLimits.ttlDays * 24 * 3600 * 1000,
+    });
+    const clearGuestCookie = (res, space) => res.clearCookie(guestCookie(space.id), { path: `/spaces/${space.id}` });
+    /** How many AI builds this address has left today. */
+    const guestBuildsLeft = async (req) => Math.max(0, guestLimits.aiBuildsPerIpPerDay - await spaces.used(`guest-ai:ip:${ipOf(req)}`));
 
     router.get('/_openvibe/sdk.js', (req, res) => {
         res.set('Cache-Control', 'no-cache').type('application/javascript').send(sdkSource({ mode: 'preview', avatar: `${config.networkUrl}/avatar/{username}` }));
@@ -127,12 +203,57 @@ function createSpacesPages(ctx) {
         const again = (error) => html(res, 422, render.newPage({ viewer: req.viewer, templates: templates.list(), csrf: csrfOf(req), aiOn: ai.enabled(), buildsLeft: 0, error, prompt }));
         if (prompt.length < 8) return again('Describe your space in a sentence or two (what it does, who uses it, how it should look).');
         if (!ai.enabled()) return again('OpenVibe AI is not available right now. Start from a template instead.');
+        // The abuse screen: what is asked of the AI must pass it (a guest's prompt passes the same checks).
+        contentCheck.refuse(contentCheck.promptReason(prompt));
         if (!(await spaces.spend(`build:${req.viewer.subject}`, limits.aiBuildsPerDay))) return again(`You have used today's ${limits.aiBuildsPerDay} AI builds. Start from a template, or try again tomorrow.`);
         const t = templates.get('blank');
         const space = await spaces.create(req.viewer, { name: 'New space', description: '', capabilities: t.capabilities, files: templates.files('blank'), template: null });
         const runId = await ai.build(spaces.personOf(req.viewer), { prompt, spaceId: space.id });
         await spaces.startBuild(space, runId, prompt);
         res.redirect(303, `/spaces/${space.slug}/edit`);
+    }));
+
+    // ── Guest drafts (openvibe.website, plan 5.9) ────────────────────────────────────────────────────────────
+    // A visitor who is not signed in makes a draft here, on openvibe.space (never on openvibe.website, which
+    // reads no cookie and sets none). The answer is the secret edit link; the cookie only remembers it.
+    router.get('/spaces/guest', view(async (req, res) => {
+        html(res, 200, render.guestPage({ templates: templates.sites(), error: null, prompt: '', aiOn: ai.enabled() }));
+    }));
+    router.post('/spaces/guest', ...guestAction(async (req, res) => {
+        const body = req.body || {};
+        const prompt = String(body.prompt || '').trim();
+        const t = body.template ? templates.get(String(body.template)) : null;
+        const again = (error) => html(res, 422, render.guestPage({ templates: templates.sites(), error, prompt, aiOn: ai.enabled() }));
+        if (!guestLimits.enabled) return again('Guest drafts are off right now.');
+        if (body.template && (!t || t.kind !== 'site')) return again('That is not a website template.');
+        if (!t && prompt.length < 8) return again('Describe your site in a sentence or two (what it does, who uses it, how it should look).');
+        if (!t && !ai.enabled()) return again('OpenVibe AI is not available right now. Start from a template instead.');
+        // The abuse screen: what the guest asks for, and what the draft starts from, must pass it.
+        contentCheck.refuse(contentCheck.promptReason(prompt));
+        const files = t ? templates.files(t.id) : templates.files('blank');
+        contentCheck.refuse(contentCheck.filesReason(files, { sitesDomain: config.sitesDomain, forms: true }));
+        // The AI's share of the day, before anything is made.
+        let aiRoom = { ok: true };
+        if (!t) {
+            aiRoom = await spaces.spendGuestAi(ipOf(req), null);
+            if (!aiRoom.ok) return again(`You have used today's ${guestLimits.aiBuildsPerIpPerDay} AI builds. Start from a template, or try again tomorrow.`);
+        }
+        // The limits: what this address may make a day, and what the service makes a day.
+        const room = await spaces.spendGuestDraft(ipOf(req));
+        if (!room.ok) return again(room.reason === 'service'
+            ? 'We have made as many drafts today as we can. Please try again tomorrow.'
+            : `You have made today's ${guestLimits.draftsPerIpPerDay} drafts. Please try again tomorrow.`);
+        const { space, key } = await spaces.createGuest({
+            ip: ipOf(req), name: t ? t.name : 'Untitled site', description: t ? t.description : '',
+            template: t ? t.id : null, files,
+        });
+        // The secret is in the link; the cookie remembers it for this one draft (the link alone works too).
+        setGuestCookie(res, space, key);
+        if (!t && aiRoom.ok) {
+            const runId = await ai.build(null, { prompt, spaceId: space.id });
+            await spaces.startBuild(space, runId, prompt);
+        }
+        res.redirect(303, `/spaces/${space.id}/edit?key=${encodeURIComponent(key)}`);
     }));
 
     router.get('/spaces/mine', view(async (req, res) => {
@@ -147,8 +268,17 @@ function createSpacesPages(ctx) {
     }));
 
     router.get('/spaces/:slug/edit', view(async (req, res) => {
-        if (!signedIn(req)) throw new ApiError(401, 'auth.required', 'sign in first');
-        const { space } = await spaces.load(req.viewer, req.params.slug, 'own');
+        const who = await editorOf(req);
+        if (who.guest) {
+            html(res, 200, render.editorPage({
+                space: who.space, files: await spaces.files(who.space), csrf: guestCsrf(who.space.id),
+                canPublish: false, url: null, aiOn: ai.enabled(), buildsLeft: await guestBuildsLeft(req),
+                templates: templates.list(),
+                guest: { id: who.space.id, key: who.key, claimCsrf: csrfOf(req), signedIn: signedIn(req) },
+            }));
+            return;
+        }
+        const { space } = who;
         html(res, 200, render.editorPage({ space, files: await spaces.files(space), csrf: csrfOf(req), canPublish: spaces.canPublish(req.viewer), url: spaces.urlOf(space), aiOn: ai.enabled(), buildsLeft: await buildsLeft(req), templates: templates.list() }));
     }));
 
@@ -158,26 +288,58 @@ function createSpacesPages(ctx) {
         res.redirect(303, `/spaces/${copy.slug}/edit`);
     }));
 
-    // ── The editor's JSON calls ──
-    const own = async (req) => (await spaces.load(req.viewer, req.params.slug, 'own')).space;
-    router.put('/spaces/:slug/files', ...api(async (req) => {
-        const space = await own(req);
-        if (space.building_run_id) throw new ApiError(409, 'space.building', 'the AI is changing this space; wait for it to finish');
-        return { files: await spaces.saveFiles(req.viewer, space, (req.body || {}).files) };
+    // The claim (openvibe.website, plan 5.9): a signed-in person who holds the draft's secret keeps it. The
+    // draft becomes theirs — with an address from its name — and follows every rule a signed-in space does.
+    router.post('/spaces/:slug/claim', ...action(async (req, res) => {
+        const space = await spaces.get(req.params.slug);
+        if (!space || !spaces.isGuest(space)) throw new ApiError(404, 'space.not_found', 'no such draft');
+        if (spaces.guestExpired(space, ctx.store.now())) throw new ApiError(404, 'space.not_found', 'this draft is gone');
+        const claimed = await spaces.claimGuest(space, String((req.body || {}).key || ''), spaces.personOf(req.viewer));
+        clearGuestCookie(res, space);
+        res.redirect(303, `/spaces/${claimed.slug}`);
     }));
-    router.put('/spaces/:slug/settings', ...api(async (req) => ({ space: settingsOut(await spaces.updateSettings(req.viewer, await own(req), req.body || {})) })));
-    router.post('/spaces/:slug/ai', ...api(async (req) => {
-        const space = await own(req);
+
+    // ── The editor's JSON calls ──
+    // The maker (signed in) or a guest holding the draft's secret; who they are, editorOf() says.
+    router.put('/spaces/:slug/files', ...api(async (req, res, who) => {
+        const space = who.space;
+        if (space.building_run_id) throw new ApiError(409, 'space.building', 'the AI is changing this space; wait for it to finish');
+        const list = (req.body || {}).files;
+        // The abuse screen: what is saved must pass it (a guest draft's forms may not post off-site).
+        contentCheck.refuse(contentCheck.filesReason(list, { sitesDomain: config.sitesDomain, forms: who.guest }));
+        const files = await spaces.saveFiles(req.viewer, space, list);
+        if (who.guest) await spaces.touchGuest(space);
+        return { files };
+    }));
+    router.put('/spaces/:slug/settings', ...api(async (req, res, who) => {
+        const body = req.body || {};
+        // A guest draft has no capabilities (there is no visitor to ask anything of) and is never in the gallery.
+        const input = who.guest ? { name: body.name, description: body.description, instructions: body.instructions, capabilities: [], visibility: 'unlisted' } : body;
+        const updated = await spaces.updateSettings(req.viewer, who.space, input);
+        if (who.guest) await spaces.touchGuest(updated);
+        return { space: settingsOut(updated) };
+    }));
+    router.post('/spaces/:slug/ai', ...api(async (req, res, who) => {
+        const space = who.space;
         const prompt = String((req.body || {}).prompt || '').trim();
         if (prompt.length < 3) throw new ApiError(422, 'space.prompt_required', 'say what to change');
         if (space.building_run_id) throw new ApiError(409, 'space.building', 'the AI is already changing this space');
-        if (!(await spaces.spend(`build:${req.viewer.subject}`, limits.aiBuildsPerDay))) throw new ApiError(429, 'quota', `you have used today's ${limits.aiBuildsPerDay} AI builds; try again tomorrow`);
-        const runId = await ai.build(spaces.personOf(req.viewer), { prompt, name: space.name, current: await spaces.files(space), spaceId: space.id });
+        // The abuse screen: what the guest asks the AI must pass it (the maker's prompt passes it too).
+        contentCheck.refuse(contentCheck.promptReason(prompt));
+        if (who.guest) {
+            const room = await spaces.spendGuestAi(ipOf(req), space.id);
+            if (!room.ok) throw new ApiError(429, 'quota', room.reason === 'ip'
+                ? `you have used today's ${guestLimits.aiBuildsPerIpPerDay} AI builds; try again tomorrow`
+                : `this draft has had its ${guestLimits.aiEditsPerDraft} AI changes; try again tomorrow`);
+        } else if (!(await spaces.spend(`build:${req.viewer.subject}`, limits.aiBuildsPerDay))) {
+            throw new ApiError(429, 'quota', `you have used today's ${limits.aiBuildsPerDay} AI builds; try again tomorrow`);
+        }
+        const runId = await ai.build(who.guest ? null : spaces.personOf(req.viewer), { prompt, name: space.name, current: await spaces.files(space), spaceId: space.id });
         await spaces.startBuild(space, runId, prompt);
         return { building: true };
     }));
-    router.get('/spaces/:slug/ai', ...api(async (req) => {
-        const space = await own(req);
+    router.get('/spaces/:slug/ai', ...api(async (req, res, who) => {
+        const space = who.space;
         if (!space.building_run_id) return { status: 'idle' };
         const runId = space.building_run_id;
         const r = await ai.result(runId);
@@ -187,10 +349,14 @@ function createSpacesPages(ctx) {
         }
         if (r.status === 'succeeded') {
             try {
-                await spaces.finishBuild(space, runId, r.output);
+                // The abuse screen: what the AI answered must pass it too.
+                contentCheck.refuse(contentCheck.filesReason(r.output && r.output.files, { sitesDomain: config.sitesDomain, forms: who.guest }));
+                // A guest draft has no capabilities: there is no visitor to ask anything of.
+                await spaces.finishBuild(space, runId, who.guest ? { ...r.output, capabilities: [] } : r.output);
             } catch (err) {
                 await spaces.failBuild(space, runId);
-                return { status: 'failed', message: `The AI's answer was not a working space (${err.message}). Try again.` };
+                const refused = err && (err.code === 'space.guest_abuse' || err.code === 'space.guest_offsite_form');
+                return { status: 'failed', message: refused ? `The AI's answer was refused: ${err.message}` : `The AI's answer was not a working space (${err.message}). Try again.` };
             }
             const fresh = await spaces.get(space.id);
             return { status: 'done', space: settingsOut(fresh), files: await spaces.files(fresh) };
@@ -198,15 +364,28 @@ function createSpacesPages(ctx) {
         await spaces.failBuild(space, runId);
         return { status: 'failed', message: r.error === 'quota.exceeded' ? 'Your OpenVibe AI allowance for today is used up.' : 'The AI could not build that. Try again, or describe it differently.' };
     }));
-    router.post('/spaces/:slug/publish', ...api(async (req) => {
-        const out = await spaces.publish(req.viewer, await own(req), { traceparent: req.ov ? req.ov.traceparent : undefined });
+    router.post('/spaces/:slug/publish', ...api(async (req, res, who) => {
+        // A guest draft is not published: it has no owner to publish under, and it is static.
+        if (who.guest) throw new ApiError(403, 'space.guest_cannot_publish', 'a guest draft cannot be published; sign in and keep it first');
+        const out = await spaces.publish(req.viewer, who.space, { traceparent: req.ov ? req.ov.traceparent : undefined });
         return { space: settingsOut(out.space), url: out.url };
     }));
-    router.post('/spaces/:slug/unpublish', ...api(async (req) => ({ space: settingsOut(await spaces.unpublish(req.viewer, await own(req))) })));
-    router.post('/spaces/:slug/delete', ...api(async (req) => { await spaces.remove(req.viewer, await own(req)); return { deleted: true }; }));
-    router.post('/spaces/:slug/preview', ...api(async (req) => {
-        const space = await own(req);
+    router.post('/spaces/:slug/unpublish', ...api(async (req, res, who) => {
+        if (who.guest) throw new ApiError(403, 'space.guest_cannot_publish', 'a guest draft was never published');
+        return { space: settingsOut(await spaces.unpublish(req.viewer, who.space)) };
+    }));
+    router.post('/spaces/:slug/delete', ...api(async (req, res, who) => { await spaces.remove(req.viewer, who.space); return { deleted: true }; }));
+    router.post('/spaces/:slug/preview', ...api(async (req, res, who) => {
+        const space = who.space;
         const b = req.body || {};
+        if (who.guest) {
+            // A guest draft is static: no visitor's lists, no private storage, no server functions. The SDK
+            // answers "sign in to use this" where a visitor's account would be needed — not an error.
+            if (b.op === 'fn.call') throw new ApiError(403, 'space.guest_no_functions', 'a guest draft runs no server functions');
+            if (b.op === 'me') return { result: null };
+            if (b.op === 'items.list') return { result: [] };
+            return { result: { error: 'sign_in_required', message: 'Sign in to use this' } };
+        }
         const person = spaces.personOf(req.viewer);
         // OV.fn in the preview: the editor's copy of functions/<name>.js (unsaved changes too), run as the maker.
         if (b.op === 'fn.call') {
