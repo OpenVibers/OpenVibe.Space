@@ -1,0 +1,107 @@
+/* OpenVibe.Website's front door (server/render/website.js): the room's motif in the hero, the template gallery with
+ * live previews, and one "be the first" row. Colours come from the room (rooms.js 'website': periwinkle) and the kit's
+ * tokens, so every theme dresses it; motion uses the network's tokens, so Calm stills it and reduced motion shows the
+ * finished frame. */
+
+.wb { --wb-type: calc(var(--ov-dur-4, .52s) * 4.6); --wb-step: var(--ov-dur-3, .32s); }
+
+/* The hero wears the room's colour like the rest of the page: its button and the accent words. */
+.wb .sc-btn.sc-primary { background: var(--room-fill); color: var(--room-on); }
+.wb .sc-accent { background-image: linear-gradient(120deg, var(--room-accent), color-mix(in srgb, var(--room-accent) 50%, var(--ovk-text))); }
+
+/* ── The motif: the prompt types, then the page assembles ── */
+.wb-stage { position: relative; display: grid; gap: 14px; width: min(520px, 100%); margin-inline: auto; padding-bottom: 8px; }
+.wb-prompt { justify-self: start; display: flex; align-items: center; gap: 9px; max-width: 100%; padding: 10px 14px; border-radius: 14px;
+  background: var(--ovk-panel); border: 1px solid color-mix(in srgb, var(--room-accent) 40%, var(--ovk-line));
+  box-shadow: 0 18px 40px -28px rgba(0, 0, 0, .6); font: 13px/1.3 ui-monospace, "SF Mono", Menlo, Consolas, monospace; color: var(--ovk-text); }
+.wb-spark { color: var(--room-accent); }
+.wb-typed { display: inline-block; overflow: hidden; white-space: nowrap; width: 32ch;
+  animation: wbType var(--wb-type) steps(32, end) both; }
+.wb-caret { flex: none; width: 2px; height: 1.15em; background: var(--room-accent); animation: wbBlink calc(var(--wb-step) * 3) steps(1) 6 both; }
+@keyframes wbType { from { width: 0; } }
+@keyframes wbBlink { 50% { opacity: 0; } }
+
+.wb-browser { border-radius: 16px; overflow: hidden; border: 1px solid var(--ovk-line); background: var(--ovk-panel);
+  box-shadow: 0 40px 80px -40px rgba(0, 0, 0, .65), 0 0 0 1px color-mix(in srgb, var(--room-accent) 12%, transparent); }
+.wb-bar, .wb-win-bar { display: flex; align-items: center; gap: 6px; padding: 9px 12px; background: var(--ovk-panel-2); border-bottom: 1px solid var(--ovk-line); }
+.wb-bar > i, .wb-win-bar > i { width: 9px; height: 9px; border-radius: 50%; background: var(--ovk-line); flex: none; }
+.wb-url { flex: 1; min-width: 0; margin-left: 8px; padding: 4px 10px; border-radius: 8px; background: var(--ovk-input); color: var(--ovk-muted);
+  font: 11.5px/1.4 ui-monospace, "SF Mono", Menlo, Consolas, monospace; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+
+/* The miniature is the bakery template's own page, so it keeps that page's warm light colours in every theme. */
+.wb-page { display: grid; gap: 12px; padding: 16px; min-height: 300px; background: #fbf7f1; }
+.wb-b { animation: wbIn var(--ov-dur-4, .52s) var(--ov-ease-spring, cubic-bezier(.34, 1.56, .64, 1)) both;
+  animation-delay: calc(var(--wb-type) + var(--i) * var(--wb-step)); }
+@keyframes wbIn { from { opacity: 0; transform: translateY(14px) scale(.98); } }
+.wb-nav { display: flex; align-items: center; gap: 8px; }
+.wb-nav b { width: 84px; height: 10px; border-radius: 5px; background: #2b1d14; margin-right: auto; }
+.wb-nav span { width: 34px; height: 7px; border-radius: 4px; background: #d8c8b8; }
+.wb-hero { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, .75fr); gap: 14px; align-items: center; padding: 6px 0 4px; }
+.wb-copy { display: grid; gap: 8px; }
+.wb-copy b { height: 16px; border-radius: 6px; background: #2b1d14; }
+.wb-copy span { height: 7px; border-radius: 4px; background: #c9b6a4; }
+.wb-copy .wb-short { width: 64%; }
+.wb-copy em { width: 92px; height: 22px; margin-top: 4px; border-radius: 999px; background: #b4532a; }
+.wb-loaf { aspect-ratio: 1; border-radius: 32% 68% 54% 46% / 42% 38% 62% 58%;
+  background: radial-gradient(circle at 36% 30%, #e9b980 0 16%, transparent 17%), linear-gradient(140deg, #f2c48d, #c27a3f 70%, #8f4f25);
+  box-shadow: inset 0 -10px 20px rgba(90, 45, 15, .35); }
+.wb-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 10px; border-radius: 10px; background: #f4e8da; }
+.wb-cards span { display: grid; gap: 6px; padding: 9px; border-radius: 8px; background: #fff; border: 1px solid #eadfd2; }
+.wb-cards b { height: 7px; border-radius: 4px; background: #2b1d14; }
+.wb-cards i { width: 40%; height: 6px; border-radius: 3px; background: #b4532a; }
+.wb-foot span { display: block; height: 6px; width: 40%; border-radius: 3px; background: #d8c8b8; }
+.wb-ready { position: absolute; right: 14px; bottom: -6px; padding: 6px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 700;
+  color: var(--room-on); background: var(--room-fill); box-shadow: 0 10px 24px -12px rgba(0, 0, 0, .6);
+  animation: wbIn var(--ov-dur-4, .52s) var(--ov-ease-spring, cubic-bezier(.34, 1.56, .64, 1)) both; animation-delay: calc(var(--wb-type) + 5 * var(--wb-step)); }
+
+/* ── The templates: each a small window onto the real page ── */
+.wb-head { display: grid; gap: 6px; margin-bottom: 20px; }
+.wb-head h2 { margin: 0; }
+.wb-head p { margin: 0; color: var(--ovk-muted); max-width: 62ch; }
+.wb-tpls { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 18px; }
+.wb-tpl { display: grid; grid-template-rows: auto 1fr auto; gap: 12px; padding: 12px; border-radius: 18px; border: 1px solid var(--ovk-line);
+  background: linear-gradient(165deg, color-mix(in srgb, var(--tpl) 10%, var(--ovk-panel)), var(--ovk-panel) 45%); }
+.wb-win { display: block; border-radius: 12px; overflow: hidden; border: 1px solid var(--ovk-line); text-decoration: none;
+  transition: transform var(--ov-dur-2, .2s) var(--ov-ease-out, ease-out), box-shadow var(--ov-dur-2, .2s) var(--ov-ease-out, ease-out); }
+.wb-win:hover { transform: translateY(-2px); box-shadow: 0 18px 36px -24px rgba(0, 0, 0, .7); }
+.wb-win:focus-visible { outline: 3px solid var(--room-accent); outline-offset: 2px; }
+.wb-win-bar { padding: 7px 10px; }
+.wb-win-bar > i { width: 7px; height: 7px; }
+.wb-win-bar > span { min-width: 0; margin-left: 6px; color: var(--ovk-muted); font: 11px/1.3 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+/* The page lays out at four times the card's width (a desktop), then shrinks to fit: a true thumbnail, not a phone view. */
+.wb-shot { position: relative; display: block; aspect-ratio: 4 / 3; overflow: hidden; background: #fff; }
+.wb-shot iframe { position: absolute; inset: 0 auto auto 0; width: 400%; height: 400%; border: 0; transform: scale(.25); transform-origin: 0 0; pointer-events: none; }
+.wb-tpl-text h3 { margin: 2px 4px 4px; font-size: 1.08rem; }
+.wb-tpl-text p { margin: 0 4px; color: var(--ovk-muted); font-size: .93rem; line-height: 1.5; }
+.wb-tpl-go { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 2px 4px 4px; }
+.wb-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 0 16px; border-radius: 999px;
+  background: var(--room-fill); color: var(--room-on); font-weight: 700; text-decoration: none;
+  transition: transform var(--ov-dur-1, .12s) var(--ov-ease-out, ease-out), filter var(--ov-dur-1, .12s) var(--ov-ease-out, ease-out); }
+.wb-btn:hover { filter: brightness(1.08); }
+.wb-btn:active { transform: scale(.97); }
+.wb-btn:focus-visible { outline: 3px solid color-mix(in srgb, var(--room-accent) 55%, transparent); outline-offset: 2px; }
+.wb-link { color: var(--room-strong); font-weight: 600; text-decoration: none; }
+.wb-link:hover { text-decoration: underline; }
+
+/* ── Sites made here: one honest row while there are none ── */
+.wb-first { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 18px 20px; border-radius: 18px;
+  border: 1px dashed color-mix(in srgb, var(--room-accent) 45%, var(--ovk-line)); }
+.wb-first h2 { margin: 0 0 4px; font-size: 1.15rem; }
+.wb-first p { margin: 0; color: var(--ovk-muted); max-width: 60ch; }
+
+/* On a phone the templates are a sideways rail (the owner's short-pages rule): every one stays in the page, the next
+   one peeks in from the edge, and the page itself never scrolls sideways. */
+@media (max-width: 640px) {
+  .wb-tpls { grid-auto-flow: column; grid-template-columns: none; grid-auto-columns: 84%; overflow-x: auto; overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory; padding-bottom: 8px; scrollbar-width: thin; }
+  .wb-tpl { scroll-snap-align: start; }
+}
+@media (max-width: 560px) {
+  .wb-page { min-height: 0; padding: 12px; }
+  .wb-ready { right: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wb-typed, .wb-caret, .wb-b, .wb-ready { animation: none; }
+  .wb-win, .wb-btn { transition: none; }
+}

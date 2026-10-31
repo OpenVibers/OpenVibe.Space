@@ -316,7 +316,9 @@ function fakeAi() {
         const templates = require('../server/spaces/templates');
         for (const tpl of templates.list()) {
             const html = templates.files(tpl.id)[0].content;
-            assert.match(html, /<script src="\/_openvibe\/sdk\.js"><\/script>/, tpl.id);
+            // Every app loads the SDK; a website template loads it only when it signs people in or keeps a list.
+            if (tpl.kind !== 'site' || tpl.capabilities.length) assert.match(html, /<script src="\/_openvibe\/sdk\.js"><\/script>/, tpl.id);
+            else assert.ok(!html.includes('/_openvibe/sdk.js'), `${tpl.id} loads no SDK it does not use`);
             for (const m of html.matchAll(/<script>([\s\S]*?)<\/script>/g)) new Function(m[1]);
         }
     });

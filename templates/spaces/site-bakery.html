@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rise &amp; Crumb · Neighbourhood bakery</title>
+<meta name="description" content="Sourdough, morning buns and celebration cakes, baked every morning on Alder Street.">
+<style>
+  /* Change the colours here: --accent is the button and link colour, --crust the warm band behind the menu. */
+  :root { --bg: #fbf7f1; --card: #ffffff; --ink: #2b1d14; --muted: #7a6656; --line: #eadfd2; --accent: #b4532a; --on-accent: #fff; --crust: #f4e8da; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #17110d; --card: #211913; --ink: #f3e9df; --muted: #b8a595; --line: #3a2d23; --accent: #f08a5d; --on-accent: #1d120b; --crust: #1f1711; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  h1, h2, h3 { font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; line-height: 1.15; margin: 0; text-wrap: balance; }
+  a { color: var(--accent); }
+  .wrap { width: min(1080px, 100% - 32px); margin-inline: auto; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-block: 18px; }
+  .logo { font: 700 1.25rem "Iowan Old Style", Georgia, serif; color: var(--ink); text-decoration: none; }
+  nav { display: flex; gap: 18px; flex-wrap: wrap; }
+  nav a { color: var(--muted); text-decoration: none; font-weight: 600; font-size: .95rem; }
+  nav a:hover { color: var(--ink); }
+  .hero { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: 40px; align-items: center; padding-block: 48px 64px; }
+  .hero h1 { font-size: clamp(2.4rem, 6vw, 4rem); }
+  .hero p { color: var(--muted); font-size: 1.15rem; max-width: 34ch; margin: 16px 0 24px; }
+  .btns { display: flex; gap: 12px; flex-wrap: wrap; }
+  .btn { display: inline-flex; align-items: center; min-height: 46px; padding: 0 20px; border-radius: 999px; background: var(--accent); color: var(--on-accent); font-weight: 700; text-decoration: none; }
+  .btn.ghost { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--line); }
+  .open { display: inline-flex; align-items: center; gap: 8px; margin-top: 20px; font-size: .92rem; color: var(--muted); }
+  .open i { width: 9px; height: 9px; border-radius: 50%; background: #3f9d5b; }
+  .open.closed i { background: var(--muted); }
+  .loaf { aspect-ratio: 1; max-width: 100%; border-radius: 32% 68% 54% 46% / 42% 38% 62% 58%; background: radial-gradient(circle at 34% 30%, #e9b980 0 18%, transparent 19%), radial-gradient(circle at 62% 58%, #d99a5b 0 22%, transparent 23%), linear-gradient(140deg, #f2c48d, #c27a3f 70%, #8f4f25); box-shadow: 0 40px 80px -40px rgba(80, 40, 10, .55), inset 0 -20px 40px rgba(90, 45, 15, .35); position: relative; }
+  .loaf::after { content: ""; position: absolute; inset: 22% 18%; border-radius: 50%; background: repeating-linear-gradient(115deg, transparent 0 22px, rgba(255, 240, 220, .55) 22px 26px); mask: radial-gradient(closest-side, #000 70%, transparent); }
+  section { padding-block: 56px; }
+  .band { background: var(--crust); }
+  .head { display: flex; justify-content: space-between; align-items: end; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+  .head h2 { font-size: clamp(1.8rem, 4vw, 2.4rem); }
+  .head p { margin: 0; color: var(--muted); }
+  .menu { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
+  .item { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 18px; display: grid; gap: 6px; }
+  .item h3 { font-size: 1.15rem; display: flex; justify-content: space-between; gap: 10px; }
+  .item h3 span { font: 700 1rem system-ui, sans-serif; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .item p { margin: 0; color: var(--muted); font-size: .95rem; }
+  .tag { justify-self: start; font-size: .75rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+  .visit { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 28px; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  td { padding: 9px 0; border-bottom: 1px solid var(--line); }
+  td:last-child { text-align: right; color: var(--muted); }
+  tr.today td { font-weight: 700; color: var(--ink); }
+  address { font-style: normal; line-height: 1.8; }
+  footer { padding-block: 32px; color: var(--muted); font-size: .9rem; border-top: 1px solid var(--line); }
+  @media (max-width: 760px) { .hero { grid-template-columns: 1fr; padding-top: 24px; } .loaf { width: 60%; justify-self: center; order: -1; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="logo" href="#top">Rise &amp; Crumb</a>
+    <nav aria-label="Sections"><a href="#menu">Menu</a><a href="#visit">Hours &amp; visit</a><a href="#order">Order</a></nav>
+  </header>
+  <main id="top">
+    <div class="hero">
+      <div>
+        <h1>Bread worth getting up for.</h1>
+        <p>Naturally leavened sourdough, morning buns and celebration cakes, baked every morning on Alder Street since 2014.</p>
+        <div class="btns"><a class="btn" id="order" href="tel:+15550142233">Call to order for pickup</a><a class="btn ghost" href="#menu">See today's menu</a></div>
+        <p class="open" id="open"><i></i><span>Open Tuesday to Sunday, 7 am to 3 pm</span></p>
+      </div>
+      <div class="loaf" role="img" aria-label="A round sourdough loaf"></div>
+    </div>
+  </main>
+</div>
+<section class="band" id="menu">
+  <div class="wrap">
+    <div class="head"><h2>This morning's bake</h2><p>Sold until it's gone. Whole cakes need two days' notice.</p></div>
+    <div class="menu">
+      <article class="item"><span class="tag">Every day</span><h3>Country sourdough <span>$9</span></h3><p>Three-day ferment, dark crust, open crumb.</p></article>
+      <article class="item"><span class="tag">Every day</span><h3>Morning bun <span>$4.50</span></h3><p>Laminated dough, orange zest, cinnamon sugar.</p></article>
+      <article class="item"><span class="tag">Weekends</span><h3>Seeded rye <span>$10</span></h3><p>Sunflower, flax and caraway, sliced on request.</p></article>
+      <article class="item"><span class="tag">Every day</span><h3>Olive oil focaccia <span>$7</span></h3><p>Rosemary, flaky salt and a lot of good oil.</p></article>
+      <article class="item"><span class="tag">Order ahead</span><h3>Celebration cake <span>from $38</span></h3><p>Vanilla, chocolate or lemon; serves eight to twelve.</p></article>
+      <article class="item"><span class="tag">Fridays</span><h3>Cardamom knot <span>$4.75</span></h3><p>Swedish-style, pearl sugar on top.</p></article>
+    </div>
+  </div>
+</section>
+<section id="visit">
+  <div class="wrap visit">
+    <div>
+      <h2>Hours</h2>
+      <table id="hours">
+        <tr data-day="1"><td>Monday</td><td>Closed</td></tr>
+        <tr data-day="2"><td>Tuesday</td><td>7 am – 3 pm</td></tr>
+        <tr data-day="3"><td>Wednesday</td><td>7 am – 3 pm</td></tr>
+        <tr data-day="4"><td>Thursday</td><td>7 am – 3 pm</td></tr>
+        <tr data-day="5"><td>Friday</td><td>7 am – 3 pm</td></tr>
+        <tr data-day="6"><td>Saturday</td><td>7 am – 3 pm</td></tr>
+        <tr data-day="0"><td>Sunday</td><td>8 am – 2 pm</td></tr>
+      </table>
+    </div>
+    <div>
+      <h2>Visit</h2>
+      <address>412 Alder Street<br>Portland, Oregon<br><a href="tel:+15550142233">(555) 014-2233</a><br><a href="https://www.openstreetmap.org/search?query=412%20Alder%20Street%20Portland">Open the map</a></address>
+    </div>
+  </div>
+</section>
+<footer><div class="wrap">© Rise &amp; Crumb. Made with OpenVibe.Website.</div></footer>
+<script>
+  // Change the hours here as [open hour, close hour] for each day (0 is Sunday); null means closed.
+  const HOURS = { 0: [8, 14], 1: null, 2: [7, 15], 3: [7, 15], 4: [7, 15], 5: [7, 15], 6: [7, 15] };
+  const now = new Date(), today = HOURS[now.getDay()], h = now.getHours() + now.getMinutes() / 60;
+  const row = document.querySelector('#hours tr[data-day="' + now.getDay() + '"]');
+  if (row) row.className = 'today';
+  const open = document.getElementById('open');
+  const fmt = (x) => (x % 12 || 12) + (x < 12 ? ' am' : ' pm');
+  if (today && h >= today[0] && h < today[1]) open.lastElementChild.textContent = 'Open now, until ' + fmt(today[1]);
+  else { open.classList.add('closed'); open.lastElementChild.textContent = today && h < today[0] ? 'Opens today at ' + fmt(today[0]) : 'Closed now'; }
+</script>
+</body>
+</html>

@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tally · Shared expenses without the spreadsheet</title>
+<meta name="description" content="Tally splits rent, trips and groceries fairly, settles up in one tap and never shows anyone an ad.">
+<style>
+  /* Change the colours here: --accent is the buttons and highlights. */
+  :root { --bg: #ffffff; --soft: #f4f7f5; --card: #ffffff; --ink: #0d1f17; --muted: #5b6e65; --line: #e1e8e4; --accent: #0f8a5f; --on-accent: #fff; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #08110d; --soft: #0d1914; --card: #10201a; --ink: #e6f3ec; --muted: #94ab9f; --line: #1d3128; --accent: #3ddc97; --on-accent: #062014; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  h1, h2, h3 { line-height: 1.1; margin: 0; letter-spacing: -.02em; text-wrap: balance; }
+  .wrap { width: min(1080px, 100% - 32px); margin-inline: auto; }
+  header { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding-block: 18px; }
+  .logo { font-weight: 800; font-size: 1.2rem; display: inline-flex; align-items: center; gap: 8px; }
+  .logo i { width: 22px; height: 22px; border-radius: 7px; background: var(--accent); }
+  .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 46px; padding: 0 20px; border-radius: 12px; background: var(--accent); color: var(--on-accent); font-weight: 700; text-decoration: none; }
+  .btn.ghost { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--line); }
+  .hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 48px; align-items: center; padding-block: 56px 72px; }
+  .hero h1 { font-size: clamp(2.4rem, 5.6vw, 3.8rem); }
+  .hero p { color: var(--muted); font-size: 1.15rem; margin: 18px 0 26px; max-width: 40ch; }
+  .btns { display: flex; gap: 12px; flex-wrap: wrap; }
+  .small { color: var(--muted); font-size: .9rem; margin-top: 14px; }
+  .phone { justify-self: center; width: min(300px, 100%); border-radius: 36px; padding: 14px; background: var(--ink); box-shadow: 0 40px 80px -40px rgba(0, 60, 40, .5); }
+  .screen { border-radius: 26px; background: var(--soft); padding: 18px; display: grid; gap: 10px; }
+  .screen b { font-size: .8rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  .row { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); font-size: .95rem; }
+  .row span:last-child { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .row.owe span:last-child { color: var(--accent); }
+  .settle { text-align: center; padding: 12px; border-radius: 14px; background: var(--accent); color: var(--on-accent); font-weight: 700; }
+  section { padding-block: 64px; }
+  .soft { background: var(--soft); }
+  .center { text-align: center; max-width: 640px; margin: 0 auto 36px; }
+  .center h2 { font-size: clamp(1.8rem, 4vw, 2.6rem); }
+  .center p { color: var(--muted); margin: 12px 0 0; }
+  .grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+  .feat { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 22px; }
+  .feat h3 { font-size: 1.15rem; margin: 12px 0 6px; }
+  .feat p { margin: 0; color: var(--muted); }
+  .ico { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); font-weight: 800; }
+  .plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; max-width: 760px; margin: 0 auto; }
+  .plan { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 26px; display: grid; gap: 12px; align-content: start; }
+  .plan.pick { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .price { font-size: 2.4rem; font-weight: 800; letter-spacing: -.02em; }
+  .price small { font-size: 1rem; color: var(--muted); font-weight: 500; }
+  .plan ul { margin: 0; padding-left: 18px; color: var(--muted); }
+  details { border-bottom: 1px solid var(--line); padding: 16px 0; max-width: 720px; margin: 0 auto; }
+  summary { font-weight: 700; cursor: pointer; }
+  details p { margin: 8px 0 0; color: var(--muted); }
+  .final { text-align: center; }
+  .final h2 { font-size: clamp(1.8rem, 4vw, 2.6rem); margin-bottom: 20px; }
+  footer { padding-block: 28px; border-top: 1px solid var(--line); color: var(--muted); font-size: .9rem; }
+  @media (max-width: 780px) { .hero { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap"><header><span class="logo"><i aria-hidden="true"></i>Tally</span><a class="btn ghost" href="#pricing">Pricing</a></header></div>
+<main>
+  <div class="wrap hero">
+    <div>
+      <h1>Shared expenses, without the spreadsheet.</h1>
+      <p>Tally splits rent, trips and groceries fairly, keeps a running total for everyone, and settles up in one tap.</p>
+      <div class="btns"><a class="btn" href="#pricing">Start free</a><a class="btn ghost" href="#how">How it works</a></div>
+      <p class="small">Free for up to three groups. No ads, ever.</p>
+    </div>
+    <div class="phone" aria-label="The Tally app showing a weekend trip" role="img">
+      <div class="screen">
+        <b>Weekend in Porto</b>
+        <div class="row"><span>Apartment</span><span>€420.00</span></div>
+        <div class="row"><span>Dinner at Taberna</span><span>€96.50</span></div>
+        <div class="row"><span>Train tickets</span><span>€64.00</span></div>
+        <div class="row owe"><span>Sam owes you</span><span>€58.40</span></div>
+        <div class="settle">Settle up</div>
+      </div>
+    </div>
+  </div>
+  <section class="soft" id="how">
+    <div class="wrap">
+      <div class="center"><h2>Fair, without the awkward conversation</h2><p>Everything a shared flat or a group trip needs, and nothing it doesn't.</p></div>
+      <div class="grid3">
+        <div class="feat"><span class="ico">÷</span><h3>Split any way</h3><p>Evenly, by share, by percentage, or "I'll get this one".</p></div>
+        <div class="feat"><span class="ico">↻</span><h3>Repeats itself</h3><p>Rent and bills come back every month without anyone typing them again.</p></div>
+        <div class="feat"><span class="ico">✓</span><h3>Settle in one tap</h3><p>Tally works out the fewest payments so everyone ends up even.</p></div>
+      </div>
+    </div>
+  </section>
+  <section id="pricing">
+    <div class="wrap">
+      <div class="center"><h2>Simple pricing</h2><p>Start free. Upgrade when the group chat gets bigger.</p></div>
+      <div class="plans">
+        <div class="plan"><h3>Free</h3><div class="price">€0</div><ul><li>Up to three groups</li><li>Unlimited expenses</li><li>Settle up</li></ul><a class="btn ghost" href="#">Start free</a></div>
+        <div class="plan pick"><h3>Plus</h3><div class="price">€3 <small>a month</small></div><ul><li>Unlimited groups</li><li>Receipts and categories</li><li>Export to a spreadsheet</li></ul><a class="btn" href="#">Try Plus for a month</a></div>
+      </div>
+    </div>
+  </section>
+  <section class="soft" id="questions">
+    <div class="wrap">
+      <div class="center"><h2>Questions</h2></div>
+      <details><summary>Does everyone need the app?</summary><p>No. Friends can see their balance from a link, and join when they like.</p></details>
+      <details><summary>Does Tally move money?</summary><p>No. It tells you who pays whom; you pay however you already do.</p></details>
+      <details><summary>Can I leave?</summary><p>Any time, with every expense exported first.</p></details>
+    </div>
+  </section>
+  <section class="final"><div class="wrap"><h2>Even, every time.</h2><a class="btn" href="#pricing">Start free</a></div></section>
+</main>
+<footer><div class="wrap">© Tally · Made with OpenVibe.Website</div></footer>
+</body>
+</html>

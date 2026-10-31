@@ -54,6 +54,14 @@
 .sp-template p { margin: 0 0 8px; color: var(--text-secondary, #9fb0c8); font-size: 0.9rem; flex: 1; }
 .sp-template form { margin: 0; }
 .sp-template-icon { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font-size: 18px; color: #fff; background: var(--tpl); }
+/* The template picked on openvibe.website, leading /spaces/new: one press from a new space. */
+.sp-pick { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 16px; align-items: center; margin: 0 0 22px; padding: 18px; border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--tpl) 55%, var(--border, #2c3d5c)); background: linear-gradient(120deg, color-mix(in srgb, var(--tpl) 18%, var(--bg-secondary, #101828)), var(--bg-secondary, #101828) 70%); }
+.sp-pick h2 { margin: 2px 0 4px; font-size: 1.25rem; }
+.sp-pick p { margin: 0; }
+.sp-pick-text > p:last-child { color: var(--text-secondary, #9fb0c8); }
+.sp-pick form { margin: 0; }
+@media (max-width: 560px) { .sp-pick { grid-template-columns: auto minmax(0, 1fr); } .sp-pick form { grid-column: 1 / -1; } }
 .sp-templates.is-compact { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
 
 .sp-how-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-top: 12px; }

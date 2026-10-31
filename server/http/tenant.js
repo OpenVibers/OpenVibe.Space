@@ -182,12 +182,14 @@ function createTenantServer({ store, config, blobs, takedowns = null, siteConfig
     const PREVIEW_CSP = previewCsp(previewOrigin);
 
     /**
-     * -> { kind: 'dashboard' } | { kind: 'site', site } | { kind: 'unknown', host }
+     * -> { kind: 'dashboard' } | { kind: 'website', host } | { kind: 'site', site } | { kind: 'unknown', host }
      */
     async function resolve(rawHost) {
         const host = normaliseHost(rawHost);
         if (!host) return { kind: 'unknown', host: null };
         if (host === config.dashboardHost || LOOPBACK_HOSTS.has(host)) return { kind: 'dashboard' };
+        // The sites domain itself (and www) is OpenVibe.Website's front door (server/website.js), never a tenant.
+        if (host === config.sitesDomain || host === `www.${config.sitesDomain}`) return { kind: 'website', host };
         if (host.endsWith(suffix)) {
             const label = host.slice(0, -suffix.length);
             if (!label || label.includes('.')) return { kind: 'unknown', host };
