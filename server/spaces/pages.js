@@ -111,7 +111,9 @@ function createSpacesPages(ctx) {
 
     router.get('/spaces/new', view(async (req, res) => {
         if (!signedIn(req)) throw new ApiError(401, 'auth.required', 'sign in first');
-        html(res, 200, render.newPage({ viewer: req.viewer, templates: templates.list(), csrf: csrfOf(req), aiOn: ai.enabled(), buildsLeft: await buildsLeft(req) }));
+        // ?template=<id>: someone picked a template on openvibe.website; it leads the page, one press from a new space.
+        const pick = req.query.template ? templates.get(String(req.query.template)) : null;
+        html(res, 200, render.newPage({ viewer: req.viewer, templates: templates.list(), csrf: csrfOf(req), aiOn: ai.enabled(), buildsLeft: await buildsLeft(req), pick }));
     }));
     router.post('/spaces/new', ...action(async (req, res) => {
         const body = req.body || {};

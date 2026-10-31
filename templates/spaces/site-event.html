@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Night Market on Fifth · Saturday 14 November</title>
+<meta name="description" content="Forty stalls, live music and food from the neighbourhood, on Fifth Street from 5 to 11 pm.">
+<style>
+  /* Change the colours here: --accent is the date and the buttons, --glow the light behind the title. */
+  :root { --bg: #fff8ef; --card: #ffffff; --ink: #1e1530; --muted: #6e6280; --line: #ecdfd0; --accent: #d9468a; --on-accent: #fff; --glow: #ffd27a; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #120d1d; --card: #1b1429; --ink: #f6eefe; --muted: #b0a2c4; --line: #2e2440; --accent: #ff7ab6; --on-accent: #1a0f20; --glow: #6b3fa0; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  h1, h2 { line-height: 1.08; margin: 0; text-wrap: balance; letter-spacing: -.02em; }
+  .wrap { width: min(980px, 100% - 32px); margin-inline: auto; }
+  .hero { position: relative; overflow: hidden; padding-block: 72px 56px; text-align: center; }
+  .hero::before { content: ""; position: absolute; inset: -40% 10% auto; height: 120%; background: radial-gradient(closest-side, var(--glow), transparent); opacity: .7; z-index: -1; }
+  .lights { display: flex; justify-content: center; gap: 18px; margin-bottom: 22px; }
+  .lights i { width: 12px; height: 12px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 14px var(--accent); }
+  .lights i:nth-child(2n) { background: #ffb547; box-shadow: 0 0 14px #ffb547; }
+  .date { font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+  .hero h1 { font-size: clamp(2.6rem, 8vw, 5.2rem); margin: 10px 0 14px; }
+  .hero p { color: var(--muted); font-size: 1.15rem; margin: 0 auto 26px; max-width: 46ch; }
+  .facts { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin-bottom: 26px; }
+  .facts span { padding: 8px 14px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); font-weight: 600; font-size: .95rem; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 22px; border: 0; border-radius: 999px; background: var(--accent); color: var(--on-accent); font: 700 1rem system-ui, sans-serif; text-decoration: none; cursor: pointer; }
+  .btn.ghost { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--line); }
+  section { padding-block: 48px; }
+  h2 { font-size: clamp(1.6rem, 4vw, 2.2rem); margin-bottom: 20px; }
+  .timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  .timeline li { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 16px; padding: 14px 18px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; }
+  .timeline time { font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .timeline b { display: block; }
+  .timeline span { color: var(--muted); font-size: .95rem; }
+  .rsvp { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 24px; display: grid; gap: 16px; }
+  .rsvp-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .count { font-size: 1.1rem; font-weight: 700; }
+  .faces { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 0; padding: 0; }
+  .faces li { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px 4px 4px; border-radius: 999px; border: 1px solid var(--line); font-size: .92rem; }
+  .faces img { width: 28px; height: 28px; border-radius: 50%; background: var(--line); }
+  .muted { color: var(--muted); margin: 0; }
+  details { border-bottom: 1px solid var(--line); padding: 14px 0; }
+  summary { font-weight: 700; cursor: pointer; }
+  details p { margin: 8px 0 0; color: var(--muted); }
+  footer { padding-block: 32px; color: var(--muted); font-size: .9rem; text-align: center; }
+  @media (max-width: 560px) { .timeline li { grid-template-columns: 1fr; gap: 2px; } }
+</style>
+</head>
+<body>
+<main>
+  <div class="hero">
+    <div class="wrap">
+      <div class="lights" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      <span class="date">Saturday 14 November</span>
+      <h1>Night Market on Fifth</h1>
+      <p>Forty stalls, live music and food from the neighbourhood. Free to get in, all ages, rain or shine under the awnings.</p>
+      <div class="facts"><span>5 pm – 11 pm</span><span>Fifth Street, between Oak and Pine</span><span>Free</span></div>
+      <a class="btn" href="#rsvp">I'm coming</a>
+    </div>
+  </div>
+  <div class="wrap">
+    <section id="schedule">
+      <h2>The evening</h2>
+      <ol class="timeline">
+        <li><time>5:00</time><div><b>Stalls open</b><span>Makers, vintage, plants and the book swap.</span></div></li>
+        <li><time>6:30</time><div><b>The Larkspur Trio</b><span>Folk and old swing on the corner stage.</span></div></li>
+        <li><time>8:00</time><div><b>Lantern walk</b><span>Kids lead the parade down the street; lanterns at the info tent.</span></div></li>
+        <li><time>9:00</time><div><b>DJ Halvard</b><span>Records until close.</span></div></li>
+      </ol>
+    </section>
+    <section id="rsvp">
+      <h2>Who's coming</h2>
+      <div class="rsvp">
+        <div class="rsvp-top"><span class="count" id="count">Say you're coming so we know how many to expect.</span><span id="act"><a class="btn" href="#rsvp">Sign in to say you're coming</a></span></div>
+        <ul class="faces" id="faces"></ul>
+      </div>
+    </section>
+    <section id="questions">
+      <h2>Questions</h2>
+      <details><summary>Can I bring my dog?</summary><p>Yes, on a lead. There's water at the info tent.</p></details>
+      <details><summary>Is there parking?</summary><p>The Oak Street garage is free after 6 pm. Bike racks are at both ends of the street.</p></details>
+      <details><summary>Can I have a stall?</summary><p>Stalls for the spring market open in February. Sign up for news at the info tent.</p></details>
+    </section>
+  </div>
+</main>
+<footer>Night Market on Fifth · Made with OpenVibe.Website</footer>
+<script src="/_openvibe/sdk.js"></script>
+<script>
+  // Everyone who says they're coming is kept in the shared list "rsvps": their OpenVibe name and picture, nothing else.
+  const $ = (s) => document.querySelector(s);
+  function el(tag, props, ...kids) { const n = Object.assign(document.createElement(tag), props || {}); n.append(...kids); return n; }
+  let going = [];
+  function render() {
+    const mine = OV.user && going.some((r) => r.author.username === OV.user.username);
+    $('#count').textContent = going.length ? going.length + (going.length === 1 ? ' person is' : ' people are') + ' coming' : 'Be the first to say you\'re coming.';
+    const act = $('#act'); act.replaceChildren();
+    if (!OV.user) { const b = el('button', { className: 'btn', type: 'button', textContent: 'Sign in to say you\'re coming' }); b.onclick = () => OV.signIn(); act.append(b); }
+    else if (mine) act.append(el('span', { className: 'muted', textContent: 'You\'re on the list. See you there!' }));
+    else { const b = el('button', { className: 'btn', type: 'button', textContent: 'I\'m coming' }); b.onclick = async () => { b.disabled = true; try { await OV.items.add('rsvps', { at: Date.now() }); await load(); } catch (e) { b.disabled = false; $('#count').textContent = e.message; } }; act.append(b); }
+    $('#faces').replaceChildren(...going.slice(0, 60).map((r) => {
+      const img = el('img', { alt: '', loading: 'lazy', src: 'https://openvibe.network/avatar/' + encodeURIComponent(r.author.username) });
+      img.onerror = () => img.removeAttribute('src');
+      return el('li', {}, img, r.author.display_name);
+    }));
+  }
+  async function load() {
+    try {
+      const seen = new Set();
+      going = (await OV.items.list('rsvps', { limit: 200 })).filter((r) => !seen.has(r.author.username) && seen.add(r.author.username));
+    } catch (e) { going = []; }
+    render();
+  }
+  OV.on('user', render);
+  OV.ready.then(load);
+</script>
+</body>
+</html>

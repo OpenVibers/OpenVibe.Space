@@ -113,7 +113,7 @@ function createHosting(app, { db, auth, config: suppliedConfig, now, resolver, f
             try {
                 const target = await tenant.resolve(req.headers.host);
                 req.hostTarget = target.kind;
-                if (target.kind === 'dashboard') return next();
+                if (target.kind === 'dashboard' || target.kind === 'website') return next();
                 if (target.kind === 'site') return await tenant.handle(req, res, target.site);
                 return tenant.unknownHost(req, res);
             } catch (err) { return next(err); }

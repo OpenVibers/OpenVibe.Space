@@ -130,6 +130,9 @@ async function createApp(opts = {}) {
         crossOriginResourcePolicy: { policy: 'cross-origin' },
         referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
     }));
+    // openvibe.website's front door (server/website.js): after the platform's headers, before cookies, sign-in and the API,
+    // none of which it ever reaches.
+    app.use(require('./website').createWebsite({ sitesDomain: hosting.config.sitesDomain, publicDir: PUBLIC_DIR }));
     app.use(cookieParser());
 
     hosting.mountRoutes(app);

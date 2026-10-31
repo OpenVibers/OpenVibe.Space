@@ -93,11 +93,17 @@ function galleryPage({ viewer, spaces, templates, q, sort, csrf }) {
     return page({ title: 'Spaces', description: 'Make a space: a small app on your OpenVibe account, built by OpenVibe AI or from a template, with sign-in, shared lists, private storage and AI.', path: '/spaces', showcase: true, body });
 }
 
-function newPage({ viewer, templates, csrf, error, prompt, aiOn, buildsLeft }) {
+function newPage({ viewer, templates, csrf, error, prompt, aiOn, buildsLeft, pick = null }) {
+    const picked = pick ? `<section class="sp-pick" style="--tpl:${esc(pick.accent)}" aria-labelledby="sp-pick-h">
+  <span class="sp-template-icon"><i class="fa-solid ${esc(pick.icon)}" aria-hidden="true"></i></span>
+  <div class="sp-pick-text"><p class="eyebrow">The template you picked</p><h2 id="sp-pick-h">${esc(pick.name)}</h2><p>${esc(pick.description)}</p></div>
+  <form method="post" action="/spaces/new"><input type="hidden" name="csrf" value="${esc(csrf)}"><input type="hidden" name="template" value="${esc(pick.id)}"><button class="sp-btn">Start from this</button></form>
+</section>` : '';
     const body = `<div class="sp-wrap">
   <p class="eyebrow">New space</p>
-  <h1 class="sp-title">What do you want to make?</h1>
+  <h1 class="sp-title">${pick ? 'Make it yours' : 'What do you want to make?'}</h1>
   ${error ? `<p class="sp-flash is-bad" role="alert">${esc(error)}</p>` : ''}
+  ${picked}
   <form class="sp-ai-form" method="post" action="/spaces/new">
     <input type="hidden" name="csrf" value="${esc(csrf)}">
     <label for="sp-prompt">Describe it and OpenVibe AI builds it</label>
