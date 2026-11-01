@@ -6,9 +6,9 @@
 <title>Night Market on Fifth · Saturday 14 November</title>
 <meta name="description" content="Forty stalls, live music and food from the neighbourhood, on Fifth Street from 5 to 11 pm.">
 <style>
-  /* Change the colours here: --accent is the date and the buttons, --glow the light behind the title. */
-  :root { --bg: #fff8ef; --card: #ffffff; --ink: #1e1530; --muted: #6e6280; --line: #ecdfd0; --accent: #d9468a; --on-accent: #fff; --glow: #ffd27a; }
-  @media (prefers-color-scheme: dark) { :root { --bg: #120d1d; --card: #1b1429; --ink: #f6eefe; --muted: #b0a2c4; --line: #2e2440; --accent: #ff7ab6; --on-accent: #1a0f20; --glow: #6b3fa0; } }
+  /* Change the colours here: --accent is the buttons and the fills, --accent-text the date and times, --glow the light behind the title. */
+  :root { --bg: #fff8ef; --card: #ffffff; --ink: #1e1530; --muted: #6e6280; --line: #ecdfd0; --accent: #d9468a; --accent-text: #b8326f; --on-accent: #fff; --glow: #ffd27a; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #120d1d; --card: #1b1429; --ink: #f6eefe; --muted: #b0a2c4; --line: #2e2440; --accent: #ff7ab6; --accent-text: #ff7ab6; --on-accent: #1a0f20; --glow: #6b3fa0; } }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; }
   h1, h2 { line-height: 1.08; margin: 0; text-wrap: balance; letter-spacing: -.02em; }
@@ -18,7 +18,7 @@
   .lights { display: flex; justify-content: center; gap: 18px; margin-bottom: 22px; }
   .lights i { width: 12px; height: 12px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 14px var(--accent); }
   .lights i:nth-child(2n) { background: #ffb547; box-shadow: 0 0 14px #ffb547; }
-  .date { font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+  .date { font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--accent-text); }
   .hero h1 { font-size: clamp(2.6rem, 8vw, 5.2rem); margin: 10px 0 14px; }
   .hero p { color: var(--muted); font-size: 1.15rem; margin: 0 auto 26px; max-width: 46ch; }
   .facts { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin-bottom: 26px; }
@@ -29,7 +29,7 @@
   h2 { font-size: clamp(1.6rem, 4vw, 2.2rem); margin-bottom: 20px; }
   .timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
   .timeline li { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 16px; padding: 14px 18px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; }
-  .timeline time { font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .timeline time { font-weight: 800; color: var(--accent-text); font-variant-numeric: tabular-nums; }
   .timeline b { display: block; }
   .timeline span { color: var(--muted); font-size: .95rem; }
   .rsvp { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 24px; display: grid; gap: 16px; }
