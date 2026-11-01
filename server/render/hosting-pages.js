@@ -42,7 +42,7 @@ function home({ projects, csrf, canCreate = true }) {
 </div><button type="submit" class="hd-btn hd-btn--primary">${icon('fa-plus')} Create project</button>`, { cls: 'hd-form' });
     return `<header class="hd-head"><p class="hd-eyebrow">${icon('fa-globe')} Static hosting</p><h1>Your projects</h1>
 <p class="hd-sub">A project holds sites, their deploys and domains, and the people who may change them.</p></header>
-${projects.length ? `<div class="hd-tiles">${cards}</div>` : `<div class="hd-empty">${icon('fa-folder-plus')}<p>You have no projects yet.</p></div>`}
+${projects.length ? `<div class="hd-tiles">${cards}</div>` : `<div class="hd-empty">${icon('fa-folder')}<p>You have no projects yet.</p></div>`}
 ${card('New project', create, { sub: canCreate ? 'Production sites can take custom domains; a sandbox is for trying things and is never indexed.' : '' })}`;
 }
 
@@ -128,7 +128,7 @@ function site({ site: s, project: p, role, deploys, activations, domains, siteCo
 <p class="hd-chips"><a class="hd-url hd-url--big" href="${esc(url)}" rel="noopener">${esc(url.replace(/^https?:\/\//, ''))} ${icon('fa-arrow-up-right-from-square')}</a> ${status} <code>${esc(s.id)}</code></p></header>
 ${canDeploy ? card('Upload a deploy', form(`/sites/${s.id}/deploys`, csrf, `<div class="hd-sources">
 <fieldset class="hd-source"><legend>${icon('fa-folder-open')} A folder</legend><input type="file" name="files" multiple webkitdirectory aria-label="A folder to upload"><input type="hidden" name="strip" value="folder"></fieldset>
-<fieldset class="hd-source"><legend>${icon('fa-file-zipper')} …or an archive (.tar.gz / .tar)</legend><input type="file" name="archive" accept=".tar,.tgz,.gz,application/gzip,application/x-tar" aria-label="An archive to upload (.tar.gz or .tar)"></fieldset>
+<fieldset class="hd-source"><legend>${icon('fa-box-archive')} …or an archive (.tar.gz / .tar)</legend><input type="file" name="archive" accept=".tar,.tgz,.gz,application/gzip,application/x-tar" aria-label="An archive to upload (.tar.gz or .tar)"></fieldset>
 </div>
 <label class="hd-field hd-field--narrow">Deploy from subfolder (optional) <input name="root" placeholder="dist"></label>
 <fieldset class="hd-choices"><legend>When it is ready</legend>

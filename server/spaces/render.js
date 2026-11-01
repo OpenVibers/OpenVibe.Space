@@ -169,7 +169,7 @@ function editorPage({ space, files, csrf, canPublish, url, aiOn, buildsLeft, tem
     };
     // The claim (openvibe.website, plan 5.9): a signed-in person who holds the secret keeps the draft.
     const claim = guest ? (guest.signedIn
-        ? `<form method="post" action="/spaces/${esc(guest.id)}/claim"><input type="hidden" name="key" value="${esc(guest.key)}"><input type="hidden" name="csrf" value="${esc(guest.claimCsrf || '')}"><button class="sp-btn" type="submit"><i class="fa-solid fa-bookmark" aria-hidden="true"></i> Keep this site</button></form>`
+        ? `<form method="post" action="/spaces/${esc(guest.id)}/claim"><input type="hidden" name="key" value="${esc(guest.key)}"><input type="hidden" name="csrf" value="${esc(guest.claimCsrf || '')}"><button class="sp-btn" type="submit"><i class="fa-solid fa-book" aria-hidden="true"></i> Keep this site</button></form>`
         : `<p class="sp-muted">This draft is yours until you sign in. <a class="sp-btn sp-btn-quiet" href="${esc(`/auth/login?next=${encodeURIComponent(`/spaces/${guest.id}/edit?key=${guest.key}`)}`)}">Sign in to keep it</a></p>`) : '';
     const body = `<div class="sp-editor" id="sp-editor" data-view="preview">
   <header class="sp-ed-bar">
