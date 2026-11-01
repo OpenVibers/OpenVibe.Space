@@ -12,6 +12,7 @@ const read = (id) => fs.readFileSync(path.join(__dirname, '..', 'templates', 'sp
 
 const event = read('site-event');
 assert.match(event, /--accent-text:\s*#b8326f;/, 'the event page has the readable text pink on white');
+assert.match(event, /\.btn \{[^}]*background: var\(--accent-text\); color: var\(--on-accent\);/, 'its filled buttons carry white on the deep pink (5.6:1), not on #d9468a (4.0:1)');
 assert.match(event, /@media \(prefers-color-scheme: dark\)[^{]*\{[^}]*--accent-text:\s*#ff7ab6;/, 'and the brighter pink on the dark page');
 assert.match(event, /\.date \{[^}]*color: var\(--accent-text\)/, 'the date uses the text pink');
 assert.match(event, /\.timeline time \{[^}]*color: var\(--accent-text\)/, 'the event times use the text pink');
