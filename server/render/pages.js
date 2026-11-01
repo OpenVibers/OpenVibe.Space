@@ -105,6 +105,24 @@ curl -X POST "https://openvibe.space/api/v1/sites/$SITE_ID/deploys?activate=1" \
     const body = sc.hero({
         eyebrow: 'OpenVibe.Space · spaces',
         title: 'Make a space.',
+        // The hero's picture is this site's own (2026-11-01): it drew the generic aura, the same on six homes.
+        // What a space is made of, around the space: sign-in, AI, data, hosting and the editor.
+        orbit: {
+            label: 'What a space has',
+            center: { title: 'Your space', sub: 'an app on your account' },
+            inner: [
+                { icon: 'ov:account', label: 'Sign-in', href: '/spaces/new' },
+                { icon: 'ov:ai', label: 'AI', href: '/spaces/new' },
+                { icon: 'ov:drive', label: 'Your data', href: '/spaces/new' },
+                { icon: 'ov:website', label: 'Hosting', href: '/dashboard' },
+                { icon: 'ov:code', label: 'Editor', href: '/spaces/new' },
+            ],
+            outer: [
+                { icon: 'ov:network', label: 'Network', href: 'https://openvibe.network/' },
+                { icon: 'ov:media', label: 'Media', href: 'https://openvibe.media/' },
+                { icon: 'ov:community', label: 'Community', href: 'https://openvibe.community/' },
+            ],
+        },
         accent: 'An app on your OpenVibe account.',
         lede: 'Describe what you want and OpenVibe AI builds it, or start from a template and change anything in the editor. A space signs visitors in with OpenVibe, keeps shared lists and private data, and talks to OpenVibe AI.',
         actions: [
