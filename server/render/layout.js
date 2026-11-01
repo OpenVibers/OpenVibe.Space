@@ -140,9 +140,10 @@ function renderPage(o) {
             ...feeds.map((f) => `<link rel="alternate" type="application/rss+xml" title="${escapeHtml(f.title)}" href="${escapeHtml(f.href)}">`),
             ...(o.styles || []).map((name) => `<link rel="stylesheet" href="${ovServe.url(name)}">`),
             `<link rel="stylesheet" href="${asset('css/space.css')}">`,
+            // The OpenVibe glyphs draw every fa- icon here (no Font Awesome since 2026-11-01).
+            `<script id="ov-glyphs-loader" src="${ovServe.url('ov-glyphs.js')}" defer></script>`,
             // Page-only stylesheets of this site (the dashboard's hosting.css), after space.css; the home page loads none.
             ...(o.localStyles || []).map((rel) => `<link rel="stylesheet" href="${asset(rel)}">`),
-            '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">',
             `<meta name="ov-boost" content="space@${escapeHtml(RELEASE)}">`,
             `<script src="${ovServe.url('boost.js')}" data-main="#main" defer></script>`,
             // The rules that show the picked part of a pick block are written for the page, because there is one per part.
