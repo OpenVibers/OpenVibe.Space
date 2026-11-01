@@ -140,8 +140,6 @@ function renderPage(o) {
             ...feeds.map((f) => `<link rel="alternate" type="application/rss+xml" title="${escapeHtml(f.title)}" href="${escapeHtml(f.href)}">`),
             ...(o.styles || []).map((name) => `<link rel="stylesheet" href="${ovServe.url(name)}">`),
             `<link rel="stylesheet" href="${asset('css/space.css')}">`,
-            // The OpenVibe glyphs draw every fa- icon here (no Font Awesome since 2026-11-01).
-            `<script id="ov-glyphs-loader" src="${ovServe.url('ov-glyphs.js')}" defer></script>`,
             // Page-only stylesheets of this site (the dashboard's hosting.css), after space.css; the home page loads none.
             ...(o.localStyles || []).map((rel) => `<link rel="stylesheet" href="${asset(rel)}">`),
             `<meta name="ov-boost" content="space@${escapeHtml(RELEASE)}">`,
