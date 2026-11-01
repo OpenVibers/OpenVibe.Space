@@ -185,11 +185,15 @@ function createSpacesPages(ctx) {
         html(res, 200, render.galleryPage({ viewer: signedIn(req) ? req.viewer : null, spaces: await spaces.gallery({ q, sort }), templates: templates.list(), q, sort, csrf: csrfOf(req) }));
     }));
 
+    // ?prompt=<text>: a description written elsewhere on the network (openvibe.codes "Something new") fills the box,
+    // one press from a build; nothing is built until the person presses Build. ?from=codes says where it came from.
+    const promptOf = (req) => (typeof req.query.prompt === 'string' ? req.query.prompt.replace(/\r\n?/g, '\n').trim().slice(0, 4000) : '');
+    const fromOf = (req) => (req.query.from === 'codes' ? 'codes' : null);
     router.get('/spaces/new', view(async (req, res) => {
         if (!signedIn(req)) throw new ApiError(401, 'auth.required', 'sign in first');
         // ?template=<id>: someone picked a template on openvibe.website; it leads the page, one press from a new space.
         const pick = req.query.template ? templates.get(String(req.query.template)) : null;
-        html(res, 200, render.newPage({ viewer: req.viewer, templates: templates.list(), csrf: csrfOf(req), aiOn: ai.enabled(), buildsLeft: await buildsLeft(req), pick }));
+        html(res, 200, render.newPage({ viewer: req.viewer, templates: templates.list(), csrf: csrfOf(req), aiOn: ai.enabled(), buildsLeft: await buildsLeft(req), pick, prompt: pick ? '' : promptOf(req), from: fromOf(req) }));
     }));
     router.post('/spaces/new', ...action(async (req, res) => {
         const body = req.body || {};
@@ -220,7 +224,7 @@ function createSpacesPages(ctx) {
         // ?template=<id>: a website template picked on openvibe.website leads the page, one press from a draft.
         const picked = req.query.template ? templates.get(String(req.query.template)) : null;
         const pick = picked && picked.kind === 'site' ? picked : null;
-        html(res, 200, render.guestPage({ templates: templates.sites(), error: null, prompt: '', aiOn: ai.enabled(), pick }));
+        html(res, 200, render.guestPage({ templates: templates.sites(), error: null, prompt: pick ? '' : promptOf(req), aiOn: ai.enabled(), pick, from: fromOf(req) }));
     }));
     router.post('/spaces/guest', ...guestAction(async (req, res) => {
         const body = req.body || {};

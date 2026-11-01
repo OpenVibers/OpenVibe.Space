@@ -18,6 +18,9 @@
 .sp-actions form { margin: 0; }
 .sp-flash { padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border, #2c3d5c); background: var(--bg-secondary, #101828); }
 .sp-flash.is-bad { border-color: #ef4444; color: #fecaca; background: color-mix(in srgb, #ef4444 12%, transparent); }
+/* A description handed over from openvibe.codes: one quiet line in the accent, above the form it filled. */
+.sp-handover { display: flex; align-items: center; gap: 10px; margin: 0 0 4px; padding: 10px 14px; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--accent, #4f8cff) 40%, transparent); background: color-mix(in srgb, var(--accent, #4f8cff) 10%, transparent); color: var(--text-primary, #e8edf3); font-size: 14px; }
+.sp-handover i { color: var(--accent, #4f8cff); }
 /* The hidden attribute wins over every display rule here (the AI overlay, Unpublish). */
 .sp-editor [hidden], .sp-wrap [hidden], .sp-section [hidden] { display: none !important; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

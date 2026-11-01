@@ -96,6 +96,30 @@ assert.match(hostingSrc, /target\.kind === 'dashboard' \|\| target\.kind === 'we
             const plain = await t.request({ method: 'GET', host: 'openvibe.space', path: '/spaces/new?template=nope', session: alice });
             assert.ok(!plain.text.includes('class="sp-pick"'), 'an unknown template picks nothing');
         });
+
+        await check('a description handed over from Codes fills the box, one press from a build', async () => {
+            const said = 'A snake game <b>with</b> a leaderboard & sound';
+            const r = await t.request({ method: 'GET', host: 'openvibe.space', path: `/spaces/new?prompt=${encodeURIComponent(said)}&from=codes`, session: alice });
+            assert.strictEqual(r.status, 200, r.text.slice(0, 200));
+            assert.ok(r.text.includes('A snake game &lt;b&gt;with&lt;/b&gt; a leaderboard &amp; sound</textarea>'), 'the description fills the box, escaped');
+            assert.ok(!r.text.includes('<b>with</b>'), 'nothing in it is markup');
+            assert.match(r.text, /class="sp-handover"[^>]*>[\s\S]*?From OpenVibe Codes/);
+            assert.match(r.text, /<button class="sp-btn"[^>]*autofocus[^>]*>[\s\S]*?Build it/, 'Build it takes the focus');
+            const plain = await t.request({ method: 'GET', host: 'openvibe.space', path: `/spaces/new?prompt=${encodeURIComponent(said)}`, session: alice });
+            assert.ok(plain.text.includes('a leaderboard &amp; sound</textarea>') && !plain.text.includes('class="sp-handover"'), 'a prompt from anywhere else fills the box without the Codes line');
+            const picked = await t.request({ method: 'GET', host: 'openvibe.space', path: `/spaces/new?template=site-portfolio&prompt=${encodeURIComponent(said)}`, session: alice });
+            assert.ok(!picked.text.includes('a leaderboard &amp; sound'), 'a picked template leads, and the box stays empty');
+        });
+
+        await check('the guest start page takes a handed-over description too, and a gated page never echoes it', async () => {
+            const r = await t.request({ method: 'GET', host: 'openvibe.space', path: `/spaces/guest?prompt=${encodeURIComponent('A bakery site with our hours')}&from=codes` });
+            assert.strictEqual(r.status, 200, r.text.slice(0, 200));
+            assert.ok(r.text.includes('A bakery site with our hours</textarea>'));
+            assert.match(r.text, /class="sp-handover"/);
+            const gated = await t.request({ method: 'GET', host: 'openvibe.space', path: `/spaces/new?prompt=${encodeURIComponent('secret plan for a site')}&from=codes` });
+            assert.strictEqual(gated.status, 401);
+            assert.ok(!gated.text.includes('secret plan'), 'an anonymous answer carries nothing from the query');
+        });
     } finally { await t.close(); }
     done();
 })().catch((e) => { console.error(e); process.exit(1); });
