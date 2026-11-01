@@ -93,7 +93,12 @@ function galleryPage({ viewer, spaces, templates, q, sort, csrf }) {
     return page({ title: 'Spaces', description: 'Make a space: a small app on your OpenVibe account, built by OpenVibe AI or from a template, with sign-in, shared lists, private storage and AI.', path: '/spaces', showcase: true, body });
 }
 
-function newPage({ viewer, templates, csrf, error, prompt, aiOn, buildsLeft, pick = null }) {
+// A description handed over from another OpenVibe site: say so, and put the Build button one press away.
+const handedOver = (from, prompt) => (prompt && from === 'codes'
+    ? '<p class="sp-handover" role="status"><i class="fa-solid fa-code" aria-hidden="true"></i> From OpenVibe Codes: check what you wrote, then press Build it.</p>'
+    : '');
+
+function newPage({ viewer, templates, csrf, error, prompt, aiOn, buildsLeft, pick = null, from = null }) {
     const picked = pick ? `<section class="sp-pick" style="--tpl:${esc(pick.accent)}" aria-labelledby="sp-pick-h">
   <span class="sp-template-icon"><i class="fa-solid ${esc(pick.icon)}" aria-hidden="true"></i></span>
   <div class="sp-pick-text"><p class="eyebrow">The template you picked</p><h2 id="sp-pick-h">${esc(pick.name)}</h2><p>${esc(pick.description)}</p></div>
@@ -104,11 +109,12 @@ function newPage({ viewer, templates, csrf, error, prompt, aiOn, buildsLeft, pic
   <h1 class="sp-title">${pick ? 'Make it yours' : 'What do you want to make?'}</h1>
   ${error ? `<p class="sp-flash is-bad" role="alert">${esc(error)}</p>` : ''}
   ${picked}
+  ${handedOver(from, prompt)}
   <form class="sp-ai-form" method="post" action="/spaces/new">
     <input type="hidden" name="csrf" value="${esc(csrf)}">
     <label for="sp-prompt">Describe it and OpenVibe AI builds it</label>
     <textarea id="sp-prompt" name="prompt" rows="4" maxlength="4000" placeholder="A trivia quiz about 90s cartoons with a leaderboard…" ${aiOn ? '' : 'disabled'}>${esc(prompt || '')}</textarea>
-    <div class="sp-row"><button class="sp-btn" ${aiOn ? '' : 'disabled'}><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> Build it</button>
+    <div class="sp-row"><button class="sp-btn" ${aiOn ? '' : 'disabled'}${prompt && aiOn ? ' autofocus' : ''}><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> Build it</button>
       <span class="sp-muted">${aiOn ? `${Number(buildsLeft)} AI builds left today. It takes about a minute; you can change everything after.` : 'OpenVibe AI is not available right now; start from a template instead.'}</span></div>
     <div class="sp-ideas" aria-label="Ideas">${['A daily mood check-in with a shared chart', 'A pixel art board everyone can paint on', 'A recipe idea generator that asks what is in my fridge', 'A study flashcard deck I can quiz myself with'].map((i) => `<button type="button" class="sp-chip" data-idea="${esc(i)}">${esc(i)}</button>`).join('')}</div>
   </form>
@@ -233,7 +239,7 @@ function editorPage({ space, files, csrf, canPublish, url, aiOn, buildsLeft, tem
  * The start page of a guest draft (openvibe.website, plan 5.9): no account, a template or a sentence, and a
  * private link to edit it. Plain forms in the spaces markup; the design is the orchestrator's.
  */
-function guestPage({ templates, error, prompt, aiOn, pick = null }) {
+function guestPage({ templates, error, prompt, aiOn, pick = null, from = null }) {
     const picked = pick ? `<section class="sp-pick" style="--tpl:${esc(pick.accent)}" aria-labelledby="sp-pick-h">
   <span class="sp-template-icon"><i class="fa-solid ${esc(pick.icon)}" aria-hidden="true"></i></span>
   <div class="sp-pick-text"><p class="eyebrow">The template you picked</p><h2 id="sp-pick-h">${esc(pick.name)}</h2><p>${esc(pick.description)}</p></div>
@@ -250,10 +256,11 @@ function guestPage({ templates, error, prompt, aiOn, pick = null }) {
   <p class="sp-lede">No account needed. Start from a template or describe what you want and OpenVibe AI writes it. You get a private link to edit it; sign in later to keep it.</p>
   ${error ? `<p class="sp-flash is-bad" role="alert">${esc(error)}</p>` : ''}
   ${picked}
+  ${handedOver(from, prompt)}
   <form class="sp-ai-form" method="post" action="/spaces/guest">
     <label for="sp-prompt">Describe it and OpenVibe AI builds it</label>
     <textarea id="sp-prompt" name="prompt" rows="4" maxlength="4000" placeholder="A bakery site with today&rsquo;s hours, where to find us and how to order…" ${aiOn ? '' : 'disabled'}>${esc(prompt || '')}</textarea>
-    <div class="sp-row"><button class="sp-btn" ${aiOn ? '' : 'disabled'}><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> Build it</button>
+    <div class="sp-row"><button class="sp-btn" ${aiOn ? '' : 'disabled'}${prompt && aiOn ? ' autofocus' : ''}><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> Build it</button>
       <span class="sp-muted">${aiOn ? 'It takes about a minute; you can change everything after.' : 'OpenVibe AI is not available right now; start from a template instead.'}</span></div>
   </form>
   <h2 class="sp-subtitle">Or start from a template</h2>
