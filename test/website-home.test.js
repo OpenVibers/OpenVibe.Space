@@ -38,6 +38,7 @@ assert.match(hostingSrc, /target\.kind === 'dashboard' \|\| target\.kind === 'we
             assert.match(r.text, /<link rel="canonical" href="https:\/\/openvibe\.website\/">/);
             assert.strictEqual((r.text.match(/<h1[\s>]/g) || []).length, 1, 'one h1');
             assert.ok(r.text.includes('"@type":"FAQPage"'), 'its questions are structured data');
+            assert.ok(r.text.includes('href="https://connect.openvibe.website/"'), 'the other half of openvibe.website: your own computer, through Connect');
         });
 
         await check('no cookie, ever: none set, none read, no sign-in or API on this host', async () => {
