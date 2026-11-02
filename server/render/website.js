@@ -27,6 +27,7 @@ const FAQ = [
     ['When can I put it on my own address?', 'Publishing at yourname.openvibe.website or on your own domain opens with public hosting, once the automatic abuse checks, a designated DMCA agent and the domain\'s Public Suffix List entry are in place. Until then you build, edit and preview, and OpenVibe staff publish.'],
     ['Do I need an account?', 'Not to start. Pick a template or describe your site and you get a private link to edit it, good for a week. Sign in with OpenVibe on openvibe.space to keep it; openvibe.website itself keeps no cookies, so no site here can touch your sign-in.'],
     ['Can I take my site somewhere else?', 'Yes. A site is plain HTML, CSS and JavaScript; copy its files out of the editor whenever you like.'],
+    ['Can I put something running on my own computer here?', 'Yes, with OpenVibe Connect: one port on your computer at its own address, like agents--you.openvibe.website, opened only by the people you pick after they sign in with OpenVibe. One file and Node, no router settings. Start at connect.openvibe.website.'],
 ];
 
 /** The room's motif: the prompt types, then the bakery template's page assembles in its browser, block by block. */
@@ -87,6 +88,10 @@ ${sc.steps({ id: 'how', title: 'From idea to address', items: [
 <section class="sc-sec" aria-labelledby="wb-first-h"><div class="wb-first">
 <div><h2 id="wb-first-h">Sites made here</h2><p>None public yet: publishing opens with public hosting. Build yours now and it is ready on the first day.</p></div>
 <a class="wb-btn" href="#templates">Pick a template</a>
+</div></section>
+<section class="sc-sec" id="your-computer" aria-labelledby="wb-connect-h"><div class="wb-first">
+<div><h2 id="wb-connect-h">Or put your own computer on the web</h2><p>Running something at home or on your laptop? OpenVibe Connect gives one port its own address, like agents--you.openvibe.website, and only the people you pick can open it, signed in with OpenVibe.</p></div>
+<a class="wb-btn" href="https://connect.openvibe.website/">Open Connect</a>
 </div></section>
 ${sc.faq({ id: 'questions', items: FAQ })}
 </div>`;

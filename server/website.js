@@ -53,7 +53,7 @@ function createWebsite({ sitesDomain, publicDir }) {
         name: 'OpenVibe.Website',
         summary: pages.DESCRIPTION,
         sections: [
-            { title: 'Start', links: [{ title: 'Website templates', url: `${base}/#templates`, html: true }, { title: 'Build on OpenVibe.Space', url: 'https://openvibe.space/spaces/new', html: true }] },
+            { title: 'Start', links: [{ title: 'Website templates', url: `${base}/#templates`, html: true }, { title: 'Build on OpenVibe.Space', url: 'https://openvibe.space/spaces/new', html: true }, { title: 'Put your own computer on the web (OpenVibe Connect)', url: 'https://connect.openvibe.website/', html: true }] },
             { title: 'Templates', links: templates.sites().map((t) => ({ title: t.name, url: `${base}/templates/${t.id}`, html: true, note: t.description })) },
         ],
     })));
