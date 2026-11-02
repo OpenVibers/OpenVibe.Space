@@ -10,7 +10,7 @@
 const config = require('../config');
 const sc = require('openvibe-shared/showcase');
 const { renderPage, escapeHtml: esc } = require('./layout');
-const { pickBlock, pickRules, foldBlock } = require('./short');
+const { pickBlock, foldBlock } = require('./short');
 
 const FORUM_URL = `${config.communityUrl}/s`;
 const FORUM_LABEL = FORUM_URL.replace(/^https?:\/\//, '');
@@ -152,7 +152,6 @@ curl -X POST "https://openvibe.space/api/v1/sites/$SITE_ID/deploys?activate=1" \
         canonicalPath: '/', active: 'home', styles: [sc.STYLESHEET], body, description: HOME_DESCRIPTION,
         agentLayer: true, llms: '/llms.txt',
         // The rule that shows the picked part of the home's pick block: one per part, written for this page.
-        inlineStyles: [`@supports selector(:has(*)){@media (max-width:640px){${pickRules('parts', parts.map((p) => p.id))}}}`],
         jsonLd: [
             { '@context': 'https://schema.org', '@type': 'WebSite', name: 'OpenVibe.Space', url: `${site}/`, description: HOME_DESCRIPTION },
             { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: HOME_FAQ.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) },
