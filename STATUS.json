@@ -7,7 +7,7 @@
   "port": 4940,
   "domain": "openvibe.space",
   "contracts": "openvibe-contracts v0.266.0",
-  "sdk": "openvibe-sdk v0.81.0",
+  "sdk": "openvibe-sdk v0.82.0",
   "shared": "openvibe-shared v4.105.0",
   "capabilities": [
     "space.site.manage",
