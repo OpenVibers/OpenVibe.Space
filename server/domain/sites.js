@@ -18,6 +18,8 @@ const RESERVED = new Set([
     'docs', 'blog', 'news', 'security', 'abuse', 'postmaster', 'hostmaster', 'webmaster', 'openvibe', 'openvibers', 'network', 'live',
     'media', 'community', 'events', 'chat', 'tools', 'codes', 'sites', 'sandbox', 'staging', 'test', 'internal', 'localhost', 'wpad',
     'autoconfig', 'autodiscover', 'isatap', 'acme', 'well-known',
+    // OpenVibe Connect's own host and the names its plan keeps (ADR-057): connect.openvibe.website, hooks, shares.
+    'connect', 'hooks', 'share', 'shares', 'tunnel',
 ]);
 const HOLD_MS = 30 * 24 * 3600 * 1000;
 
