@@ -49,12 +49,19 @@ function createWebsite({ sitesDomain, publicDir }) {
         .send(seo.robotsTxt({ sitemaps: [`${base}/sitemap.xml`], disallow: ['/templates/'] })));
     router.get('/sitemap.xml', (_req, res) => res.type('application/xml').set('Cache-Control', PAGE_CACHE)
         .send(seo.sitemapXml([{ loc: `${base}/`, changefreq: 'weekly', priority: 1 }])));
+    // AGT-5: the website host's own pages, each at its Markdown twin; none of them answers as .md yet
+    // (llms-twins-probe, 11-03), so they keep their URL and say (HTML). No llms-full.txt is served on this host.
     router.get('/llms.txt', (_req, res) => res.type('text/plain').set('Cache-Control', PAGE_CACHE).send(seo.llmsTxt({
         name: 'OpenVibe.Website',
         summary: pages.DESCRIPTION,
         sections: [
             { title: 'Start', links: [{ title: 'Website templates', url: `${base}/#templates`, html: true }, { title: 'Build on OpenVibe.Space', url: 'https://openvibe.space/spaces/new', html: true }, { title: 'Put your own computer on the web (OpenVibe Connect)', url: 'https://connect.openvibe.website/', html: true }] },
             { title: 'Templates', links: templates.sites().map((t) => ({ title: t.name, url: `${base}/templates/${t.id}`, html: true, note: t.description })) },
+        ],
+        // llmstxt.org's "## Optional": what an agent may skip when it needs a shorter context.
+        optional: [
+            { title: 'Sitemap', url: `${base}/sitemap.xml` },
+            { title: 'robots.txt', url: `${base}/robots.txt` },
         ],
     })));
 

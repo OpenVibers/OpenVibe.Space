@@ -17,22 +17,29 @@ const ROBOTS_DISALLOW = ['/api/', '/auth/', '/dashboard', '/projects/', '/sites/
 const SUMMARY = 'OpenVibe.Space is where people make spaces: small apps on their OpenVibe account, built by OpenVibe AI from a description or started from a template and changed in a browser editor, that sign visitors in with OpenVibe, keep shared lists and private data, and talk to OpenVibe AI. It also serves tested static hosting (immutable deploys, rollback, previews, Git ingest, verified custom domains), open to OpenVibe staff until the public launch. The forum that used to live here is on OpenVibe.Community.';
 
 // ── llms.txt / llms-full.txt (llmstxt.org) ───────────────────
+// AGT-5: each of Space's own pages is linked at its Markdown twin (llmsTxt's markdown: true, base: baseUrl).
+// /spaces and /spaces/new have no twin yet (llms-twins-probe, 11-03), so they keep their URL and say (HTML).
 function llmsSections() {
     const u = config.baseUrl;
     return [
         { title: 'This site', links: [
             { title: 'Home', url: `${u}/`, note: 'spaces and static hosting' },
-            { title: 'Spaces', url: `${u}/spaces`, note: 'the gallery of published spaces and the templates' },
-            { title: 'Make a space', url: `${u}/spaces/new`, note: 'describe it to the AI builder, or start from a template (sign-in required)' },
+            { title: 'Spaces', url: `${u}/spaces`, html: true, note: 'the gallery of published spaces and the templates' },
+            { title: 'Make a space', url: `${u}/spaces/new`, html: true, note: 'describe it to the AI builder, or start from a template (sign-in required)' },
         ] },
         { title: 'The network', links: [
             { title: 'The forum', url: `${config.communityUrl}/s`, note: 'OpenVibe.Community hosts the forum' },
             { title: 'OpenVibe.Network', url: config.networkUrl, note: 'identity, accounts and sign-in' },
         ] },
-        { title: 'Machine-readable', links: [
-            { title: 'Sitemap', url: `${u}/sitemap.xml` },
-            { title: 'Full text for language models', url: `${u}/llms-full.txt` },
-        ] },
+    ];
+}
+
+/** llmstxt.org's "## Optional": what an agent may skip when it needs a shorter context. */
+function llmsOptional() {
+    const u = config.baseUrl;
+    return [
+        { title: 'Sitemap', url: `${u}/sitemap.xml` },
+        { title: 'Full text for language models', url: `${u}/llms-full.txt` },
     ];
 }
 
@@ -57,4 +64,4 @@ async function sitemapRows(releaseLastmod, db = null) {
     return rows;
 }
 
-module.exports = { ROBOTS_DISALLOW, SUMMARY, llmsSections, llmsFullSections, sitemapRows };
+module.exports = { ROBOTS_DISALLOW, SUMMARY, llmsSections, llmsOptional, llmsFullSections, sitemapRows };

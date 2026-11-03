@@ -80,6 +80,12 @@ assert.match(hostingSrc, /target\.kind === 'dashboard' \|\| target\.kind === 'we
             const llms = (await t.get('openvibe.website', '/llms.txt')).text;
             assert.match(llms, /^# OpenVibe\.Website/);
             for (const s of templates.sites()) assert.ok(llms.includes(`https://openvibe.website/templates/${s.id}`), s.id);
+            // AGT-5: none of this host's pages answers as .md yet, so each keeps its URL and says (HTML);
+            // Optional is the last section.
+            assert.match(llms, /\[Website templates\]\(https:\/\/openvibe\.website\/#templates\) \(HTML\)/);
+            for (const s of templates.sites()) assert.ok(llms.includes(`https://openvibe.website/templates/${s.id}) (HTML)`), s.id);
+            assert.match(llms, /\n## Optional\n\n[\s\S]*\[Sitemap\]\(https:\/\/openvibe\.website\/sitemap\.xml\)/);
+            assert.strictEqual(llms.lastIndexOf('\n## '), llms.indexOf('\n## Optional'), 'Optional is the last section');
         });
 
         await check('the guest start page leads with a website template picked on the front door', async () => {

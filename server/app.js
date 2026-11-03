@@ -214,7 +214,7 @@ async function createApp(opts = {}) {
     app.get('/robots.txt', (_req, res) => res.type('text/plain').set('Cache-Control', cache.htmlHeaders({ maxAge: 3600 }))
         .send(seo.robotsTxt({ sitemaps: [`${config.baseUrl}/sitemap.xml`], disallow: discovery.ROBOTS_DISALLOW })));
     app.get('/llms.txt', (_req, res) => res.type('text/plain').set('Cache-Control', cache.htmlHeaders({ maxAge: 3600 }))
-        .send(seo.llmsTxt({ name: SITE_NAME, summary: discovery.SUMMARY, details: discovery.SUMMARY, sections: discovery.llmsSections() })));
+        .send(seo.llmsTxt({ name: SITE_NAME, markdown: true, base: config.baseUrl, summary: discovery.SUMMARY, details: discovery.SUMMARY, sections: discovery.llmsSections(), optional: discovery.llmsOptional() })));
     app.get('/llms-full.txt', wrap(async (_req, res) => res.type('text/plain').set('Cache-Control', cache.htmlHeaders({ maxAge: 3600 }))
         .send(seo.llmsFull({ site: SITE_NAME, summary: discovery.SUMMARY, base: config.baseUrl, sections: await discovery.llmsFullSections(), maxBytes: 512 * 1024 }))));
     app.get('/sitemap.xml', async (_req, res) => {
