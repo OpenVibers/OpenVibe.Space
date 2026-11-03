@@ -146,11 +146,17 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, outb
     }
 
     async function uniqueSlug(name) {
-        const base = slugBase(name);
+        let base = slugBase(name);
         for (let i = 0; i < 8; i++) {
             const tail = crypto.randomBytes(3).toString('hex').slice(0, 4);
             const slug = `${base.slice(0, 34).replace(/-+$/, '')}-${tail}`;
-            try { sites.checkName(slug); } catch { continue; }
+            try { sites.checkName(slug); } catch {
+                // A reserved base stays reserved whatever the tail ("OpenVibe Poll" failed all eight tries with a 503,
+                // REVIEW-0 11-03): drop the reserved "openvibe" part once, or fall back to a plain "space-…".
+                const rest = base.replace(/^openvibe-*/, '');
+                base = rest !== base && rest.length >= 3 ? rest : 'space';
+                continue;
+            }
             if (!(await q.slugUsed.get(slug, slug))) return slug;
         }
         throw new ApiError(503, 'space.slug_unavailable', 'could not find a free address for the space; try another name');

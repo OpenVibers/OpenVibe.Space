@@ -127,7 +127,9 @@ function createHosting(app, { db, auth, config: suppliedConfig, now, resolver, f
         if (forumRedirect) app.use(forumRedirect);
         app.use(contracts.http.middleware());
         app.use('/api/v1/resources', rateLimit({ windowMs: 60_000, max: 240, standardHeaders: true, legacyHeaders: false }), viewers.middleware('api'), require('./registry/resource-control').router({ guard: guard('space.resource.control') }), resourceIndex.router({ guard: guard('space.resource.read') }));
-        app.use('/api/v1/apps', require('./spaces/api').createSpacesApi({ config, spaces: ctx.spaces, data: ctx.spaceData, sites, takedowns, log }));
+        // The Spaces API had no rate limit of its own (it is mounted before /api/v1's): a space's page calls it, so its
+        // limit is wider than the API's (REVIEW-0 11-03).
+        app.use('/api/v1/apps', rateLimit({ windowMs: 60_000, max: 600, standardHeaders: true, legacyHeaders: false }), require('./spaces/api').createSpacesApi({ config, spaces: ctx.spaces, data: ctx.spaceData, sites, takedowns, log }));
         app.use('/api/v1', rateLimit({ windowMs: 60_000, max: 240, standardHeaders: true, legacyHeaders: false }), createApi(ctx));
         app.use('/preview', rateLimit({ windowMs: 60_000, max: 300, standardHeaders: true, legacyHeaders: false }), viewers.middleware('dashboard'), (req, res, next) => Promise.resolve(tenant.preview(req, res)).catch(next));
         {
