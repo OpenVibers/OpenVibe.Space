@@ -68,6 +68,17 @@ function fakeAi() {
         assert.match(pub.text, /<link rel="canonical" href="https:\/\/openvibe\.space\/spaces">/);
     });
 
+    await check('a space named with a reserved word still gets an address (REVIEW-0: "OpenVibe Poll" was a 503)', async () => {
+        const viewer = { kind: 'user', subject: carol.subject, user: { username: carol.username } };
+        const index = [{ path: 'index.html', content: '<!doctype html><title>x</title>' }];
+        const poll = await t.ctx.spaces.create(viewer, { name: 'OpenVibe Poll', files: index });
+        assert.match(poll.slug, /^poll-[0-9a-f]{4}$/, poll.slug);
+        const bare = await t.ctx.spaces.create(viewer, { name: 'OpenVibe', files: index });
+        assert.match(bare.slug, /^space-[0-9a-f]{4}$/, bare.slug);
+        await t.ctx.spaces.remove(viewer, poll);
+        await t.ctx.spaces.remove(viewer, bare);
+    });
+
     await check('a person starts a space from a template and lands in its editor', async () => {
         const r = await form(alice, '/spaces/new', { template: 'guestbook' });
         assert.strictEqual(r.status, 303, r.text);
