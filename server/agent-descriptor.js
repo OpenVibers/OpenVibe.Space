@@ -6,6 +6,7 @@ module.exports = {
     purpose: 'Static hosting for the OpenVibe network: a space is an app on your OpenVibe account, published at its own address.',
     home: 'https://openvibe.space', api: '/api/v1',
     docs: 'https://openvibe.services/docs/api',
+    openapi: '/openapi.json',
     policy: {
         auth: ['none', 'bearer', 'Network OIDC'],
         rateLimit: 'The hosting API is rate limited per caller; the owner\'s plan sets the numbers.',
