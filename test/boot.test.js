@@ -91,7 +91,13 @@ async function check(name, fn) {
             assert.match(await robots.text(), /Sitemap:/);
             const llms = await fetch(`${base}/llms.txt`);
             assert.strictEqual(llms.status, 200);
-            assert.match(await llms.text(), /OpenVibe\.Space/);
+            const text = await llms.text();
+            assert.match(text, /OpenVibe\.Space/);
+            // AGT-5: the home at its Markdown twin, the twin-less pages marked (HTML), Optional last.
+            assert.match(text, new RegExp(`\\[Home\\]\\(http://127\\.0\\.0\\.1:${port}/index\\.md\\)`), 'the home is /index.md');
+            assert.match(text, new RegExp(`\\[Spaces\\]\\(http://127\\.0\\.0\\.1:${port}/spaces\\) \\(HTML\\)`), 'a twin-less page keeps its URL');
+            assert.match(text, /\n## Optional\n/);
+            assert.strictEqual(text.lastIndexOf('\n## '), text.indexOf('\n## Optional'), 'Optional is the last section');
             const map = await fetch(`${base}/sitemap.xml`);
             assert.strictEqual(map.status, 200);
             const xml = await map.text();
