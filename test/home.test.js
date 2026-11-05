@@ -37,6 +37,22 @@ const { boot, check, done } = require('./helpers/app');
         assert.doesNotMatch(r.text, /href="\/s"/, 'nothing links a /s that only redirects');
     });
 
+    await check('the home page shares the site card, content-hashed, with its 1200×630 size and the Twitter mirror', async () => {
+        const r = await t.get('/');
+        assert.strictEqual(r.status, 200);
+        const head = r.text.split('</head>')[0];
+        const image = /<meta property="og:image" content="([^"]+)">/.exec(head)?.[1] || '';
+        assert.match(image, /^https:\/\/openvibe\.space\/shared\/social\/space\.jpg\?v=[0-9a-f]{12}$/);
+        assert.ok(head.includes('<meta property="og:image:width" content="1200">'));
+        assert.ok(head.includes('<meta property="og:image:height" content="630">'));
+        assert.ok(head.includes('<meta name="twitter:card" content="summary_large_image">'));
+        assert.ok(head.includes(`<meta name="twitter:image" content="${image}">`));
+        const path = new URL(image).pathname + new URL(image).search;
+        const card = await t.get(path);
+        assert.strictEqual(card.status, 200, path);
+        assert.ok(card.headers.get('content-type').startsWith('image/jpeg'));
+    });
+
     await check('/updates is this site\'s own update log, and the footer links it', async () => {
         const r = await t.get('/updates');
         assert.strictEqual(r.status, 200);
