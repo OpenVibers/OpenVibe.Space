@@ -269,7 +269,20 @@ function createSpacesPages(ctx) {
     }));
 
     router.get('/spaces/:slug', view(async (req, res) => {
-        const { space, owner } = await spaces.load(req.viewer, req.params.slug, 'read');
+        let loaded;
+        try { loaded = await spaces.load(req.viewer, req.params.slug, 'read'); } catch (err) {
+            // A space shared with specific people answers with the gate, never its name, description or files.
+            if (err.status === 404 && ctx.sharing) {
+                const space = await spaces.getBySlug(req.params.slug);
+                const row = space ? await ctx.sharing.shareOf(space.id).catch(() => null) : null;
+                if (row && row.audience === 'people') {
+                    return html(res, 404, render.sharedGate({ id: space.id, signedInAs: req.viewer && req.viewer.subject ? req.viewer.subject : null,
+                        signInUrl: `/auth/login?next=${encodeURIComponent(req.originalUrl)}` }));
+                }
+            }
+            throw err;
+        }
+        const { space, owner } = loaded;
         const forkedFrom = space.forked_from ? await spaces.get(space.forked_from) : null;
         html(res, 200, render.spacePage({ viewer: signedIn(req) ? req.viewer : null, space, owner, url: spaces.urlOf(space), csrf: csrfOf(req), forkedFrom: forkedFrom && forkedFrom.site_id ? forkedFrom : null }));
     }));

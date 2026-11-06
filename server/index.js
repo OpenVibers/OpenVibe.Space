@@ -29,6 +29,9 @@ const { createPgTelemetrySink, startTelemetryRetention } = require('openvibe-sdk
     app.locals.hosting.outbox.start();
     app.locals.hosting.billing.start();   // off unless SPACE_BILLING_INTERVAL_MS > 0
     app.locals.hosting.guestCleanup.start();   // the guest drafts whose week is up (off with SPACE_GUEST_DRAFTS=off)
+    // Sharing (openvibe-sdk/share): expire members and transfers, then send queued share events and notifications.
+    const sharingTimer = setInterval(() => { app.locals.hosting.sharing.work().catch(() => { /* logged inside */ }); }, 15_000);
+    if (sharingTimer.unref) sharingTimer.unref();
     // The two account subscriptions at OpenVibe.Events (ADR-033), created when missing; off without EVENTS_URL,
     // SPACE_EVENTS_SECRET or the client secret.
     const hc = app.locals.hosting.config;
@@ -46,7 +49,7 @@ const { createPgTelemetrySink, startTelemetryRetention } = require('openvibe-sdk
     gracefulStop({
         name: 'Space', server,
         drainMs: 4000, deadlineMs: 5000, deadlineExitCode: 1,
-        stop: [async () => { if (subscriptions) subscriptions.stop(); app.locals.hosting.worker.stop(); app.locals.hosting.guestCleanup.stop(); await app.locals.hosting.outbox.stop(); await app.locals.hosting.billing.stop(); }],
+        stop: [async () => { if (subscriptions) subscriptions.stop(); clearInterval(sharingTimer); app.locals.hosting.worker.stop(); app.locals.hosting.guestCleanup.stop(); await app.locals.hosting.outbox.stop(); await app.locals.hosting.billing.stop(); }],
         close: [
             async () => { if (telemetryRetention) await telemetryRetention.stop(); await telemetry.stop(); },
             async () => {

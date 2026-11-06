@@ -134,9 +134,31 @@ function minePage({ spaces }) {
     return page({ title: 'Your spaces', path: '/spaces/mine', robots: 'noindex,nofollow', body });
 }
 
+/**
+ * The page a person who is not on the list sees (design 2026-11-06): the audience, never the space's
+ * name, description or files. OVShare.gate offers "Ask for access" when signed in.
+ */
+function sharedGate({ id, signedInAs = null, signInUrl = '/auth/login' }) {
+    const body = `<div class="sp-wrap">
+  <p class="eyebrow">A space on OpenVibe.Space</p>
+  <h1 class="sp-title">This is shared with specific people.</h1>
+  <div id="space-gate"><p class="sp-muted">This space is shared with specific people on OpenVibe.Space.</p>
+  <p><a class="sp-btn" href="${esc(signInUrl)}">Sign in</a></p></div>
+  <script src="/shared/ov-share.js" defer></script>
+  <script>
+window.addEventListener('DOMContentLoaded', function () {
+  var el = document.getElementById('space-gate');
+  if (el && window.OVShare) OVShare.gate(el, { kind: 'space', id: ${JSON.stringify(id)},
+    signedInAs: ${JSON.stringify(signedInAs || '')}, signInUrl: ${JSON.stringify(signInUrl)} });
+});
+  </script>
+</div>`;
+    return page({ title: 'A space on OpenVibe.Space', description: 'A space shared with specific people on OpenVibe.Space.', path: '/spaces', robots: 'noindex,nofollow', body });
+}
+
 function spacePage({ viewer, space, owner, url, csrf, forkedFrom }) {
     const live = Boolean(space.site_id);
-    const share = kit.share({ title: space.name, url: live && url ? url : null, text: space.description || '' });
+    const share = kit.share({ title: space.name, url: live && url ? url : null, text: space.description || '', kind: 'space', id: space.id });
     const actions = [
         live ? `<a class="sp-btn" href="${esc(url)}" rel="noopener"><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i> Open</a>` : '', share,
         owner ? `<a class="sp-btn ${live ? 'sp-btn-quiet' : ''}" href="/spaces/${esc(space.slug)}/edit"><i class="fa-solid fa-pen" aria-hidden="true"></i> Edit</a>` : '',
@@ -310,4 +332,4 @@ function errorBody(status, message) {
     return page({ title: status === 404 ? 'Space not found' : 'Spaces', path: '/spaces', robots: 'noindex,nofollow', body: `<div class="sp-wrap"><p class="eyebrow">Error ${Number(status)}</p><h1 class="sp-title">${status === 404 ? 'No such space' : 'That did not work'}</h1><p class="sp-lede">${esc(message)}</p><p><a class="sp-btn" href="/spaces">Back to spaces</a></p></div>` });
 }
 
-module.exports = { galleryPage, newPage, minePage, spacePage, editorPage, guestPage, connectPage, signInPage, errorBody, CAP_TEXT };
+module.exports = { sharedGate, galleryPage, newPage, minePage, spacePage, editorPage, guestPage, connectPage, signInPage, errorBody, CAP_TEXT };

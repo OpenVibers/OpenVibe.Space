@@ -42,7 +42,7 @@ function slugBase(name) {
     return s.length >= 3 ? s : `space-${s}`.replace(/-+$/, '');
 }
 
-function createSpaces({ store, config, projects, sites, deploys, takedowns, outbox = null, log = console }) {
+function createSpaces({ store, config, projects, sites, deploys, takedowns, outbox = null, log = console, sharing = null }) {
     const { db } = store;
     const limits = config.spaces;
     const q = {
@@ -103,14 +103,20 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, outb
     async function forSite(siteId) { return siteId ? (await q.bySite.get(siteId)) || null : null; }
 
     const isOwner = (viewer, space) => Boolean(viewer && viewer.kind === 'user' && viewer.subject === space.owner_subject);
-    /** read: a published space anyone can open, or the owner's (and staff's) own drafts. own: the owner or staff. */
+    /**
+     * read: the owner and staff, or whoever the space's share row admits (Everyone, the link, the
+     * people on its list); a draft is Only me until its maker shares it. own: the owner or staff.
+     */
     async function load(viewer, slug, need = 'read') {
         const space = await getBySlug(slug);
         const notFound = new ApiError(404, 'space.not_found', 'no such space');
         if (!space) throw notFound;
         const owner = isOwner(viewer, space) || Boolean(viewer && viewer.staff);
         if (need === 'own' && !owner) throw isOwner(viewer, space) || space.site_id ? new ApiError(403, 'space.not_owner', 'only the space\'s maker can change it') : notFound;
-        if (need === 'read' && !owner && !space.site_id) throw notFound;
+        if (need === 'read' && !owner) {
+            const allowed = sharing ? await sharing.canView(viewer, space.id).catch(() => false) : Boolean(space.site_id);
+            if (!allowed) throw notFound;
+        }
         return { space, owner };
     }
 
@@ -184,6 +190,8 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, outb
             await q.insert.run(id, slug, person.subject, person.username, person.name, name, text(input.description, 400), String(input.instructions || '').trim().slice(0, 4000),
                 JSON.stringify(capsOf(input.capabilities)), input.template ? text(input.template, 40) : null, input.forked_from || null, now, now);
             for (const f of fileList) await q.addFile.run(id, f.path, f.content, now);
+            // A new space is a draft: Only me until its maker shares it or publishes it.
+            if (sharing) await sharing.register(viewer, id, 'private');
         });
         return await get(id);
     }
@@ -225,6 +233,7 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, outb
         await store.tx(async () => {
             await q.insertGuest.run(id, slug, text(name, 40), text(description, 400), template, now, now, guest.keyHash(key), String(ip || '').slice(0, 64), now + limits.guest.ttlDays * DAY);
             for (const f of list) await q.addFile.run(id, f.path, f.content, now);
+            if (sharing) await sharing.register(null, id, 'private');
         });
         return { space: await get(id), key };
     }
@@ -243,6 +252,8 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, outb
         const claimed = await store.tx(async () => {
             const r = await q.claimGuest.run(person.subject, person.username, person.name, slug, now, space.id);
             if (!r.changes) return false;
+            // The share row follows the draft to its new owner.
+            if (sharing) await sharing.adopt(space.id, { subject: person.subject });
             // The claim is a status event: the draft now belongs to a person.
             if (outbox) {
                 await outbox.emit({
@@ -284,6 +295,7 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, outb
         await q.settings.run(name, input.description !== undefined ? text(input.description, 400) : space.description,
             input.instructions !== undefined ? String(input.instructions || '').trim().slice(0, 4000) : space.instructions,
             JSON.stringify(input.capabilities !== undefined ? capsOf(input.capabilities) : capsOf(space.capabilities)), visibility, store.now(), space.id);
+        if (sharing && input.visibility !== undefined) await sharing.syncAudience(space.id, visibility);
         return await get(space.id);
     }
 
@@ -351,6 +363,8 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, outb
         const deploy = await deploys.create(viewer, pre, entries, { source: 'files', activate: true, notes: [`space ${space.id}`], traceparent });
         const now = store.now();
         await q.published.run(site.id, space.published_at || now, now, space.id);
+        // Publishing makes it Everyone (or the link, when its gallery visibility says unlisted).
+        if (sharing) await sharing.syncAudience(space.id, space.visibility);
         return { space: await get(space.id), site, deploy, url: urlOf(space) };
     }
 
@@ -359,6 +373,7 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, outb
         const site = await sites.get(space.site_id);
         if (site && site.status === 'active') await sites.remove(viewer, site.id, { deploys });
         await q.unpublished.run(store.now(), space.id);
+        if (sharing) await sharing.syncAudience(space.id, 'private');
         return await get(space.id);
     }
 
