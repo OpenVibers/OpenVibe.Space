@@ -135,8 +135,9 @@ function minePage({ spaces }) {
 
 function spacePage({ viewer, space, owner, url, csrf, forkedFrom }) {
     const live = Boolean(space.site_id);
+    const share = `<button type="button" class="sp-btn sp-btn-quiet" data-ov-share-sheet data-title="${esc(space.name)}"${live && url ? ` data-url="${esc(url)}"` : ''}${space.description ? ` data-text="${esc(space.description)}"` : ''}><i class="fa-solid fa-share-nodes" aria-hidden="true"></i> Share</button>`;
     const actions = [
-        live ? `<a class="sp-btn" href="${esc(url)}" rel="noopener"><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i> Open</a>` : '',
+        live ? `<a class="sp-btn" href="${esc(url)}" rel="noopener"><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i> Open</a>` : '', share,
         owner ? `<a class="sp-btn ${live ? 'sp-btn-quiet' : ''}" href="/spaces/${esc(space.slug)}/edit"><i class="fa-solid fa-pen" aria-hidden="true"></i> Edit</a>` : '',
         viewer ? `<form method="post" action="/spaces/${esc(space.slug)}/fork"><input type="hidden" name="csrf" value="${esc(csrf)}"><button class="sp-btn sp-btn-quiet"><i class="fa-solid fa-code-fork" aria-hidden="true"></i> Fork</button></form>`
             : `<a class="sp-btn sp-btn-quiet" href="${signInHref(`/spaces/${space.slug}`)}"><i class="fa-solid fa-code-fork" aria-hidden="true"></i> Sign in to fork</a>`,
