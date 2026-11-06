@@ -105,6 +105,11 @@ const { boot, check, done } = require('./helpers/app');
         const login = await t.get('/auth/login?next=/');
         assert.strictEqual(login.status, 302);
         assert.match(login.headers.get('location'), /^https?:\/\/127\.0\.0\.1:\d+\/oauth\/authorize/);
+        const u = new URL(login.headers.get('location'));
+        assert.strictEqual(u.searchParams.get('code_challenge_method'), 'S256', 'PKCE from openvibe-sdk/sso');
+        assert.match(u.searchParams.get('code_challenge'), /^[0-9A-Za-z_-]{43}$/);
+        const health = await t.get('/auth/health');
+        assert.deepStrictEqual([health.status, health.json()], [200, { ok: true, client: 'ok' }]);
     });
 
     await check('a session token signs in; a typed Network token (a FedCM assertion, a realtime ticket, an export token) never does', async () => {
