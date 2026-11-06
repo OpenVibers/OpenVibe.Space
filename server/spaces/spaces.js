@@ -114,7 +114,9 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, outb
         const owner = isOwner(viewer, space) || Boolean(viewer && viewer.staff);
         if (need === 'own' && !owner) throw isOwner(viewer, space) || space.site_id ? new ApiError(403, 'space.not_owner', 'only the space\'s maker can change it') : notFound;
         if (need === 'read' && !owner) {
-            const allowed = sharing ? await sharing.canView(viewer, space.id).catch(() => false) : Boolean(space.site_id);
+            // A space from before sharing has no row: it falls back to "published is anyone's, a draft is the maker's".
+            const row = sharing ? await sharing.shareOf(space.id).catch(() => null) : null;
+            const allowed = row ? await sharing.canView(viewer, space.id).catch(() => false) : Boolean(space.site_id);
             if (!allowed) throw notFound;
         }
         return { space, owner };
