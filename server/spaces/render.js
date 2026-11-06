@@ -5,6 +5,7 @@
  * Plain template strings, every value escaped; the editor's behaviour is public/js/space-editor.js.
  */
 const sc = require('openvibe-shared/showcase');
+const kit = require('openvibe-shared/kit');
 const { renderPage, escapeHtml: esc, asset } = require('../render/layout');
 
 const CAP_TEXT = {
@@ -23,7 +24,7 @@ const ago = (ms) => {
 function page(o) {
     return renderPage({
         title: o.title, description: o.description, canonicalPath: o.path, robots: o.robots || 'index,follow',
-        active: 'spaces', styles: o.showcase ? [sc.STYLESHEET] : [], localStyles: ['css/spaces.css'], body: o.body, jsonLd: o.jsonLd,
+        active: 'spaces', styles: [...(o.showcase ? [sc.STYLESHEET] : []), ...(o.styles || [])], localStyles: ['css/spaces.css'], body: o.body, jsonLd: o.jsonLd,
     });
 }
 
@@ -135,7 +136,7 @@ function minePage({ spaces }) {
 
 function spacePage({ viewer, space, owner, url, csrf, forkedFrom }) {
     const live = Boolean(space.site_id);
-    const share = `<button type="button" class="sp-btn sp-btn-quiet" data-ov-share-sheet data-title="${esc(space.name)}"${live && url ? ` data-url="${esc(url)}"` : ''}${space.description ? ` data-text="${esc(space.description)}"` : ''}><i class="fa-solid fa-share-nodes" aria-hidden="true"></i> Share</button>`;
+    const share = kit.share({ title: space.name, url: live && url ? url : null, text: space.description || '' });
     const actions = [
         live ? `<a class="sp-btn" href="${esc(url)}" rel="noopener"><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i> Open</a>` : '', share,
         owner ? `<a class="sp-btn ${live ? 'sp-btn-quiet' : ''}" href="/spaces/${esc(space.slug)}/edit"><i class="fa-solid fa-pen" aria-hidden="true"></i> Edit</a>` : '',
@@ -154,7 +155,7 @@ function spacePage({ viewer, space, owner, url, csrf, forkedFrom }) {
 </div>`;
     return page({
         title: space.name, description: space.description || `${space.name}: a space on OpenVibe.Space by @${space.owner_username}.`, path: `/spaces/${space.slug}`,
-        robots: live && space.visibility === 'public' ? 'index,follow' : 'noindex,nofollow', body,
+        styles: ['kit.css'], robots: live && space.visibility === 'public' ? 'index,follow' : 'noindex,nofollow', body,
         jsonLd: live ? { '@context': 'https://schema.org', '@type': 'WebApplication', name: space.name, url, description: space.description || undefined, applicationCategory: 'WebApplication', author: { '@type': 'Person', name: space.owner_username } } : undefined,
     });
 }

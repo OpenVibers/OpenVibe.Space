@@ -180,6 +180,7 @@ function fakeAi() {
         assert.strictEqual((p.text.match(/data-ov-share-sheet/g) || []).length, 1, 'one Share button');
         assert.ok(p.text.includes(`data-url="${url}"`), 'the published space address');
         assert.ok(p.text.includes('data-title="Guestbook"'), 'its title');
+        assert.ok(p.text.includes('class="ovk-btn ovk-btn--quiet"') && p.text.includes('<span>Share</span>'), 'the shared kit button');
     });
 
     // A visitor signs in: the connect page, a code back to the space, traded from the space's origin.
