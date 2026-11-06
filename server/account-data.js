@@ -34,14 +34,31 @@ const TABLES = [
     { table: 'space_takedowns', subject: 'created_by', file: null, erase: { keep: 'a moderation record stays attributed for accountability' } },
 ];
 
+
+/** The sharing system's rows (openvibe-sdk/share): jsonb subjects, so the SDK's table map cannot name them. */
+async function shareExport(db, subject) {
+    const owned = await db.many("SELECT * FROM shares WHERE service = $1 AND owner_subject->>'id' = $2", ['space', subject]);
+    const member = await db.many("SELECT * FROM share_members WHERE service = $1 AND subject->>'id' = $2", ['space', subject]);
+    const asked = await db.many("SELECT * FROM share_access_requests WHERE service = $1 AND subject->>'id' = $2", ['space', subject]);
+    return owned.length || member.length || asked.length ? [{ name: 'shares.json', content: { owned, member_of: member, requests: asked } }] : [];
+}
+async function shareErase(t, subjects) {
+    for (const subject of subjects) {
+        await t.exec("DELETE FROM share_members WHERE service = $1 AND subject->>'id' = $2", ['space', subject]);
+        await t.exec("DELETE FROM share_access_requests WHERE service = $1 AND subject->>'id' = $2", ['space', subject]);
+        await t.exec("DELETE FROM share_transfers WHERE service = $1 AND (from_subject->>'id' = $2 OR to_subject->>'id' = $2)", ['space', subject]);
+        await t.exec("DELETE FROM shares WHERE service = $1 AND owner_subject->>'id' = $2", ['space', subject]);
+    }
+}
+
 async function extraExport(db, subject) {
     const spaces = await db.many(`SELECT id, slug, name, description, instructions, capabilities, template, forked_from, visibility, site_id IS NOT NULL AS published,
         forks, created_at, updated_at, published_at FROM space_apps WHERE owner_subject = $1 AND status = 'active' ORDER BY created_at`, [subject]);
-    if (!spaces.length) return [];
+    if (!spaces.length) return await shareExport(db, subject);
     const files = await db.many('SELECT space_id, path, content FROM space_app_files WHERE space_id = ANY($1::text[]) ORDER BY space_id, path', [spaces.map((s) => s.id)]);
     const byId = new Map(spaces.map((s) => [s.id, { ...s, capabilities: JSON.parse(s.capabilities || '[]'), files: [] }]));
     for (const f of files) byId.get(f.space_id).files.push({ path: f.path, content: f.content });
-    return [{ name: 'spaces.json', content: [...byId.values()] }];
+    return [{ name: 'spaces.json', content: [...byId.values()] }, ...await shareExport(db, subject)];
 }
 
 /** Close sites (and their deploys) the way removing them does; the worker sweeps the objects nothing references. */
@@ -55,6 +72,7 @@ async function closeSites(t, siteIds, now) {
 }
 
 async function extraErase(t, subjects, counts) {
+        await shareErase(t, subjects);
     const now = Date.now();
     // Their spaces: published ones stop serving, then the spaces go with what others kept in them.
     const spaces = await t.many("SELECT id, site_id FROM space_apps WHERE owner_subject = ANY($1::text[])", [subjects]);
