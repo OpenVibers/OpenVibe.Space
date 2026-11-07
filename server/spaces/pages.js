@@ -276,7 +276,7 @@ function createSpacesPages(ctx) {
                 const space = await spaces.getBySlug(req.params.slug);
                 const row = space ? await ctx.sharing.shareOf(space.id).catch(() => null) : null;
                 if (row && row.audience === 'people') {
-                    return html(res, 404, render.sharedGate({ id: space.id, signedInAs: req.viewer && req.viewer.subject ? req.viewer.subject : null,
+                    return html(res, 404, render.sharedGate({ id: space.id, signedInAs: req.viewer && req.viewer.user && req.viewer.user.username ? req.viewer.user.username : null,
                         signInUrl: `/auth/login?next=${encodeURIComponent(req.originalUrl)}` }));
                 }
             }

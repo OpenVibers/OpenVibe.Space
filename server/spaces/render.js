@@ -142,16 +142,12 @@ function sharedGate({ id, signedInAs = null, signInUrl = '/auth/login' }) {
     const body = `<div class="sp-wrap">
   <p class="eyebrow">A space on OpenVibe.Space</p>
   <h1 class="sp-title">This is shared with specific people.</h1>
-  <div id="space-gate"><p class="sp-muted">This space is shared with specific people on OpenVibe.Space.</p>
-  <p><a class="sp-btn" href="${esc(signInUrl)}">Sign in</a></p></div>
+  <div id="share-gate" data-ov-share-gate data-kind="space" data-id="${esc(String(id))}" data-signed-in-as="${esc(signedInAs || '')}" data-sign-in-url="${esc(signInUrl)}">
+    <p class="sp-muted">This space is shared with specific people on OpenVibe.Space.</p>
+    <p><a class="sp-btn" href="${esc(signInUrl)}">Sign in</a></p>
+  </div>
+  <link rel="stylesheet" href="/shared/ov-share.css">
   <script src="/shared/ov-share.js" defer></script>
-  <script>
-window.addEventListener('DOMContentLoaded', function () {
-  var el = document.getElementById('space-gate');
-  if (el && window.OVShare) OVShare.gate(el, { kind: 'space', id: ${JSON.stringify(id)},
-    signedInAs: ${JSON.stringify(signedInAs || '')}, signInUrl: ${JSON.stringify(signInUrl)} });
-});
-  </script>
 </div>`;
     return page({ title: 'A space on OpenVibe.Space', description: 'A space shared with specific people on OpenVibe.Space.', path: '/spaces', robots: 'noindex,nofollow', body });
 }

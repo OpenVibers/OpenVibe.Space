@@ -43,7 +43,7 @@ const { boot, check, done } = require('./helpers/app');
         assert.ok(member.text.includes('Secret plan'));
         const stranger = await get(`/spaces/${space.slug}`, sam);
         assert.strictEqual(stranger.status, 404);
-        assert.ok(stranger.text.includes('shared with specific people') && stranger.text.includes('OVShare.gate'));
+        assert.ok(stranger.text.includes('shared with specific people') && stranger.text.includes('data-ov-share-gate'));
         assert.ok(!stranger.text.includes('SECRET-PLAN'), 'no description or files');
         const anon = await get(`/spaces/${space.slug}`);
         assert.strictEqual(anon.status, 404);
