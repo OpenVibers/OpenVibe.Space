@@ -18,6 +18,7 @@ const { createSiteSources } = require('./domain/site-sources');
 const { createViewerResolver, guard } = require('./auth/viewer');
 const { createTenantServer } = require('./http/tenant');
 const { createUploadGate } = require('./http/upload');
+const { createSharing, describeRef } = require('./sharing');
 const { createApi } = require('./http/api');
 const resourceIndex = require('./registry/resource-index');
 const { createDashboard } = require('./http/dashboard');
@@ -61,11 +62,13 @@ function createHosting(app, { db, auth, config: suppliedConfig, now, resolver, f
     const worker = createWorker({ config, store, domains, blobs, outbox, log });
     const billing = createSpaceBilling({ db, config, now: store.now, ...(fetchImpl ? { fetchImpl } : {}), log });
     const ctx = { config, store, blobs, outbox, billing, access, takedowns, projects, sites, deploys, domains, siteConfig, siteSources, auth, viewers, tenant, worker, uploadGate, indexnow, log, valkey: valkey || null };
+    // Sharing (openvibe-sdk/share): the shares row next to each space, members, transfers and the one access check.
+    ctx.sharing = createSharing({ db, config, outbox, now: store.now, ...(fetchImpl ? { fetchImpl } : {}), log });
     ctx.actorLimits = require('./http/actor-limits').createHostActorLimits({ registry: app.locals.metrics, valkey: ctx.valkey });
     app.locals.ctx = ctx;
 
     // Spaces (server/spaces/): apps people make here and publish as sites of their Spaces project.
-    ctx.spaces = require('./spaces/spaces').createSpaces({ store, config, projects, sites, deploys, takedowns, outbox, log });
+    ctx.spaces = require('./spaces/spaces').createSpaces({ store, config, projects, sites, deploys, takedowns, outbox, log, sharing: ctx.sharing });
     ctx.spacesAi = require('./spaces/ai').createSpacesAi({ config, client: spacesAiClient, log });
     ctx.spaceData = require('./spaces/data').createSpaceData({ store, config, spaces: ctx.spaces, ai: ctx.spacesAi });
     ctx.spaceFunctions = require('./spaces/functions').createSpaceFunctions({ data: ctx.spaceData, workers: config.spaces.fnWorkers, log });
@@ -129,6 +132,20 @@ function createHosting(app, { db, auth, config: suppliedConfig, now, resolver, f
         app.use('/api/v1/resources', rateLimit({ windowMs: 60_000, max: 240, standardHeaders: true, legacyHeaders: false }), viewers.middleware('api'), require('./registry/resource-control').router({ guard: guard('space.resource.control') }), resourceIndex.router({ guard: guard('space.resource.read') }));
         // The Spaces API had no rate limit of its own (it is mounted before /api/v1's): a space's page calls it, so its
         // limit is wider than the API's (REVIEW-0 11-03).
+        // ── /api/v1/<kind>/<id>/share — the uniform share API (openvibe-sdk/share) ────
+        // GET/PUT /api/v1/space/:id/share, .../share/requests, .../share/transfer[/accept|decline|cancel],
+        // GET /api/v1/share/people?name=, GET /api/v1/shared-with-me.
+        {
+            const shareApi = require('express').Router();
+            shareApi.use(viewers.middleware('api'));
+            shareApi.use(ctx.sharing.shares.router({
+                service: 'space',
+                authenticate: (req) => ctx.sharing.shareViewer(req.viewer),
+                describe: describeRef(db, config),
+            }));
+            const SHARE_PATH = /^\/api\/v1\/(?:shared-with-me$|share\/people$|[^/]+\/[^/]+\/share(?:\/|$))/;
+            app.use((req, res, next) => (SHARE_PATH.test(req.path) ? shareApi(req, res, next) : next()));
+        }
         app.use('/api/v1/apps', rateLimit({ windowMs: 60_000, max: 600, standardHeaders: true, legacyHeaders: false }), require('./spaces/api').createSpacesApi({ config, spaces: ctx.spaces, data: ctx.spaceData, sites, takedowns, log }));
         app.use('/api/v1', rateLimit({ windowMs: 60_000, max: 240, standardHeaders: true, legacyHeaders: false }), createApi(ctx));
         app.use('/preview', rateLimit({ windowMs: 60_000, max: 300, standardHeaders: true, legacyHeaders: false }), viewers.middleware('dashboard'), (req, res, next) => Promise.resolve(tenant.preview(req, res)).catch(next));

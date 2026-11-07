@@ -25,6 +25,8 @@ const b64url = (buf) => buf.toString('base64').replace(/\+/g, '-').replace(/\//g
             exempt: {
                 account_data_events: 'the ledger of requests itself: which export and deletion Space applied',
                 account_data_events_forum: 'the forum ledger of requests itself: which export and deletion the Space forum applied',
+                share_members: 'jsonb subject: the SDK table map cannot name it; extraExport/extraErase cover the share rows',
+                share_access_requests: 'jsonb subject: the SDK table map cannot name it; extraExport/extraErase cover the share rows',
             },
         });
         assert.deepStrictEqual(missing, [], `a table with a person column is neither covered nor exempted: ${missing.join(', ')}`);
