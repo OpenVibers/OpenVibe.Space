@@ -74,6 +74,11 @@ const BUILD_CAPS = ['space.build.read', 'space.build.create', 'space.build.write
         // The page opens the Dock at that task: the shared navbar's API (the Dock's Agent panel marks the step).
         const js = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'space-editor.js'), 'utf8');
         assert.ok(/OpenVibeNavbar\.openDock\('agent', \{ task: agent\.task \}\)/.test(js), 'the editor opens the Dock at the task');
+        // The agent's line, not the full-cover overlay: the preview stays in view while the agent writes the space, and
+        // asking to publish is its own state with the Dock one tap away.
+        assert.match(page.text, /<div class="sp-ed-agent" id="ed-agent" role="status" aria-live="polite" data-state="running" hidden>/, 'the agent bar is on the page');
+        assert.ok(/if \(space\.building && !boot\.agent\)/.test(js), 'the building overlay is only for the old builder');
+        for (const words of ['Your agent is building this', 'Your agent asks to publish this space', 'Answer in your Dock', 'Your agent is done']) assert.ok(js.includes(words), `the bar says "${words}"`);
     });
 
     await check('the agent works on the space through the builder API, and the page shows it', async () => {

@@ -166,15 +166,16 @@
     var go = function () {
       return call('POST', '/ai', { prompt: prompt }).then(function (j) {
         input.value = '';
+        // The answer names a task of the person's own agent (plan 2026-10-22 §Z stage Z1): follow it in the bar, with
+        // the preview left in view so the person watches the space change as the agent writes it.
+        if (j && j.task) { agent = { task: j.task, state: 'running' }; agentBar('running', prompt); openDock(); setTimeout(agentPoll, 1500); return; }
         building(true, prompt);
-        // The answer names a task of the person's own agent (plan 2026-10-22 §Z stage Z1): follow it there.
-        if (j && j.task) { agent = { task: j.task, state: 'running' }; var title = $('ed-building-title'); if (title) title.textContent = 'Your agent is building this…'; openDock(); setTimeout(agentPoll, 1500); return; }
         setTimeout(poll, 3000);
       }, function (err) { status(err.message, 'bad'); });
     };
     if (dirty) save().then(go, function () {}); else go();
   });
-  if (space.building) { building(true, space.building_prompt); setTimeout(poll, 1500); }
+  if (space.building && !boot.agent) { building(true, space.building_prompt); setTimeout(poll, 1500); }
 
   // ── The person's own agent (plan 2026-10-22 §Z, stage Z1) ──
   // The space is a task of the agent: the Dock opens at it, the page follows it, and the preview shows the
@@ -196,26 +197,46 @@
     run();
     return true;
   }
+  /**
+   * The agent's line above the editor: one sentence for where the task is, and the Dock for its steps. Building
+   * (a live dot), asking (amber: it wants to publish, nothing goes live until the person answers), done, or stuck.
+   */
+  var AGENT_WORDS = {
+    running: ['Your agent is building this', 'Watch in your Dock'],
+    waiting: ['Your agent asks to publish this space', 'Answer in your Dock'],
+    done: ['Your agent is done', 'See its steps'],
+    failed: ['Your agent couldn\u2019t finish', 'See what happened'],
+  };
+  var agentNote = '';
+  function agentBar(state, text) {
+    var bar = $('ed-agent'); if (!bar) return;
+    var words = AGENT_WORDS[state] || AGENT_WORDS.running;
+    if (text != null) agentNote = text;
+    bar.dataset.state = state;
+    $('ed-agent-title').textContent = words[0];
+    $('ed-agent-text').textContent = agentNote ? (state === 'running' || state === 'waiting' ? '\u201c' + agentNote + '\u201d' : agentNote) : '';
+    $('ed-agent-open-label').textContent = words[1];
+    $('ed-agent-open').classList.toggle('sp-btn-quiet', state !== 'waiting');
+    $('ed-agent-x').hidden = state === 'running' || state === 'waiting';
+    bar.hidden = false;
+  }
+  $('ed-agent-open').addEventListener('click', openDock);
+  $('ed-agent-x').addEventListener('click', function () { $('ed-agent').hidden = true; });
   function agentPoll() {
     if (!agent) return;
     call('GET', '/agent').then(function (j) {
       agentFiles(j.files);
-      if (j.publish && j.publish.state === 'pending') status('Your agent wants to publish this space — answer it in your Dock');
-      if (j.status === 'running' || j.status === 'waiting') { setTimeout(agentPoll, 3000); return; }
-      building(false);
-      if (j.status === 'done') status(j.message ? 'Your agent is done: ' + j.message : 'Your agent is done');
-      else if (j.status === 'failed') status('Your agent could not build this space', 'bad');
-      else status('');
+      var asking = j.publish && j.publish.state === 'pending';
+      if (j.status === 'running' || j.status === 'waiting') { agentBar(asking ? 'waiting' : 'running'); setTimeout(agentPoll, 3000); return; }
+      if (j.status === 'done') agentBar('done', j.message || '');
+      else if (j.status === 'failed') agentBar('failed', j.message || '');
+      else $('ed-agent').hidden = true;
     }, function () { setTimeout(agentPoll, 5000); });
   }
-  if (agent) {
-    var title = $('ed-building-title');
-    if (title) title.textContent = 'Your agent is building this…';
-    if (agent.state === 'running' || agent.state === 'waiting') {
-      building(true, '');
-      openDock();
-      setTimeout(agentPoll, 1500);
-    }
+  if (agent && (agent.state === 'running' || agent.state === 'waiting')) {
+    agentBar(agent.state === 'waiting' ? 'waiting' : 'running', space.building_prompt || '');
+    openDock();
+    setTimeout(agentPoll, 1500);
   }
 
   // ── Settings ──
