@@ -145,6 +145,11 @@ function createSpacesPages(ctx) {
         }
     }];
     const buildsLeft = async (req) => (signedIn(req) ? Math.max(0, limits.aiBuildsPerDay - await spaces.used(`build:${req.viewer.subject}`)) : 0);
+    /**
+     * The agent is the builder (plan 2026-10-22 §Z, stage Z1): the flag says so, and OpenVibe.Actor is there to
+     * answer. Guests never get an agent (they have no account, and the agent works for the person).
+     */
+    const agentOn = () => Boolean(config.builder && config.builder.mode === 'agent' && ctx.spaceAgent && ctx.spaceAgent.enabled);
     const settingsOut = (s) => ({ id: s.id, slug: s.slug, name: s.name, description: s.description, instructions: s.instructions, capabilities: spaces.capsOf(s.capabilities), visibility: s.visibility, published: Boolean(s.site_id), url: spaces.urlOf(s), building: Boolean(s.building_run_id) });
 
     // ── Guest drafts (openvibe.website, plan 5.9) ────────────────────────────────────────────────────────────
@@ -206,12 +211,32 @@ function createSpacesPages(ctx) {
         }
         const again = (error) => html(res, 422, render.newPage({ viewer: req.viewer, templates: templates.list(), csrf: csrfOf(req), aiOn: ai.enabled(), buildsLeft: 0, error, prompt }));
         if (prompt.length < 8) return again('Describe your space in a sentence or two (what it does, who uses it, how it should look).');
-        if (!ai.enabled()) return again('OpenVibe AI is not available right now. Start from a template instead.');
-        // The abuse screen: what is asked of the AI must pass it (a guest's prompt passes the same checks).
+        // The builder: the person's own agent (plan 2026-10-22 §Z, stage Z1) or Space's old AI loop, while the
+        // flag says which one it is. The old path is untouched and still works.
+        const withAgent = agentOn();
+        if (!withAgent && !ai.enabled()) return again('OpenVibe AI is not available right now. Start from a template instead.');
+        // The abuse screen: what is asked of the builder must pass it (a guest's prompt passes the same checks).
         contentCheck.refuse(contentCheck.promptReason(prompt));
         if (!(await spaces.spend(`build:${req.viewer.subject}`, limits.aiBuildsPerDay))) return again(`You have used today's ${limits.aiBuildsPerDay} AI builds. Start from a template, or try again tomorrow.`);
         const t = templates.get('blank');
         const space = await spaces.create(req.viewer, { name: 'New space', description: '', capabilities: t.capabilities, files: templates.files('blank'), template: null });
+        if (withAgent) {
+            // The space is a task of the person's own agent: it writes the files, and the Dock shows the step.
+            const person = spaces.personOf(req.viewer);
+            const task = await ctx.spaceAgent.createTask({
+                person: person.subject,
+                task: ctx.spaceAgent.taskText(space, prompt, await spaces.files(space)),
+                idempotencyKey: `space:${space.id}`,
+            });
+            if (task.error) {
+                // Nothing was built: the space goes away with the empty promise.
+                await spaces.remove(req.viewer, space).catch(() => {});
+                return again(task.error.message);
+            }
+            await spaces.setAgentTask(space, task.id, 'running');
+            await ctx.spaceSteps.started({ space, person: person.subject, taskId: task.id });
+            return res.redirect(303, `/spaces/${space.slug}/edit`);
+        }
         const runId = await ai.build(spaces.personOf(req.viewer), { prompt, spaceId: space.id });
         await spaces.startBuild(space, runId, prompt);
         res.redirect(303, `/spaces/${space.slug}/edit`);
@@ -351,6 +376,21 @@ function createSpacesPages(ctx) {
             if (!room.ok) throw new ApiError(429, 'quota', room.reason === 'ip'
                 ? `you have used today's ${guestLimits.aiBuildsPerIpPerDay} AI builds; try again tomorrow`
                 : `this draft has had its ${guestLimits.aiEditsPerDraft} AI changes; try again tomorrow`);
+        } else if (agentOn()) {
+            // The agent changes the space, as a task of the person's own agent (plan 2026-10-22 §Z stage Z1).
+            const person = spaces.personOf(req.viewer);
+            if (!(await spaces.spend(`build:${person.subject}`, limits.aiBuildsPerDay))) {
+                throw new ApiError(429, 'quota', `you have used today's ${limits.aiBuildsPerDay} AI builds; try again tomorrow`);
+            }
+            const task = await ctx.spaceAgent.createTask({
+                person: person.subject,
+                task: ctx.spaceAgent.taskText(space, prompt, await spaces.files(space)),
+                idempotencyKey: `space:${space.id}:${ctx.store.now()}`,
+            });
+            if (task.error) throw new ApiError(502, 'actor.unavailable', task.error.message);
+            await spaces.setAgentTask(space, task.id, 'running');
+            await ctx.spaceSteps.started({ space, person: person.subject, taskId: task.id });
+            return { building: true, task: task.id };
         } else if (!(await spaces.spend(`build:${req.viewer.subject}`, limits.aiBuildsPerDay))) {
             throw new ApiError(429, 'quota', `you have used today's ${limits.aiBuildsPerDay} AI builds; try again tomorrow`);
         }
@@ -383,6 +423,25 @@ function createSpacesPages(ctx) {
         }
         await spaces.failBuild(space, runId);
         return { status: 'failed', message: r.error === 'quota.exceeded' ? 'Your OpenVibe AI allowance for today is used up.' : 'The AI could not build that. Try again, or describe it differently.' };
+    }));
+    // The task of the person's own agent that builds this space (plan 2026-10-22 §Z, stage Z1): the editor asks
+    // it how it is doing, so the page can show the space as the agent writes it.
+    router.get('/spaces/:slug/agent', ...api(async (req, res, who) => {
+        const space = who.space;
+        // A guest draft has no agent (there is no person to run one).
+        if (who.guest || !space.agent_task_id) return { status: 'idle' };
+        const person = spaces.personOf(req.viewer);
+        const t = await ctx.spaceAgent.task({ person: person.subject, id: space.agent_task_id });
+        const status = t ? (ctx.spaceAgent.stateOf(t.state) || 'running') : (space.agent_task_state || 'running');
+        const fresh = await spaces.get(space.id);
+        const publish = space.agent_publish_id ? await spaces.publishRequest(person.subject, space.agent_publish_id) : null;
+        return {
+            status,
+            task: space.agent_task_id,
+            files: await spaces.files(fresh),
+            publish: publish ? { id: publish.id, state: publish.state } : null,
+            message: t && t.result && typeof t.result.answer === 'string' ? t.result.answer.slice(0, 300) : '',
+        };
     }));
     router.post('/spaces/:slug/publish', ...api(async (req, res, who) => {
         // A guest draft is not published: it has no owner to publish under, and it is static.

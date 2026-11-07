@@ -150,6 +150,21 @@ function load(env = process.env) {
 
         sites: { extraReservedNames: list(env.SPACE_RESERVED_SITE_NAMES).map((d) => d.toLowerCase()) },
 
+        // The builder (plan 2026-10-22 section Z, stage Z1): who builds a space when the person describes one.
+        //   'legacy'  Space's own AI loop (the way it was before the agent became the builder)
+        //   'agent'   a task of the person's one agent (OpenVibe.Actor), with the space_* tools
+        // The old path stays until the new one is proven; nothing is deleted. Production runs 'agent' once the
+        // checks pass (SPACE_BUILDER=agent in /etc/openvibe/space.env).
+        builder: {
+            mode: ['agent', 'legacy'].includes(String(env.SPACE_BUILDER || 'legacy').trim().toLowerCase())
+                ? String(env.SPACE_BUILDER || 'legacy').trim().toLowerCase() : 'legacy',
+            // OpenVibe.Actor, the person's one agent (its API answers the task and the tools it uses).
+            actorUrl: trim(env.OV_ACTOR_INTERNAL_URL || env.OV_ACTOR_URL || 'http://127.0.0.1:4950'),
+            timeoutMs: int(env.SPACE_ACTOR_TIMEOUT_MS, 15000),
+            // How often Space asks Actor how the task is doing (the agent's steps reach the Dock through Events).
+            pollMs: int(env.SPACE_ACTOR_POLL_MS, 3000),
+        },
+
         // Spaces (server/spaces/): apps people make here. Making, editing, previewing and the AI builder are open to
         // everyone signed in; publishing follows publicHosting (or staff). The limits keep one person or one space from
         // filling the database or spending everyone's AI.

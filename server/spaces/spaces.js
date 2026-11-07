@@ -75,6 +75,17 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, outb
         counter: db.prepare(`INSERT INTO space_app_counters (scope, day, n) VALUES (?, ?, 1)
                              ON CONFLICT (scope, day) DO UPDATE SET n = space_app_counters.n + 1 RETURNING n`),
         counterGet: db.prepare('SELECT n FROM space_app_counters WHERE scope = ? AND day = ?'),
+        // The task of the person's own agent that builds this space (plan 2026-10-22 §Z stage Z1).
+        setAgentTask: db.prepare('UPDATE space_apps SET agent_task_id = ?, agent_task_state = ?, updated_at = ? WHERE id = ?'),
+        setAgentState: db.prepare('UPDATE space_apps SET agent_task_state = ?, updated_at = ? WHERE id = ?'),
+        setAgentStep: db.prepare('UPDATE space_apps SET agent_step_id = ?, updated_at = ? WHERE id = ?'),
+        setAgentPublish: db.prepare('UPDATE space_apps SET agent_publish_id = ?, updated_at = ? WHERE id = ?'),
+        agentTasks: db.prepare("SELECT * FROM space_apps WHERE agent_task_id IS NOT NULL AND agent_task_state IN ('running','waiting') AND status = 'active'"),
+        // A publish the agent asked for: the person answers it (migrations/0011_space_agent.sql).
+        addPublish: db.prepare(`INSERT INTO space_publish_requests (id, space_id, owner_subject, state, created_at) VALUES (?, ?, ?, 'pending', ?)`),
+        publishById: db.prepare('SELECT * FROM space_publish_requests WHERE id = ?'),
+        publishPending: db.prepare("SELECT * FROM space_publish_requests WHERE space_id = ? AND state = 'pending' ORDER BY created_at DESC LIMIT 1"),
+        decidePublish: db.prepare("UPDATE space_publish_requests SET state = ?, decided_at = ? WHERE id = ? AND state = 'pending'"),
         // Guest drafts (openvibe.website, plan 5.9): no owner yet, a secret of their own, and a time they live until.
         insertGuest: db.prepare(`INSERT INTO space_apps (id, slug, owner_subject, owner_username, owner_name, name, description, instructions, capabilities,
                                  template, forked_from, visibility, status, created_at, updated_at, guest_hash, guest_ip, guest_expires_at)
@@ -347,6 +358,96 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, outb
     }
     async function used(scope) { const cur = await q.counterGet.get(scope, today()); return cur ? cur.n : 0; }
 
+    // ── The person's one agent (plan 2026-10-22 §Z stage Z1) ────────────────────────────────────────────
+    // A space may carry the task of the person's agent that builds it. The agent works through the builder API
+    // (server/spaces/agent-api.js) as the person, and the task is theirs: Space asked Actor for it with the
+    // person in X-OV-Subject.
+
+    /** The person's own space by id. Another person's space is the same 404 as one that does not exist. */
+    async function ownedOf(person, id) {
+        const space = isSpaceId(id) ? (await q.byId.get(id)) || null : null;
+        if (!space || space.owner_subject !== person) return null;
+        return space;
+    }
+
+    /** The person's own spaces, newest first. */
+    async function mineOf(person) {
+        if (!person) return [];
+        return await q.mine.all(person);
+    }
+
+    /** The viewer of a person: what Space's own write paths expect (the owner of a space). */
+    function viewerOf(person, space) {
+        return {
+            kind: 'user',
+            subject: person,
+            staff: false,
+            user: { username: (space && space.owner_username) || '', name: (space && space.owner_name) || '' },
+        };
+    }
+
+    /** The task of the person's agent that builds this space, and what it is doing. */
+    async function setAgentTask(space, taskId, state) {
+        await q.setAgentTask.run(String(taskId || ''), String(state || 'queued'), store.now(), space.id);
+        return await get(space.id);
+    }
+    async function setAgentState(space, state) {
+        await q.setAgentState.run(String(state || ''), store.now(), space.id);
+        return await get(space.id);
+    }
+    async function setAgentStep(space, stepId) {
+        await q.setAgentStep.run(String(stepId || ''), store.now(), space.id);
+        return await get(space.id);
+    }
+    /** The spaces whose agent task is still running: the watcher follows them. */
+    async function agentRunning() { return await q.agentTasks.all(); }
+
+    /**
+     * The agent asks to publish a space. Nothing goes live: the request waits for the person, who answers it in
+     * the Dock ("Needs you") or on the space's page. A request that is already waiting is answered as it is.
+     */
+    async function askPublish(person, space) {
+        const pending = await q.publishPending.get(space.id);
+        if (pending) return { id: pending.id, state: 'pending', url: null, reason: null };
+        const id = `apr_${ids.ulid(store.now())}`;
+        await q.addPublish.run(id, space.id, person, store.now());
+        await q.setAgentPublish.run(id, store.now(), space.id);
+        return { id, state: 'pending', url: null, reason: null };
+    }
+
+    /** The publish request the person is answering, when it is theirs. */
+    async function publishRequest(person, id) {
+        const row = await q.publishById.get(String(id || ''));
+        if (!row || row.owner_subject !== person) return null;
+        return row;
+    }
+
+    /**
+     * The person's answer to a publish request: approved publishes the space now, declined leaves it as it is.
+     * Answering twice is the answer that stands.
+     */
+    async function decidePublish(person, id, decision) {
+        const row = await q.publishById.get(String(id || ''));
+        if (!row || row.owner_subject !== person) return { error: 'No such request of yours.', status: 404 };
+        if (row.state !== 'pending') return { state: row.state, space: await get(row.space_id) };
+        const now = store.now();
+        if (decision === 'decline') {
+            await q.decidePublish.run('declined', now, row.id);
+            return { state: 'declined', space: await get(row.space_id) };
+        }
+        const space = await get(row.space_id);
+        try {
+            const out = await publish(viewerOf(person, space), space);
+            await q.decidePublish.run('approved', now, row.id);
+            return { state: 'approved', space: out.space, url: out.url };
+        } catch (err) {
+            // The person said yes, but the space could not go live (public hosting is not open yet, most of all).
+            // The request remembers the answer and why it did not work.
+            await q.decidePublish.run('failed', now, row.id);
+            return { state: 'failed', space, reason: (err && err.message) || 'the space could not be published' };
+        }
+    }
+
     // ── Publishing: the hosting engine serves a published space ──
     const canPublish = (viewer) => Boolean(config.publicHosting || (viewer && viewer.staff));
 
@@ -418,6 +519,9 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, outb
         CAPABILITIES, isSpaceId, get, getBySlug, forSite, load, isOwner, files, create, saveFiles, updateSettings, fork,
         startBuild, finishBuild, failBuild, spend, used, canPublish, publish, unpublish, publishedFiles, remove, gallery, mine, hostnameOf, urlOf,
         personOf, capsOf, checkFiles, DAY,
+        // The person's one agent (plan 2026-10-22 §Z stage Z1)
+        ownedOf, mineOf, viewerOf, setAgentTask, setAgentState, setAgentStep, agentRunning,
+        askPublish, publishRequest, decidePublish,
         // Guest drafts (openvibe.website, plan 5.9)
         isGuest, guestExpired, guestKeyOk, touchGuest, createGuest, claimGuest, spendGuestDraft, spendGuestAi,
     };

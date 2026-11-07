@@ -186,6 +186,9 @@ function editorPage({ space, files, csrf, canPublish, url, aiOn, buildsLeft, tem
         // owned space by its slug. A guest carries its secret with every call.
         base: `/spaces/${guest ? space.id : space.slug}`,
         guest: guest ? { id: space.id, key: guest.key } : null,
+        // The task of the person's own agent that builds this space (plan 2026-10-22 §Z, stage Z1): the editor
+        // opens the Dock at it and follows it until it ends.
+        agent: space.agent_task_id ? { task: space.agent_task_id, state: space.agent_task_state || 'running' } : null,
     };
     // The claim (openvibe.website, plan 5.9): a signed-in person who holds the secret keeps the draft.
     const claim = guest ? (guest.signedIn
@@ -221,7 +224,7 @@ function editorPage({ space, files, csrf, canPublish, url, aiOn, buildsLeft, tem
       <details class="sp-ed-fnlog" id="ed-fnlog" hidden><summary><i class="fa-solid fa-terminal" aria-hidden="true"></i> Function log <span class="sp-muted" id="ed-fnlog-last"></span></summary><ol id="ed-fnlog-list"></ol></details>
     </section>
   </div>
-  <div class="sp-ed-building" id="ed-building" hidden><div><i class="fa-solid fa-wand-magic-sparkles fa-bounce" aria-hidden="true"></i><h2>OpenVibe AI is building…</h2><p id="ed-building-text"></p><p class="sp-muted">This usually takes under a minute or two. You can leave and come back.</p></div></div>
+  <div class="sp-ed-building" id="ed-building" hidden><div><i class="fa-solid fa-wand-magic-sparkles fa-bounce" aria-hidden="true"></i><h2 id="ed-building-title">OpenVibe AI is building…</h2><p id="ed-building-text"></p><p class="sp-muted">This usually takes under a minute or two. You can leave and come back.</p></div></div>
   <dialog class="sp-ed-dialog" id="ed-dialog">
     <form method="dialog" id="ed-settings-form">
       <h2>Settings</h2>
