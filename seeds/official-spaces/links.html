@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenVibe · links</title>
+<meta name="description" content="Every OpenVibe site in one place: streams, chat, games, tools and the places that write it all down.">
+<style>
+  /* An official example space, built from the Space kit's "Link in bio" template (site-links.html). */
+  :root { --from: #e9f7ff; --to: #eef0ff; --card: rgba(255, 255, 255, .76); --ink: #111827; --muted: #5b6478; --line: rgba(17, 24, 39, .1); --accent: #2563eb; --accent-ink: #0b3ea8; }
+  @media (prefers-color-scheme: dark) { :root { --from: #071a2b; --to: #101433; --card: rgba(255, 255, 255, .07); --ink: #eef4ff; --muted: #a9b6cf; --line: rgba(255, 255, 255, .13); --accent: #7dd3fc; --accent-ink: #a5e4ff; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; background: linear-gradient(160deg, var(--from), var(--to)) fixed; color: var(--ink); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; display: grid; justify-items: center; padding: 44px 16px 28px; }
+  main { width: min(560px, 100%); display: grid; gap: 20px; text-align: center; }
+  .face { width: 96px; height: 96px; margin: 0 auto; border-radius: 28px; display: grid; place-items: center; font: 800 2rem system-ui, sans-serif; letter-spacing: -.04em; color: #fff; background: conic-gradient(from 200deg, #22d3ee, #2563eb, #7c3aed, #22d3ee); box-shadow: 0 0 0 5px var(--card), 0 18px 40px -18px rgba(20, 50, 120, .55); }
+  h1 { margin: 0; font-size: 1.65rem; letter-spacing: -.02em; }
+  .bio { margin: 6px 0 0; color: var(--muted); }
+  .group { margin: 4px 0 0; font: 700 .72rem/1 system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); text-align: left; }
+  .links { display: grid; gap: 10px; }
+  .links a { display: flex; align-items: center; gap: 14px; min-height: 58px; padding: 10px 18px; border-radius: 18px; background: var(--card); border: 1px solid var(--line); color: inherit; text-decoration: none; font-weight: 650; text-align: left; backdrop-filter: blur(10px); transition: transform .15s ease, border-color .15s ease; }
+  .links a:hover { transform: translateY(-2px); border-color: var(--accent); }
+  .links a:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .links svg { width: 22px; height: 22px; flex: none; color: var(--accent); }
+  .links small { display: block; font-weight: 500; color: var(--muted); }
+  .links .tag { margin-left: auto; font-size: .7rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--accent-ink); white-space: nowrap; }
+  .social { display: flex; justify-content: center; gap: 10px; }
+  .social a { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; background: var(--card); border: 1px solid var(--line); color: var(--ink); }
+  .social a:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .social svg { width: 20px; height: 20px; }
+  footer { color: var(--muted); font-size: .82rem; display: grid; gap: 4px; }
+  footer a { color: var(--accent-ink); }
+  @media (prefers-reduced-motion: reduce) { .links a { transition: none; } }
+</style>
+</head>
+<body>
+<main>
+  <div>
+    <div class="face" aria-hidden="true">OV</div>
+    <h1>OpenVibe</h1>
+    <p class="bio">One account for every site. Here is where each one lives.</p>
+  </div>
+
+  <nav class="links" aria-label="OpenVibe sites">
+    <p class="group">Watch and listen</p>
+    <a href="https://openvibe.live/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="m10 9 5 3-5 3z" fill="currentColor"/></svg><span>Live<small>Streams, clips, recordings and The Rundown.</small></span><span class="tag">On air</span></a>
+    <a href="https://openvibe.video/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="m8 9 8 3-8 3z" fill="currentColor"/></svg><span>Video and pictures<small>Uploads, AI edits and every picture.</small></span></a>
+
+    <p class="group">Talk and gather</p>
+    <a href="https://openvibe.chat/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16v11H9l-5 4z"/></svg><span>Chat<small>Servers, rooms, DMs and the global chat.</small></span></a>
+    <a href="https://openvibe.community/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 2.7-5 6-5s6 2 6 5M16 7a3 3 0 0 1 0 6M18 20c0-2-1-4-3-5"/></svg><span>Community<small>Pastes, the forum, comments and Pulse.</small></span></a>
+    <a href="https://openvibe.today/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span>Today<small>Events across the network, in your time zone.</small></span></a>
+
+    <p class="group">Play</p>
+    <a href="https://openvibe.games/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 8h10a5 5 0 0 1 4.6 7l-1 2a3 3 0 0 1-4.8 1L14 16h-4l-1.8 2a3 3 0 0 1-4.8-1l-1-2A5 5 0 0 1 7 8z"/><path d="M9 11v4M7 13h4"/></svg><span>Games<small>Scraplandia and worlds players build and publish.</small></span><span class="tag">Play</span></a>
+    <a href="https://openvibe.play/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 6h3v2a3 3 0 0 1-3 3M7 6H4v2a3 3 0 0 0 3 3"/></svg><span>Play<small>Achievements and leaderboards for every game.</small></span></a>
+    <a href="https://openvibe.quest/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.4 6.8 19.1l1-5.8L3.5 9.2l5.9-.9z"/></svg><span>Quest<small>One quest log and badges across the sites.</small></span></a>
+
+    <p class="group">Build</p>
+    <a href="https://openvibe.space/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V9l8-5 8 5v11"/><path d="M9 20v-6h6v6"/></svg><span>Space<small>Small apps you make here, served at your own address.</small></span><span class="tag">New</span></a>
+    <a href="https://openvibe.tools/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 4a4 4 0 0 0-5 5L4 14v6h6l5-5a4 4 0 0 0 5-5l-3 3-2-2z"/></svg><span>Tools<small>Small tools that run in your browser.</small></span></a>
+    <a href="https://openvibe.services/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 8-4 4 4 4M15 8l4 4-4 4"/></svg><span>Developers<small>Projects, apps, credentials and grants.</small></span></a>
+    <a href="https://openvibe.network/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 4 5.8 4 9s-1.5 6.4-4 9c-2.5-2.6-4-5.8-4-9s1.5-6.4 4-9z"/></svg><span>Your account<small>Identity, notifications and your OpenCoins.</small></span></a>
+
+    <p class="group">Read</p>
+    <a href="https://openvibe.wiki/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5a3 3 0 0 1 3-2h10a3 3 0 0 1 3 2v16H7a3 3 0 0 1-3-3z"/><path d="M8 7h8M8 11h8"/></svg><span>Wiki<small>One page for every product and library.</small></span></a>
+    <a href="https://openvibe.blog/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4h14v16H5z"/><path d="M9 8h6M9 12h6M9 16h4"/></svg><span>Blog<small>What shipped, written down.</small></span></a>
+    <a href="https://openvibe.news/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h13v14H4z"/><path d="M17 8h3v9a2 2 0 0 1-3 2M7 8h7M7 12h7M7 16h4"/></svg><span>News<small>Stories assembled from collected items, each with its source.</small></span></a>
+    <a href="https://openvibe.help/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.4 2.3c-.6.3-.9.8-.9 1.4v.3M12 17h.01"/></svg><span>Help<small>Answers for every site, and a real ticket when they run out.</small></span></a>
+  </nav>
+
+  <div class="social" aria-label="Elsewhere">
+    <a href="https://github.com/OpenVibers" aria-label="OpenVibers on GitHub"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19c-4 1.5-4-2.5-6-3m12 6v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.2 4.2 0 0 0-.1-3.2s-1-.3-3.4 1.3a11.6 11.6 0 0 0-6.2 0C6.6 3.8 5.6 4.1 5.6 4.1a4.2 4.2 0 0 0-.1 3.2A4.6 4.6 0 0 0 4.2 10.5c0 4.5 2.7 5.7 5.5 6-.4.4-.6 1.1-.6 1.9V22"/></svg></a>
+    <a href="https://openvibe.network/" aria-label="Your OpenVibe profile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg></a>
+    <a href="mailto:contact@openvibe.network" aria-label="Email OpenVibe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></a>
+  </div>
+
+  <footer>
+    <span id="who">Made with OpenVibe.Space</span>
+    <span><a href="https://openvibe.space/spaces/new?template=site-links">Make a link page like this one</a></span>
+  </footer>
+</main>
+<script src="/_openvibe/sdk.js"></script>
+<script>
+  // The only thing this page asks of the Space SDK is who is reading it.
+  const who = document.getElementById('who');
+  OV.ready.then(() => {
+    if (!OV.user) return;
+    who.replaceChildren();
+    const name = document.createElement('a');
+    name.href = 'https://openvibe.network/';
+    name.textContent = '@' + OV.user.username;
+    who.append('Signed in as ', name, ' · made with OpenVibe.Space');
+  }).catch(() => {});
+</script>
+</body>
+</html>
