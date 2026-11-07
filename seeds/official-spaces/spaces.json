@@ -1,0 +1,26 @@
+{
+  "_about": "The official example spaces (plan §4 Space): a link page, a portfolio and an event page, owned by the official OpenVibe account and published from this folder. scripts/seed-official-spaces.js creates and publishes them; running it again changes nothing unless --revise is given. The pages are adaptations of the Space kit's site-links, site-portfolio and site-event templates (templates/spaces/), with real OpenVibe content.",
+  "spaces": [
+    {
+      "slug": "ov-links",
+      "name": "OpenVibe links",
+      "description": "Every OpenVibe site in one place: streams, chat, games, the tools and the places that write it all down.",
+      "capabilities": ["profile"],
+      "files": [{ "path": "index.html", "file": "links.html" }]
+    },
+    {
+      "slug": "ov-portfolio",
+      "name": "OpenVibe portfolio",
+      "description": "What the network is made of: the sites, the games and the platform every one of them shares.",
+      "capabilities": [],
+      "files": [{ "path": "index.html", "file": "portfolio.html" }]
+    },
+    {
+      "slug": "ov-night",
+      "name": "OpenVibe community night",
+      "description": "The monthly OpenVibe community night: what it is, when the next one is, the evening's plan and who is coming.",
+      "capabilities": ["profile", "data"],
+      "files": [{ "path": "index.html", "file": "event.html" }]
+    }
+  ]
+}

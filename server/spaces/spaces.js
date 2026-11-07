@@ -179,6 +179,15 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, outb
         throw new ApiError(503, 'space.slug_unavailable', 'could not find a free address for the draft; try again');
     }
 
+    /** A slug chosen by the caller (the official examples): the same checks a generated one gets. */
+    async function fixedSlug(value) {
+        const slug = String(value == null ? '' : value).trim().toLowerCase();
+        if (!SLUG_RE.test(slug)) throw new ApiError(422, 'space.invalid_slug', 'a space address is 3 to 40 characters: a–z, 0–9 and single hyphens, starting and ending with a letter or digit');
+        try { sites.checkName(slug); } catch (err) { throw new ApiError(422, 'space.slug_reserved', err.message); }
+        if (await q.slugUsed.get(slug, slug)) throw new ApiError(409, 'space.slug_taken', `${slug} is already taken`);
+        return slug;
+    }
+
     /** A new space owned by the viewer: from given files (a template, a fork, an AI build) and settings. */
     async function create(viewer, input = {}) {
         const person = personOf(viewer);
@@ -187,7 +196,7 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, outb
         const fileList = checkFiles(input.files);
         const now = store.now();
         const id = `spc_${ids.ulid(now)}`;
-        const slug = await uniqueSlug(name);
+        const slug = input.slug ? await fixedSlug(input.slug) : await uniqueSlug(name);
         await store.tx(async () => {
             await q.insert.run(id, slug, person.subject, person.username, person.name, name, text(input.description, 400), String(input.instructions || '').trim().slice(0, 4000),
                 JSON.stringify(capsOf(input.capabilities)), input.template ? text(input.template, 40) : null, input.forked_from || null, now, now);
@@ -370,6 +379,14 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, outb
         return { space: await get(space.id), site, deploy, url: urlOf(space) };
     }
 
+    /** What the site's active deploy serves: [{ path, sha256, size, content_type }], or null when not published. */
+    async function publishedFiles(space) {
+        if (!space.site_id) return null;
+        const site = await sites.get(space.site_id);
+        if (!site || site.status !== 'active' || !site.active_deploy_id) return null;
+        return await deploys.filesOf(site.active_deploy_id);
+    }
+
     async function unpublish(viewer, space) {
         if (!space.site_id) return await get(space.id);
         const site = await sites.get(space.site_id);
@@ -399,7 +416,7 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, outb
 
     return {
         CAPABILITIES, isSpaceId, get, getBySlug, forSite, load, isOwner, files, create, saveFiles, updateSettings, fork,
-        startBuild, finishBuild, failBuild, spend, used, canPublish, publish, unpublish, remove, gallery, mine, hostnameOf, urlOf,
+        startBuild, finishBuild, failBuild, spend, used, canPublish, publish, unpublish, publishedFiles, remove, gallery, mine, hostnameOf, urlOf,
         personOf, capsOf, checkFiles, DAY,
         // Guest drafts (openvibe.website, plan 5.9)
         isGuest, guestExpired, guestKeyOk, touchGuest, createGuest, claimGuest, spendGuestDraft, spendGuestAi,

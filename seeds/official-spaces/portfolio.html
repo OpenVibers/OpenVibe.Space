@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenVibe · what we build</title>
+<meta name="description" content="The sites, games and platform behind the OpenVibe network, and the libraries every one of them shares.">
+<style>
+  /* An official example space, built from the Space kit's "Portfolio" template (site-portfolio.html). */
+  :root { --bg: #f6f7f4; --ink: #101216; --muted: #62666e; --line: #dcdfd8; --accent: #1d4ed8; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #0b0d11; --ink: #eceef2; --muted: #98a0ad; --line: #262b33; --accent: #86a6ff; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: .8rem; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+  a { color: inherit; }
+  .wrap { width: min(1160px, 100% - 32px); margin-inline: auto; }
+  header { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding-block: 22px; border-bottom: 1px solid var(--line); }
+  header b { font-weight: 700; }
+  header nav { display: flex; gap: 20px; }
+  header nav a { text-decoration: none; }
+  header nav a:hover { color: var(--accent); }
+  .intro { padding-block: 72px 56px; }
+  .intro h1 { font-size: clamp(2.2rem, 6.4vw, 5rem); line-height: 1.02; letter-spacing: -.03em; margin: 12px 0 0; max-width: 16ch; text-wrap: balance; font-weight: 650; }
+  .intro h1 em { font-style: normal; color: var(--accent); }
+  .work { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 18px; }
+  .p { grid-column: span 6; display: grid; gap: 10px; text-decoration: none; }
+  .p:nth-child(3n) { grid-column: span 12; }
+  .tile { aspect-ratio: 4 / 3; border-radius: 6px; background: linear-gradient(135deg, var(--a), var(--b)); position: relative; overflow: hidden; }
+  .p:nth-child(3n) .tile { aspect-ratio: 21 / 9; }
+  .tile::before { content: ""; position: absolute; width: 46%; aspect-ratio: 1; right: 8%; bottom: -12%; border-radius: 50%; background: rgba(255, 255, 255, .22); }
+  .tile::after { content: ""; position: absolute; left: 7%; top: 12%; width: 28%; height: 5px; background: rgba(255, 255, 255, .75); box-shadow: 0 14px 0 rgba(255, 255, 255, .5), 0 28px 0 rgba(255, 255, 255, .3); }
+  .p:hover .tile { filter: saturate(1.15); }
+  .p:focus-visible { outline: 3px solid var(--accent); outline-offset: 6px; border-radius: 10px; }
+  .meta { display: flex; justify-content: space-between; gap: 12px; }
+  .meta h2 { font-size: 1.05rem; margin: 0; font-weight: 600; }
+  section { padding-block: 72px; }
+  .about { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 32px; border-top: 1px solid var(--line); }
+  .about p { margin: 0 0 14px; font-size: 1.2rem; line-height: 1.55; max-width: 60ch; }
+  .clients { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 20px; color: var(--muted); }
+  .contact { border-top: 1px solid var(--line); }
+  .contact a.big { display: inline-block; margin-top: 10px; font-size: clamp(1.6rem, 5vw, 3.2rem); font-weight: 650; letter-spacing: -.02em; text-decoration-thickness: 2px; text-underline-offset: 6px; color: var(--accent); word-break: break-word; }
+  footer { padding-block: 28px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  @media (max-width: 720px) { .p, .p:nth-child(3n) { grid-column: span 12; } .p:nth-child(3n) .tile { aspect-ratio: 4 / 3; } .about { grid-template-columns: 1fr; } header nav { gap: 14px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><b>OpenVibe</b><nav aria-label="Sections"><a href="#work">Work</a><a href="#about">About</a><a href="#contact">Contact</a></nav></header>
+  <main>
+    <div class="intro">
+      <span class="mono">The network · built in the open</span>
+      <h1>A family of sites that share <em>one account</em>.</h1>
+    </div>
+
+    <div class="work" id="work">
+      <a class="p" href="https://openvibe.live/"><div class="tile" style="--a:#0e7490;--b:#22d3ee"></div><div class="meta"><h2>OpenVibe.Live</h2><span class="mono">Streaming · 2026</span></div></a>
+      <a class="p" href="https://openvibe.chat/"><div class="tile" style="--a:#4338ca;--b:#a78bfa"></div><div class="meta"><h2>OpenVibe.Chat</h2><span class="mono">Rooms · 2026</span></div></a>
+      <a class="p" href="https://openvibe.games/"><div class="tile" style="--a:#b45309;--b:#fbbf24"></div><div class="meta"><h2>OpenVibe.Games</h2><span class="mono">A persistent world · 2026</span></div></a>
+      <a class="p" href="https://openvibe.space/"><div class="tile" style="--a:#1d4ed8;--b:#7dd3fc"></div><div class="meta"><h2>OpenVibe.Space</h2><span class="mono">Small apps · 2026</span></div></a>
+      <a class="p" href="https://openvibe.community/"><div class="tile" style="--a:#065f46;--b:#34d399"></div><div class="meta"><h2>OpenVibe.Community</h2><span class="mono">Forum · 2026</span></div></a>
+    </div>
+
+    <section class="about" id="about">
+      <span class="mono">About</span>
+      <div>
+        <p>OpenVibe is a network of small, complete products — streams, chat, games, hosting, a wiki — that sign you in once and know about each other. Each one is built in the open by OpenVibers.</p>
+        <p>Under them sit the parts the sites share: one identity and wallet, an event bus, a source registry, a media service and a small set of contracts that keep every interface honest.</p>
+        <div class="clients mono"><span>Live</span><span>Chat</span><span>Community</span><span>Games</span><span>Space</span><span>Tools</span><span>Wiki</span><span>Blog</span><span>News</span></div>
+      </div>
+    </section>
+
+    <section class="contact" id="contact">
+      <span class="mono">Every repository is public</span><br>
+      <a class="big" href="https://github.com/OpenVibers">github.com/OpenVibers</a>
+    </section>
+  </main>
+  <footer><span class="mono">© OpenVibers</span><span class="mono">Made with OpenVibe.Space</span></footer>
+</div>
+</body>
+</html>

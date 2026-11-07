@@ -21,6 +21,25 @@ The preview runs the space in a sandboxed frame (`srcdoc`, an opaque origin with
 space's code never acts as openvibe.space. Its SDK calls are postMessages to the editor, which runs them as the
 signed-in maker (`POST /spaces/:slug/preview`).
 
+## Official examples
+
+Three published spaces show what a space can be, owned by the official OpenVibe account: a link page
+(`ov-links.openvibe.website`), a portfolio (`ov-portfolio.openvibe.website`) and a monthly community night with a
+live RSVP list (`ov-night.openvibe.website`). They are adaptations of the kit's `site-links`, `site-portfolio` and
+`site-event` templates, kept in `seeds/official-spaces/` with the list of what to create in `spaces.json`.
+
+They are created through the service's own modules, never by inserting rows:
+
+```bash
+node scripts/seed-official-spaces.js            # create what is missing, publish what is not published
+node scripts/seed-official-spaces.js --revise   # also rewrite files and settings that differ from the seed
+```
+
+The run is idempotent, uses the service's environment (`DATABASE_URL`, `SPACE_STORAGE_DIR`, …) and writes as
+`SPACE_OFFICIAL_SUBJECT` (default: the owner's account, `SPACE_OFFICIAL_USERNAME` its @name). A slug that belongs to
+someone else is reported and left alone. `server/spaces/official.js` holds the logic; the seed test is
+`test/official-spaces.test.js`.
+
 ## Publishing
 
 Publishing deploys the files to a site named after the space's slug, in its maker's **Spaces** project. The space is
