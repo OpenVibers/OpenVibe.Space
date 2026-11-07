@@ -119,14 +119,56 @@ function normaliseHost(raw) {
     return h;
 }
 
-function baseHeaders(res, { sandbox = false } = {}) {
+// A scratch site is a page an AI made from a chat request, shown on stream at an openvibe.space address.
+// Somebody asked for it, so it may be convincing: it may collect nothing. No form may be submitted
+// (form-action 'none'), it may not be framed (frame-ancestors 'none'), it may not phone home
+// (connect-src 'none'), and it is never indexed (X-Robots-Tag: noindex). The badge that says what it is
+// lives in a wrapper document above the page (scratchWrapper), so the page cannot hide it.
+const SCRATCH_CSP = [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: https:",
+    "font-src 'self' data:",
+    "media-src 'self' https:",
+    "connect-src 'none'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'none'",
+    "frame-ancestors 'none'",
+].join('; ');
+
+/**
+ * The wrapper of a scratch site: the badge, and the page inside a frame that is sandboxed without
+ * allow-same-origin, so the page runs in an opaque origin and cannot reach this document to take the
+ * badge away. The page's own markup goes into the frame as srcdoc, so it keeps its own markup and its
+ * own scripts, and nothing of it is served as this document's markup.
+ */
+function scratchWrapper(html, { expiresAt = null } = {}) {
+    const when = expiresAt ? new Date(Number(expiresAt)).toUTCString().replace(/ GMT$/, ' UTC') : 'a day';
+    const badge = `A throwaway page an AI made from a chat request · removed ${when}`;
+    const page = String(html == null ? '' : html)
+        .replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow"><title>A throwaway page</title>
+<style>html,body{margin:0;padding:0;background:#0a0e14;color:#e6edf3;font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+#ov-scratch-frame{display:block;width:100%;height:100vh;border:0;background:#fff}
+#ov-scratch-badge{position:fixed;left:0;right:0;bottom:0;z-index:2147483647;background:#0f1622;color:#c9d6e4;border-top:1px solid #223047;padding:9px 12px;font-size:12px;text-align:center;line-height:1.3}</style></head>
+<body>
+<div id="ov-scratch-badge">${badge}</div>
+<iframe id="ov-scratch-frame" sandbox="allow-scripts" referrerpolicy="no-referrer" title="A throwaway page" srcdoc="${page}"></iframe>
+</body></html>`;
+}
+
+function baseHeaders(res, { sandbox = false, scratch = false } = {}) {
     res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('Content-Security-Policy', TENANT_CSP);
+    res.setHeader('Content-Security-Policy', scratch ? SCRATCH_CSP : TENANT_CSP);
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
     res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
     res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()');
     res.setHeader('X-Served-By', 'OpenVibe.Space');
-    if (sandbox) res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+    if (sandbox || scratch) res.setHeader('X-Robots-Tag', 'noindex, nofollow');
 }
 
 const FN_PATH = /^\/api\/([a-z0-9][a-z0-9-]{0,39})\/?$/;
@@ -259,6 +301,17 @@ function createTenantServer({ store, config, blobs, takedowns = null, siteConfig
             return res.destroy();
         }
         res.setHeader('Content-Length', length);
+        // A scratch site is served in the wrapper: the badge is above the page, outside its own markup,
+        // so the page cannot take it away.
+        if (site.scratch === true && /^text\/html/i.test(String(row.content_type || ''))) {
+            let html = '';
+            try { html = await fs.promises.readFile(file, 'utf8'); } catch { html = ''; }
+            const wrapped = Buffer.from(scratchWrapper(html, { expiresAt: site.scratch_expires_at }), 'utf8');
+            res.setHeader('Content-Length', wrapped.length);
+            res.removeHeader('Content-Range');
+            res.setHeader('Content-Type', 'text/html; charset=utf-8');
+            return res.end(wrapped);
+        }
         const stream = fs.createReadStream(file, { start, end });
         stream.on('error', (err) => {
             log.error('[Space] object missing or unreadable:', row.project_id, row.sha256, err.code || err.message);
@@ -405,7 +458,7 @@ function createTenantServer({ store, config, blobs, takedowns = null, siteConfig
         // The site's own headers go on first; baseHeaders then overrides every reserved one, so a
         // tenant can never weaken CSP/HSTS/nosniff or set a cookie.
         if (cfg) applyConfiguredHeaders(res, cfg.headers);
-        baseHeaders(res, { sandbox: site.environment === 'sandbox' });
+        baseHeaders(res, { sandbox: site.environment === 'sandbox', scratch: site.scratch === true });
         // A published space: the app policy, and the space SDK at /_openvibe/sdk.js (never one of its files).
         const space = apps && apps() ? await apps().forSite(site.id) : null;
         if (space) res.setHeader('Content-Security-Policy', appCsp(config));
@@ -540,4 +593,4 @@ function createTenantServer({ store, config, blobs, takedowns = null, siteConfig
     return { resolve, handle, preview, unknownHost, normaliseHost, candidates, TENANT_CSP };
 }
 
-module.exports = { createTenantServer, normaliseHost, TENANT_CSP, appCsp };
+module.exports = { createTenantServer, normaliseHost, TENANT_CSP, SCRATCH_CSP, scratchWrapper, appCsp };
