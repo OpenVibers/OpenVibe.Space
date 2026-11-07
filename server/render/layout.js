@@ -70,7 +70,7 @@ function navbarInit(opts) {
             { label: 'Home', href: '/', active: opts.active === 'home' },
             { label: 'Spaces', href: '/spaces', active: opts.active === 'spaces' },
             { label: 'Hosting', href: '/dashboard' },
-            { label: 'The forum', href: `${config.communityUrl}/s` },
+            { label: 'The forum', href: `${config.communityUrl}/forum` },
         ],
         menu: { after: [{ label: 'OpenVibe.Network', href: NETWORK_URL, icon: 'fa-globe' }] },
         history: { type: opts.historyType || 'page', title: opts.historyTitle || opts.title },
@@ -96,7 +96,7 @@ function footerInit(opts) {
             heading: 'Space',
             items: [
                 { name: 'Home', url: '/' },
-                { name: 'The forum', url: `${config.communityUrl}/s` },
+                { name: 'The forum', url: `${config.communityUrl}/forum` },
                 { name: 'OpenVibe.Community', url: config.communityUrl },
                 { name: 'Source code', url: 'https://github.com/OpenVibers/OpenVibe.Space' },
             ],

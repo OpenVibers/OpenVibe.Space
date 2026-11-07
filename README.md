@@ -55,16 +55,16 @@ The forum lived here from 3 October 2026 (it moved off Community then). On **202
 moved it back**: OpenVibe.Community owns the forum (spaces, threads, posts, votes, categories,
 per-space moderators, the Discord relay) again, and Space became the network's hosting (static sites now; dynamic pages and spaces next).
 
-So Space keeps no forum code and **every forum URL answers a permanent redirect to the same path and
-query on https://openvibe.community**:
+So Space keeps no forum code and **every forum URL answers a permanent redirect to the forum's
+address on https://openvibe.community** (which moved from `/s` to `/forum` on 2026-11-07):
 
-| Path | Methods | Status |
-| --- | --- | --- |
-| `/s`, `/s/*` (pages, feeds) | GET, HEAD | `301` |
-| `/s`, `/s/*` | anything else | `308` (the method and body are preserved) |
-| `/api/v1/spaces*`, `/api/v1/posts/*`, `/api/v1/space-groups*`, `/api/v1/relay*` | all | `308` |
+| Path | Methods | Status | Goes to |
+| --- | --- | --- | --- |
+| `/s`, `/s/*` (pages, feeds) | GET, HEAD | `301` | `/forum/<space>/<thread>` (the `/t/` segment is gone) |
+| `/s`, `/s/*` | anything else | `308` (the method and body are preserved) | the same `/forum` path |
+| `/api/v1/spaces*`, `/api/v1/posts/*`, `/api/v1/space-groups*`, `/api/v1/relay*` | all | `308` | the same API path |
 
-A redirected bookmark, crawler or API client therefore lands on Community's copy of the same page.
+A redirected bookmark, crawler or API client therefore lands on Community's copy in one hop.
 Nothing that is not a forum path redirects.
 
 ## Routes

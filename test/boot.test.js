@@ -70,16 +70,16 @@ async function check(name, fn) {
             assert.match(html, /<title>OpenVibe\.Space — spaces and static hosting<\/title>/);
             assert.match(html, /<h1>Make a space\.<span class="sc-accent"> An app on your OpenVibe account\.<\/span><\/h1>/);
             assert.match(html, /The forum moved to OpenVibe\.Community/);
-            assert.match(html, /href="https:\/\/openvibe\.community\/s"/);
+            assert.match(html, /href="https:\/\/openvibe\.community\/forum"/);
         });
 
         await check('every forum URL is a permanent redirect to OpenVibe.Community', async () => {
             const s = await fetch(`${base}/s`, { redirect: 'manual' });
             assert.strictEqual(s.status, 301);
-            assert.strictEqual(s.headers.get('location'), 'https://openvibe.community/s');
+            assert.strictEqual(s.headers.get('location'), 'https://openvibe.community/forum');
             const nested = await fetch(`${base}/s/general/t/1?x=2`, { redirect: 'manual' });
             assert.strictEqual(nested.status, 301);
-            assert.strictEqual(nested.headers.get('location'), 'https://openvibe.community/s/general/t/1?x=2');
+            assert.strictEqual(nested.headers.get('location'), 'https://openvibe.community/forum/general/1?x=2');
             const api = await fetch(`${base}/api/v1/spaces/general/threads`, { redirect: 'manual' });
             assert.strictEqual(api.status, 308);
             assert.strictEqual(api.headers.get('location'), 'https://openvibe.community/api/v1/spaces/general/threads');
