@@ -66,7 +66,7 @@ function createSpacesPages(ctx) {
             "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com https://fonts.googleapis.com https://openvibe.network",
             "font-src 'self' data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://fonts.gstatic.com",
             "img-src 'self' data: blob: https:", "media-src 'self' data: blob: https:",
-            "connect-src 'self' https://openvibe.network https://openvibe.events https://cloudflareinsights.com",
+            "connect-src 'self' https://openvibe.network https://openvibe.chat https://openvibe.events https://cloudflareinsights.com",
             `frame-src 'self' https://openvibe.network ${sites}`, "frame-ancestors 'self'", "object-src 'none'", "base-uri 'self'",
             "form-action 'self' https://openvibe.network", "script-src-attr 'unsafe-inline'",
         ].join('; '));
