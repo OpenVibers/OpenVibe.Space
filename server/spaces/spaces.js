@@ -379,6 +379,14 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, outb
         return { space: await get(space.id), site, deploy, url: urlOf(space) };
     }
 
+    /** What the site's active deploy serves: [{ path, sha256, size, content_type }], or null when not published. */
+    async function publishedFiles(space) {
+        if (!space.site_id) return null;
+        const site = await sites.get(space.site_id);
+        if (!site || site.status !== 'active' || !site.active_deploy_id) return null;
+        return await deploys.filesOf(site.active_deploy_id);
+    }
+
     async function unpublish(viewer, space) {
         if (!space.site_id) return await get(space.id);
         const site = await sites.get(space.site_id);
@@ -408,7 +416,7 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, outb
 
     return {
         CAPABILITIES, isSpaceId, get, getBySlug, forSite, load, isOwner, files, create, saveFiles, updateSettings, fork,
-        startBuild, finishBuild, failBuild, spend, used, canPublish, publish, unpublish, remove, gallery, mine, hostnameOf, urlOf,
+        startBuild, finishBuild, failBuild, spend, used, canPublish, publish, unpublish, publishedFiles, remove, gallery, mine, hostnameOf, urlOf,
         personOf, capsOf, checkFiles, DAY,
         // Guest drafts (openvibe.website, plan 5.9)
         isGuest, guestExpired, guestKeyOk, touchGuest, createGuest, claimGuest, spendGuestDraft, spendGuestAi,

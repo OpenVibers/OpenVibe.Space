@@ -71,13 +71,15 @@ const OFFICIAL = { kind: 'user', subject: 'usr_01JZ0000000000000000000AAA', staf
             assert.strictEqual((await t.ctx.spaces.getBySlug('ov-links')).id, before.id);
         });
 
-        await check('--revise repairs drift, and a third run is unchanged again', async () => {
+        await check('--revise repairs drift and deploys it, and a third run is unchanged again', async () => {
             const space = await t.ctx.spaces.getBySlug('ov-links');
             await t.ctx.spaces.saveFiles(OFFICIAL, space, [{ path: 'index.html', content: '<h1>drift</h1>' }]);
+            await t.ctx.spaces.publish(OFFICIAL, space);
+            assert.ok((await t.get('ov-links.openvibe.website', '/')).text.includes('drift'), 'the drift is what is live before the revise');
             const revised = await seedOfficialSpaces({ spaces: t.ctx.spaces, viewer: OFFICIAL, log: quiet, revise: true });
             assert.deepStrictEqual(revised.map((r) => r.action), ['revised', 'unchanged', 'unchanged']);
             const r = await t.get('ov-links.openvibe.website', '/');
-            assert.ok(r.text.includes('Every OpenVibe site in one place'));
+            assert.ok(r.text.includes('Every OpenVibe site in one place'), 'the revise was deployed, not only stored');
             const again = await seedOfficialSpaces({ spaces: t.ctx.spaces, viewer: OFFICIAL, log: quiet, revise: true });
             assert.deepStrictEqual(again.map((r) => r.action), ['unchanged', 'unchanged', 'unchanged']);
         });

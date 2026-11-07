@@ -12,6 +12,7 @@
  */
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 const DIR = path.join(__dirname, '..', '..', 'seeds', 'official-spaces');
 
@@ -28,6 +29,13 @@ function loadOfficialSpaces() {
             content: fs.readFileSync(path.join(DIR, path.basename(String(f.file || ''))), 'utf8'),
         })),
     }));
+}
+
+/** Whether the files the site's active deploy serves are exactly the seed's. */
+function servesFiles(deployed, wanted) {
+    if (!deployed || deployed.length !== wanted.length) return false;
+    const byPath = new Map(deployed.map((f) => [f.path, f.sha256]));
+    return wanted.every((f) => byPath.get(f.path) === crypto.createHash('sha256').update(f.content).digest('hex'));
 }
 
 /** Whether the stored files are already exactly the seed's. */
@@ -81,7 +89,10 @@ async function seedOfficialSpaces({ spaces, viewer, log = console, revise = fals
                 log.info(`[official-spaces] revised ${def.slug} (${space.id})`);
             }
         }
-        if (!space.site_id) {
+        // A revised space is deployed again only when its site does not serve the seed (this also repairs a run
+        // that saved the files but died before publishing); a first publish is always done.
+        const deployed = revise ? await spaces.publishedFiles(space) : null;
+        if (!space.site_id || (revise && !servesFiles(deployed, def.files))) {
             const published = await spaces.publish(viewer, space);
             space = published.space;
             if (action === 'unchanged') action = 'published';
