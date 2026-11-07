@@ -211,6 +211,12 @@ function editorPage({ space, files, csrf, canPublish, url, aiOn, buildsLeft, tem
       <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
       <input id="ed-ai" maxlength="4000" autocomplete="off" placeholder="${aiOn ? 'Ask AI to change it: “make the buttons bigger and add a dark mode toggle”' : 'OpenVibe AI is not available right now'}" ${aiOn ? '' : 'disabled'}>
       <button class="sp-btn" ${aiOn ? '' : 'disabled'}>Change</button></form>
+    <div class="sp-ed-agent" id="ed-agent" role="status" aria-live="polite" data-state="running" hidden>
+      <span class="sp-ed-agent-dot" aria-hidden="true"></span>
+      <span class="sp-ed-agent-words"><b id="ed-agent-title">Your agent is building this</b> <span class="sp-muted" id="ed-agent-text"></span></span>
+      <button class="sp-btn sp-btn-quiet sp-btn-sm" id="ed-agent-open" type="button"><i class="fa-solid fa-list-check" aria-hidden="true"></i> <span id="ed-agent-open-label">Watch in your Dock</span></button>
+      <button class="sp-ed-agent-x" id="ed-agent-x" type="button" aria-label="Hide" hidden>×</button>
+    </div>
   </div>
   <div class="sp-ed-switch" role="tablist" aria-label="Show"><button type="button" role="tab" data-view="preview" aria-selected="true"><i class="fa-solid fa-eye" aria-hidden="true"></i> Preview</button><button type="button" role="tab" data-view="code" aria-selected="false"><i class="fa-solid fa-code" aria-hidden="true"></i> Code</button></div>
   <div class="sp-ed-main">
