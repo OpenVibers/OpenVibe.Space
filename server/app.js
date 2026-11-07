@@ -149,7 +149,7 @@ async function createApp(opts = {}) {
                 fontSrc: ["'self'", 'https://cdnjs.cloudflare.com', 'https://fonts.gstatic.com', 'data:'],
                 imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
                 // The shared navbar's notification bell hears OpenVibe.Events (notificationsRealtime).
-                connectSrc: ["'self'", 'https://openvibe.network', 'https://openvibe.events', 'https://cloudflareinsights.com'],
+                connectSrc: ["'self'", 'https://openvibe.network', 'https://openvibe.chat', 'https://openvibe.events', 'https://cloudflareinsights.com'],
                 // The Network's hidden /sso/check frame: how a visitor who is signed in elsewhere gets signed in here.
                 frameSrc: ["'self'", 'https://openvibe.network'],
                 frameAncestors: ["'self'"],
