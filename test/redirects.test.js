@@ -13,24 +13,33 @@ const COMMUNITY = 'https://openvibe.community';
 (async () => {
     const t = await boot();
 
-    await check('GET and HEAD of /s and its nested paths answer 301 to Community, path and query intact', async () => {
-        for (const path of ['/s', '/s?sort=new', '/s/general', '/s/general/t/123?x=1&y=two', '/s/feed.xml', '/s/general/feed.xml']) {
+    await check('GET and HEAD of /s and its nested paths answer 301 to the forum on Community, mapped to /forum', async () => {
+        const map = [
+            ['/s', '/forum'],
+            ['/s?sort=new', '/forum?sort=new'],
+            ['/s/general', '/forum/general'],
+            ['/s/general/t/123?x=1&y=two', '/forum/general/123?x=1&y=two'],
+            ['/s/feed.xml', '/forum/feed.xml'],
+            ['/s/general/feed.xml', '/forum/general/feed.xml'],
+            ['/s/new-space', '/forum/new'],
+        ];
+        for (const [path, to] of map) {
             const r = await t.get(path);
             assert.strictEqual(r.status, 301, path);
-            assert.strictEqual(r.headers.get('location'), `${COMMUNITY}${path}`, path);
+            assert.strictEqual(r.headers.get('location'), `${COMMUNITY}${to}`, path);
         }
         const head = await t.get('/s?sort=top', { method: 'HEAD' });
         assert.strictEqual(head.status, 301);
-        assert.strictEqual(head.headers.get('location'), `${COMMUNITY}/s?sort=top`);
+        assert.strictEqual(head.headers.get('location'), `${COMMUNITY}/forum?sort=top`);
     });
 
     await check('other methods of /s and /s/* answer 308 (the method and body are preserved)', async () => {
         const post = await t.get('/s/general/threads?q=1', { method: 'POST', body: 'title=x', headers: { 'content-type': 'application/x-www-form-urlencoded' } });
         assert.strictEqual(post.status, 308);
-        assert.strictEqual(post.headers.get('location'), `${COMMUNITY}/s/general/threads?q=1`);
+        assert.strictEqual(post.headers.get('location'), `${COMMUNITY}/forum/general/threads?q=1`);
         const del = await t.get('/s/general/t/123/posts/9', { method: 'DELETE' });
         assert.strictEqual(del.status, 308);
-        assert.strictEqual(del.headers.get('location'), `${COMMUNITY}/s/general/t/123/posts/9`);
+        assert.strictEqual(del.headers.get('location'), `${COMMUNITY}/forum/general/123/posts/9`);
     });
 
     await check('the forum APIs answer 308 to Community, path and query intact', async () => {

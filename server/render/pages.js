@@ -12,7 +12,7 @@ const sc = require('openvibe-shared/showcase');
 const { renderPage, escapeHtml: esc } = require('./layout');
 const { pickBlock, foldBlock } = require('./short');
 
-const FORUM_URL = `${config.communityUrl}/s`;
+const FORUM_URL = `${config.communityUrl}/forum`;
 const FORUM_LABEL = FORUM_URL.replace(/^https?:\/\//, '');
 const SERVICES_URL = 'https://openvibe.services/';
 const TEMPLATES = require('../spaces/templates').list();

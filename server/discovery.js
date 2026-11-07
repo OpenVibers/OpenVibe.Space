@@ -28,7 +28,7 @@ function llmsSections() {
             { title: 'Make a space', url: `${u}/spaces/new`, html: true, note: 'describe it to the AI builder, or start from a template (sign-in required)' },
         ] },
         { title: 'The network', links: [
-            { title: 'The forum', url: `${config.communityUrl}/s`, note: 'OpenVibe.Community hosts the forum' },
+            { title: 'The forum', url: `${config.communityUrl}/forum`, note: 'OpenVibe.Community hosts the forum' },
             { title: 'OpenVibe.Network', url: config.networkUrl, note: 'identity, accounts and sign-in' },
         ] },
     ];

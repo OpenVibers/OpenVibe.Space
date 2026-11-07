@@ -12,9 +12,10 @@
  *   GET /robots.txt, /llms.txt, /llms-full.txt, /sitemap.xml   crawler endpoints (the sitemap is / alone)
  *   GET /api/health, /api/ready, /release.json, /metrics (loopback)
  *
- * The forum is OpenVibe.Community's again (owner decision, 2026-10-08): every forum URL here answers
- * a permanent redirect to the same path and query there — /s and /s/* (301 for GET and HEAD, 308
- * otherwise), and /api/v1/spaces*, /api/v1/posts/*, /api/v1/space-groups* and /api/v1/relay* (308).
+ * The forum is OpenVibe.Community's again (owner decision, 2026-10-08), and it lives at /forum there
+ * (2026-11-07): every forum URL here answers a permanent redirect to it — /s and /s/* (301 for GET and
+ * HEAD, 308 otherwise), mapped to /forum/<space>/<thread>, and /api/v1/spaces*, /api/v1/posts/*,
+ * /api/v1/space-groups* and /api/v1/relay* (308, path unchanged).
  *
  * Space holds hosted content and emits hosting lifecycle events. The historical forum rows belong
  * to Community; the forum redirects below stay intact. See README.md.
@@ -44,16 +45,29 @@ const FORUM_PAGE = /^\/s(\/|$)/;
 const FORUM_API = /^\/api\/v1\/(spaces|posts|space-groups|relay)(\/|$)/;
 
 /**
- * Permanent redirect to the same path and query on Community. A GET or HEAD of a page keeps its
- * method with a 301; anything else (a form post, a vote) must not be replayed as a GET, and the
- * APIs are called with bodies, so they always answer 308.
+ * Permanent redirect to the forum's address on Community. The forum moved from /s (spaces) to /forum
+ * and dropped a thread's /t/ segment (2026-11-07), so /s/general/t/123 becomes /forum/general/123 —
+ * one hop, never a second redirect. A GET or HEAD of a page keeps its method with a 301; anything else
+ * (a form post, a vote) must not be replayed as a GET, and the APIs are called with bodies, so they
+ * always answer 308.
  */
+function forumTarget(url) {
+    const qi = url.indexOf('?');
+    const pathname = qi === -1 ? url : url.slice(0, qi);
+    const query = qi === -1 ? '' : url.slice(qi);
+    if (pathname === '/s') return `/forum${query}`;
+    let rest = pathname.replace(/\/+$/, '');
+    if (rest === '/s/new-space') return `/forum/new${query}`;
+    rest = rest.replace(/^\/s\/([^/]+)\/t(?=\/|$)/, '/forum/$1').replace(/^\/s(?=\/|$)/, '/forum');
+    return `${rest}${query}`;
+}
+
 function forumRedirect(req, res, next) {
     const isPage = FORUM_PAGE.test(req.path);
     if (!isPage && !FORUM_API.test(req.path)) return next();
     const method = String(req.method || 'GET').toUpperCase();
     const status = isPage && (method === 'GET' || method === 'HEAD') ? 301 : 308;
-    res.redirect(status, `${config.communityUrl}${req.originalUrl}`);
+    res.redirect(status, `${config.communityUrl}${isPage ? forumTarget(req.originalUrl) : req.originalUrl}`);
 }
 
 async function createApp(opts = {}) {

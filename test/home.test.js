@@ -32,7 +32,7 @@ const { boot, check, done } = require('./helpers/app');
         assert.match(r.text, /What works now/);
         assert.match(r.text, /showcase\.css/, 'built from the network\'s showcase sections');
         assert.match(r.text, /The forum moved to OpenVibe\.Community/);
-        assert.match(r.text, /href="https:\/\/openvibe\.community\/s"/, 'the forum link points at Community');
+        assert.match(r.text, /href="https:\/\/openvibe\.community\/forum"/, 'the forum link points at Community');
         assert.match(r.text, /<link rel="canonical" href="https:\/\/openvibe\.space\/">/);
         assert.doesNotMatch(r.text, /href="\/s"/, 'nothing links a /s that only redirects');
     });
@@ -74,7 +74,7 @@ const { boot, check, done } = require('./helpers/app');
         const r = await t.get('/llms.txt');
         assert.strictEqual(r.status, 200);
         assert.match(r.text, /OpenVibe\.Space/);
-        assert.match(r.text, /https:\/\/openvibe\.community\/s/);
+        assert.match(r.text, /https:\/\/openvibe\.community\/forum/);
         assert.doesNotMatch(r.text, /\/s\/feed\.xml/, 'no forum feed is advertised');
     });
 
