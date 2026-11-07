@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **The builder is the person's own agent** (plan 2026-10-22 §Z, stage Z1): "Describe it and OpenVibe AI builds it" starts a task of the person's one agent (OpenVibe.Actor) instead of Space's own AI loop. The space is the task's subject; the agent writes its files through Space's builder API (`/api/v1/builder/spaces`, the capabilities `space.build.read|create|write|publish`), and the editor opens the Dock at that task and shows the space as the agent writes it. The step reaches the network's agent namespace (`agent.step.started|updated|ended`, product `space`), so the Dock's one timeline shows it. Publishing is never done on its own: the agent asks, the person's answer lands in the Dock ("Needs you") and nothing goes live until they say yes (`POST /api/v1/agent/approvals/:id/decide`). The old builder stays behind `SPACE_BUILDER=legacy` until the new one is proven; nothing is deleted. `test/spaces-agent.test.js`.
 - **The forum's links follow Community's move to `/forum`** (design 2026-11-07): Space's forum redirect now
   maps `/s` and `/s/*` straight to `/forum` and `/forum/<space>/<thread>` (the `/t/` segment is gone) instead
   of passing the old path on, so a bookmark lands in one hop. The home page, both navbars and `llms.txt` link

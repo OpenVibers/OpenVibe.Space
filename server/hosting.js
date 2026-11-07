@@ -72,6 +72,11 @@ function createHosting(app, { db, auth, config: suppliedConfig, now, resolver, f
     ctx.spacesAi = require('./spaces/ai').createSpacesAi({ config, client: spacesAiClient, log });
     ctx.spaceData = require('./spaces/data').createSpaceData({ store, config, spaces: ctx.spaces, ai: ctx.spacesAi });
     ctx.spaceFunctions = require('./spaces/functions').createSpaceFunctions({ data: ctx.spaceData, workers: config.spaces.fnWorkers, log });
+    // The person's one agent (plan 2026-10-22 §Z, stage Z1): the builder API the agent works through, the
+    // steps it publishes into the network's agent namespace, and the watcher that follows its task.
+    ctx.spaceSteps = require('./spaces/steps').createSpaceSteps({ outbox, config, log });
+    ctx.spaceAgent = require('./spaces/agent').createSpaceAgent({ config, fetchImpl, log });
+    ctx.spaceAgentWatch = require('./spaces/agent-watch').createAgentWatcher({ config, spaces: ctx.spaces, agent: ctx.spaceAgent, steps: ctx.spaceSteps, log });
     // Guest drafts (openvibe.website, plan 5.9): the job that removes the drafts whose week is up.
     ctx.guestCleanup = require('./spaces/guest-cleanup').createGuestCleanup({ store, config, log });
     {
@@ -147,6 +152,11 @@ function createHosting(app, { db, auth, config: suppliedConfig, now, resolver, f
             app.use((req, res, next) => (SHARE_PATH.test(req.path) ? shareApi(req, res, next) : next()));
         }
         app.use('/api/v1/apps', rateLimit({ windowMs: 60_000, max: 600, standardHeaders: true, legacyHeaders: false }), require('./spaces/api').createSpacesApi({ config, spaces: ctx.spaces, data: ctx.spaceData, sites, takedowns, log }));
+        // Space's builder API (plan 2026-10-22 §Z, stage Z1): what the person's own agent (OpenVibe.Actor)
+        // works through, and where the person's answer to its publish request lands. It is mounted before
+        // /api/v1, which answers everything else.
+        app.use('/api/v1/builder/spaces', rateLimit({ windowMs: 60_000, max: 240, standardHeaders: true, legacyHeaders: false }), viewers.middleware('api'), require('./spaces/agent-api').createSpacesBuilderApi({ config, spaces: ctx.spaces, steps: ctx.spaceSteps, log }));
+        app.use('/api/v1/agent/approvals', rateLimit({ windowMs: 60_000, max: 240, standardHeaders: true, legacyHeaders: false }), viewers.middleware('api'), require('./spaces/agent-api').createApprovalsApi({ spaces: ctx.spaces, steps: ctx.spaceSteps, log }));
         app.use('/api/v1', rateLimit({ windowMs: 60_000, max: 240, standardHeaders: true, legacyHeaders: false }), createApi(ctx));
         app.use('/preview', rateLimit({ windowMs: 60_000, max: 300, standardHeaders: true, legacyHeaders: false }), viewers.middleware('dashboard'), (req, res, next) => Promise.resolve(tenant.preview(req, res)).catch(next));
         {

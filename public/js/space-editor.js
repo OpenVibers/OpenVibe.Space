@@ -147,8 +147,7 @@
   // ── AI changes ──
   var overlay = $('ed-building');
   function building(on, text) { overlay.hidden = !on; $('ed-building-text').textContent = text ? '“' + text + '”' : ''; }
-  function poll() {
-    call('GET', '/ai').then(function (j) {
+  function poll() {    call('GET', '/ai').then(function (j) {
       if (j.status === 'running') return setTimeout(poll, 3000);
       building(false);
       if (j.status === 'done') {
@@ -165,11 +164,59 @@
     var input = $('ed-ai'), prompt = input.value.trim();
     if (!prompt) return;
     var go = function () {
-      return call('POST', '/ai', { prompt: prompt }).then(function () { input.value = ''; building(true, prompt); setTimeout(poll, 3000); }, function (err) { status(err.message, 'bad'); });
+      return call('POST', '/ai', { prompt: prompt }).then(function (j) {
+        input.value = '';
+        building(true, prompt);
+        // The answer names a task of the person's own agent (plan 2026-10-22 §Z stage Z1): follow it there.
+        if (j && j.task) { agent = { task: j.task, state: 'running' }; var title = $('ed-building-title'); if (title) title.textContent = 'Your agent is building this…'; openDock(); setTimeout(agentPoll, 1500); return; }
+        setTimeout(poll, 3000);
+      }, function (err) { status(err.message, 'bad'); });
     };
     if (dirty) save().then(go, function () {}); else go();
   });
   if (space.building) { building(true, space.building_prompt); setTimeout(poll, 1500); }
+
+  // ── The person's own agent (plan 2026-10-22 §Z, stage Z1) ──
+  // The space is a task of the agent: the Dock opens at it, the page follows it, and the preview shows the
+  // space as the agent writes it. Nothing new is drawn here: the Dock and the editor's own preview do the work.
+  var agent = boot.agent || null;
+  function openDock() {
+    try { if (window.OpenVibeNavbar && agent && agent.task) window.OpenVibeNavbar.openDock('agent', { task: agent.task }); } catch (e) { /* the Dock is optional */ }
+  }
+  /** The files the agent wrote: they replace the editor's, unless the person has unsaved edits of their own. */
+  function agentFiles(list) {
+    if (!list || !list.length || dirty) return false;
+    var next = list.map(function (f) { return { path: f.path, content: f.content }; });
+    var same = next.length === files.length && next.every(function (f, i) { return f.path === files[i].path && f.content === files[i].content; });
+    if (same) return false;
+    files = next;
+    current = 'index.html';
+    setText((fileOf('index.html') || { content: '' }).content, 'index.html');
+    renderTabs();
+    run();
+    return true;
+  }
+  function agentPoll() {
+    if (!agent) return;
+    call('GET', '/agent').then(function (j) {
+      agentFiles(j.files);
+      if (j.publish && j.publish.state === 'pending') status('Your agent wants to publish this space — answer it in your Dock');
+      if (j.status === 'running' || j.status === 'waiting') { setTimeout(agentPoll, 3000); return; }
+      building(false);
+      if (j.status === 'done') status(j.message ? 'Your agent is done: ' + j.message : 'Your agent is done');
+      else if (j.status === 'failed') status('Your agent could not build this space', 'bad');
+      else status('');
+    }, function () { setTimeout(agentPoll, 5000); });
+  }
+  if (agent) {
+    var title = $('ed-building-title');
+    if (title) title.textContent = 'Your agent is building this…';
+    if (agent.state === 'running' || agent.state === 'waiting') {
+      building(true, '');
+      openDock();
+      setTimeout(agentPoll, 1500);
+    }
+  }
 
   // ── Settings ──
   var dialog = $('ed-dialog'), form = $('ed-settings-form');

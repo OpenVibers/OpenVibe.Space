@@ -44,8 +44,16 @@ const { EVENT_TYPES } = require('../server/events/outbox');
     await check('the proposed service manifest declares every event the service emits', async () => {
         assert.strictEqual(manifest.id, 'space');
         const pinned = new Set(contracts.catalog.map((c) => c.id));
+        // The agent.* namespace belongs to the network (like provider.* and share.*): a first-party mode publishes
+        // its own steps into it, and OpenVibe.Actor keeps the one timeline behind the Dock. One producer per event
+        // type is a manifest rule, so Space's manifest does not list them (OpenVibe.Run does the same).
+        const SHARED = ['agent.', 'provider.', 'share.'];
         for (const e of EVENT_TYPES) {
             if (manifest.eventsProduced.includes(e)) continue;
+            if (SHARED.some((p) => e.startsWith(p))) {
+                assert.ok(pinned.has(e), `${e} is a shared-namespace type the pinned catalogue knows`);
+                continue;
+            }
             // An event the pinned openvibe-contracts does not know yet: it waits for its contracts PR and for
             // the pin that follows it (space.app.claimed, plan 5.9). An event neither knows is a mistake.
             assert.ok(!pinned.has(e), `${e} is in neither the service manifest nor the pinned catalogue`);

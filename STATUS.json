@@ -6,15 +6,19 @@
   "runtime": "node 22, express, PostgreSQL 18 (openvibe-sdk/db, async)",
   "port": 4940,
   "domain": "openvibe.space",
-  "contracts": "openvibe-contracts v0.312.0",
+  "contracts": "openvibe-contracts v0.324.0",
   "sdk": "openvibe-sdk v0.94.0",
-  "shared": "openvibe-shared v4.133.0",
+  "shared": "openvibe-shared v4.134.0",
   "capabilities": [
     "space.site.manage",
     "space.site.config",
     "space.deploy.create",
     "space.domain.manage",
-    "space.resource.read"
+    "space.resource.read",
+    "space.build.read",
+    "space.build.create",
+    "space.build.write",
+    "space.build.publish"
   ],
   "capabilitiesRegistered": true,
   "deployed": true,
@@ -37,5 +41,10 @@
     "No app or agent holds a space.* grant on OpenVibe.Network yet; staff use the dashboard"
   ],
   "hostingDeployed": false,
-  "updated": "2026-11-07"
+  "updated": "2026-11-07",
+  "packages": [
+    "openvibe-contracts v0.324.0",
+    "openvibe-sdk v0.94.0",
+    "openvibe-shared v4.134.0"
+  ]
 }
