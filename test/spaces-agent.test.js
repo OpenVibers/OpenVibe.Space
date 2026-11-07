@@ -134,6 +134,26 @@ const BUILD_CAPS = ['space.build.read', 'space.build.create', 'space.build.write
         assert.strictEqual(step.payload.step_id, TASK);
     });
 
+    await check('while public hosting is off, the agent is told at once that a space cannot go live', async () => {
+        const t2 = await boot({ env: { SPACE_BUILDER: 'agent', OV_ACTOR_INTERNAL_URL: 'http://actor.test', SPACE_PUBLIC_HOSTING: 'off' }, fetchImpl });
+        try {
+            const carol = t2.user('carol');
+            const csrf2 = (u) => csrfToken(t2.config, { subject: u.subject });
+            const made = await t2.api('POST', '/spaces/new', { session: carol, form: { csrf: csrf2(carol), prompt: 'A small diary for my notes' }, headers: { origin: ORIGIN } });
+            assert.strictEqual(made.status, 303, made.text);
+            const slug2 = String(made.headers.location || '').split('/').slice(-2)[0];
+            const page = await t2.api('GET', `/spaces/${slug2}/edit`, { session: carol });
+            const id2 = JSON.parse(page.text.match(/<script type="application\/json" id="sp-boot">([\s\S]*?)<\/script>/)[1].replace(/\\u003c/g, '<')).space.id;
+            const ask = await t2.api('POST', `/api/v1/builder/spaces/${id2}/publish`, {
+                as: t2.network.serviceToken('actor', BUILD_CAPS), json: {}, headers: { 'x-ov-subject': carol.subject },
+            });
+            assert.strictEqual(ask.status, 403, ask.text);
+            assert.match(ask.text, /public hosting/, 'the reason says why');
+        } finally {
+            await t2.close();
+        }
+    });
+
     await t.close();
     done();
 })().catch((e) => { console.error(e); process.exit(1); });

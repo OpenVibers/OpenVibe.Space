@@ -129,6 +129,12 @@ function createSpacesBuilderApi({ config, spaces, steps = null, log = console })
 
     router.post('/:id/publish', guard('space.build.publish'), json, run(async (req) => {
         const { person, space } = await ownSpace(req);
+        // While public hosting is off, nothing can go live (an owner decision): the agent is told now, instead
+        // of asking the person to approve something that could not succeed.
+        const staff = req.viewer.kind === 'user' && req.viewer.staff;
+        if (!config.publicHosting && !staff) {
+            throw new ApiError(403, 'space.not_launched', 'Publishing a space at its own address opens with OpenVibe.Space\'s public hosting; until then the space runs in its editor.');
+        }
         const ask = await spaces.askPublish(person, space);
         if (steps) await steps.publishAsked({ space, person, request: ask });
         return { state: ask.state, approval_id: ask.id, url: ask.url || null, reason: ask.reason || null };
