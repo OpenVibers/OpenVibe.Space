@@ -89,10 +89,10 @@ async function seedOfficialSpaces({ spaces, viewer, log = console, revise = fals
                 log.info(`[official-spaces] revised ${def.slug} (${space.id})`);
             }
         }
-        // A revised space is deployed again only when its site does not serve the seed (this also repairs a run
-        // that saved the files but died before publishing); a first publish is always done.
-        const deployed = revise ? await spaces.publishedFiles(space) : null;
-        if (!space.site_id || (revise && !servesFiles(deployed, def.files))) {
+        // Publish when the site does not serve anything (a first publish, a deleted site, or a run that saved the
+        // files and died before deploying). With --revise, also when it serves something other than the seed.
+        const deployed = await spaces.publishedFiles(space);
+        if (!deployed || (revise && !servesFiles(deployed, def.files))) {
             const published = await spaces.publish(viewer, space);
             space = published.space;
             if (action === 'unchanged') action = 'published';

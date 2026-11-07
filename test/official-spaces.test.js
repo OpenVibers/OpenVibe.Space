@@ -84,6 +84,14 @@ const OFFICIAL = { kind: 'user', subject: 'usr_01JZ0000000000000000000AAA', staf
             assert.deepStrictEqual(again.map((r) => r.action), ['unchanged', 'unchanged', 'unchanged']);
         });
 
+        await check('a space whose site went away is published again, without --revise', async () => {
+            const space = await t.ctx.spaces.getBySlug('ov-links');
+            await t.ctx.sites.remove(OFFICIAL, space.site_id, { deploys: t.ctx.deploys });
+            const out = await seedOfficialSpaces({ spaces: t.ctx.spaces, viewer: OFFICIAL, log: quiet });
+            assert.deepStrictEqual(out.map((r) => r.action), ['published', 'unchanged', 'unchanged']);
+            assert.strictEqual((await t.get('ov-links.openvibe.website', '/')).status, 200);
+        });
+
         await check('a slug that belongs to someone else is reported, never created over or changed', async () => {
             const calls = { create: 0, publish: 0, save: 0 };
             const fake = {
