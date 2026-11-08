@@ -88,7 +88,9 @@ body {
    before, with no chips. */
 .pick-head, .pick-row { display: none; }
 @media (max-width: 640px) {
-  .pick-bar { margin-top: 30px; }
+  /* The page has no gutter of its own (each showcase section brings one), so the bar brings the same 16 px: the
+     heading clears the screen's edge and the chip row still bleeds to it (2026-11-08). */
+  .pick-bar { margin-top: 30px; padding: 0 16px; }
   .pick-head { display: block; }
   .pick-head h2 { margin: 0 0 4px; font: 700 clamp(20px, 2.4vw, 28px)/1.2 var(--ov-font, 'Inter', system-ui, sans-serif); letter-spacing: -.02em; }
   .pick-row { display: flex; gap: 8px; overflow-x: auto; margin: 10px -16px 0; padding: 2px 16px 4px; scrollbar-width: none; overscroll-behavior-x: contain; }
