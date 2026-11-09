@@ -6,6 +6,7 @@
  * cookie, serves nothing of the API or sign-in, and a template at full size runs no script.
  */
 const assert = require('assert');
+const { parseHTML } = require('linkedom');
 const fs = require('fs');
 const path = require('path');
 const { boot, check, done } = require('./stageb/boot');
@@ -91,7 +92,9 @@ assert.match(hostingSrc, /target\.kind === 'dashboard' \|\| target\.kind === 'we
         await check('the guest start page leads with a website template picked on the front door', async () => {
             const r = await t.request({ method: 'GET', host: 'openvibe.space', path: '/spaces/guest?template=site-event' });
             assert.strictEqual(r.status, 200, r.text.slice(0, 200));
-            assert.match(r.text, /<section class="sp-pick"[^>]*>[\s\S]*?<h2 id="sp-pick-h">Event page<\/h2>[\s\S]*?name="template" value="site-event"/);
+            const pick = parseHTML(r.text).document.querySelector('section.sp-pick');
+            assert.strictEqual(pick.querySelector('#sp-pick-h').textContent, 'Event page');
+            assert.strictEqual(pick.querySelector('[name=template]').getAttribute('value'), 'site-event');
             const app = await t.request({ method: 'GET', host: 'openvibe.space', path: '/spaces/guest?template=poll' });
             assert.ok(!app.text.includes('class="sp-pick"'), 'an app template is not a website to start from here');
         });
@@ -99,7 +102,9 @@ assert.match(hostingSrc, /target\.kind === 'dashboard' \|\| target\.kind === 'we
         await check('openvibe.space leads with a template picked on the front door', async () => {
             const r = await t.request({ method: 'GET', host: 'openvibe.space', path: '/spaces/new?template=site-portfolio', session: alice });
             assert.strictEqual(r.status, 200, r.text.slice(0, 200));
-            assert.match(r.text, /<section class="sp-pick"[^>]*>[\s\S]*?<h2 id="sp-pick-h">Portfolio<\/h2>[\s\S]*?name="template" value="site-portfolio"/);
+            const pick = parseHTML(r.text).document.querySelector('section.sp-pick');
+            assert.strictEqual(pick.querySelector('#sp-pick-h').textContent, 'Portfolio');
+            assert.strictEqual(pick.querySelector('[name=template]').getAttribute('value'), 'site-portfolio');
             const plain = await t.request({ method: 'GET', host: 'openvibe.space', path: '/spaces/new?template=nope', session: alice });
             assert.ok(!plain.text.includes('class="sp-pick"'), 'an unknown template picks nothing');
         });
