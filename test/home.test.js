@@ -24,7 +24,7 @@ const { boot, check, done } = require('./helpers/app');
     await check('the home page leads with spaces, describes staff static hosting and links the forum on OpenVibe.Community', async () => {
         const r = await t.get('/');
         assert.strictEqual(r.status, 200);
-        assert.match(r.text, /<h1>Make a space\.<span class="sc-accent"> An app on your OpenVibe account\.<\/span><\/h1>/);
+        assert.match(r.text, /<h1>Make a space\. An app on your OpenVibe account\.<\/h1>/);
         assert.match(r.text, /href="\/spaces\/new"/, 'the home page starts a space');
         assert.match(r.text, /<h2[^>]*>Static hosting: publish a site, keep every deploy\.<\/h2>/);
         assert.match(r.text, /Immutable, content-addressed deploys with one-step rollback/);

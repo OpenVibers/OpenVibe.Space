@@ -63,7 +63,7 @@ function templateCard(t, base) {
 function home({ base }) {
     const sites = templates.sites();
     const body = `<div class="ov-room wb" style="${rooms.style('website')}">
-${sc.hero({
+${sc.hero({ pageHead: { icon: 'home' },
         eyebrow: NAME,
         title: 'Websites that look finished.',
         accent: 'From the first preview.',
@@ -77,7 +77,7 @@ ${sc.hero({
     })}
 <section class="sc-sec" id="templates" aria-labelledby="wb-tpl-h">
 <div class="wb-head"><h2 id="wb-tpl-h">Start from a real site</h2><p>${sites.length} whole sites, each one page you can change line by line. Open one full size to see it the way your visitors will.</p></div>
-<div class="wb-tpls">${sites.map((t) => templateCard(t, base)).join('')}</div>
+<div class="wb-tpls" data-ovk-scroll>${sites.map((t) => templateCard(t, base)).join('')}</div>
 </section>
 ${sc.steps({ id: 'how', title: 'From idea to address', items: [
         { title: 'Pick a site, or describe yours', text: 'A template is a working site from the first second; OpenVibe AI writes a first version from a sentence.' },
@@ -102,7 +102,7 @@ ${sc.faq({ id: 'questions', items: FAQ })}
 }
 
 function notFound({ base }) {
-    return page({ base, title: `Not found · ${NAME}`, canonicalPath: '/', robots: 'noindex', body: `<div class="ov-room wb" style="${rooms.style('website')}">${sc.hero({
+    return page({ base, title: `Not found · ${NAME}`, canonicalPath: '/', robots: 'noindex', body: `<div class="ov-room wb" style="${rooms.style('website')}">${sc.hero({ pageHead: { icon: 'home' },
         eyebrow: NAME, title: 'Nothing lives at this address.',
         lede: 'Sites people make live at their own name, like rise-and-crumb.openvibe.website. This is OpenVibe.Website\'s front door.',
         actions: [{ label: 'Go to the front door', href: '/', primary: true }],

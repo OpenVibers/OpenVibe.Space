@@ -1,4 +1,5 @@
 'use strict';
+const kit = require('openvibe-shared/kit');
 /**
  * Dashboard page bodies. Every value is escaped; every action is a POST form carrying the form
  * token, so the dashboard works without JavaScript. Styles: public/css/hosting.css (hd-*), loaded
@@ -40,8 +41,8 @@ function home({ projects, csrf, canCreate = true }) {
 <label class="hd-field">Name <input name="name" required maxlength="80" placeholder="My website"></label>
 <label class="hd-field">Environment <select name="environment"><option value="production">production</option><option value="sandbox">sandbox (smaller quotas, noindex, no custom domains)</option></select></label>
 </div><button type="submit" class="hd-btn hd-btn--primary">${icon('fa-plus')} Create project</button>`, { cls: 'hd-form' });
-    return `<header class="hd-head"><p class="hd-eyebrow">${icon('fa-globe')} Static hosting</p><h1>Your projects</h1>
-<p class="hd-sub">A project holds sites, their deploys and domains, and the people who may change them.</p></header>
+    return `<div class="hd-head"><p class="hd-eyebrow">${icon('fa-globe')} Static hosting</p>${kit.pageHead({ title: `Your projects`, icon: 'server', back: { href: '/', label: 'Home' } })}
+<p class="hd-sub">A project holds sites, their deploys and domains, and the people who may change them.</p></div>
 ${projects.length ? `<div class="hd-tiles">${cards}</div>` : `<div class="hd-empty">${icon('fa-folder')}<p>You have no projects yet.</p></div>`}
 ${card('New project', create, { sub: canCreate ? 'Production sites can take custom domains; a sandbox is for trying things and is never indexed.' : '' })}`;
 }
@@ -70,14 +71,14 @@ function project({ project: p, role, sites, quota, usage, members, csrf, siteUrl
 <span class="hd-row__side">${s.active_deploy_id ? `${badge('live', 'ok')} <code>${short(s.active_deploy_id)}</code>` : badge('nothing published')}</span></li>`).join('');
     const memberRows = members.map((m) => `<tr><td><code>${esc(m.principal)}</code></td><td>${badge(m.role, m.role === 'owner' ? 'accent' : 'neutral')}</td><td class="hd-actions">${role === 'owner' && m.principal !== p.owner_subject
         ? form(`/projects/${p.id}/members/remove`, csrf, `<input type="hidden" name="principal" value="${esc(m.principal)}"><button type="submit" class="hd-link hd-link--danger">Remove</button>`, { cls: 'hd-inline' }) : ''}</td></tr>`).join('');
-    return `<header class="hd-head">${crumbs([['/dashboard', 'Projects']])}
-<h1>${esc(p.name)}</h1>
-<p class="hd-chips">${badge(p.environment, p.environment === 'sandbox' ? 'warn' : 'accent')} ${badge(`your role: ${role}`)} <code>${esc(p.id)}</code>${p.network_project_id ? ` <span class="hd-muted">Network project <code>${esc(p.network_project_id)}</code></span>` : ''}</p></header>
+    return `<div class="hd-head">${crumbs([['/dashboard', 'Projects']])}
+${kit.pageHead({ title: `${p.name}`, icon: 'server', back: { href: '/', label: 'Home' } })}
+<p class="hd-chips">${badge(p.environment, p.environment === 'sandbox' ? 'warn' : 'accent')} ${badge(`your role: ${role}`)} <code>${esc(p.id)}</code>${p.network_project_id ? ` <span class="hd-muted">Network project <code>${esc(p.network_project_id)}</code></span>` : ''}</p></div>
 <div class="hd-split">
 <div class="hd-split__main">
 ${card('Sites', `${sites.length ? `<ul class="hd-rows">${siteRows}</ul>` : `<div class="hd-empty hd-empty--small">${icon('fa-globe')}<p>No sites yet.</p></div>`}
 ${canMaintain ? form(`/projects/${p.id}/sites`, csrf, `<label class="hd-field">New site name <input name="name" required pattern="[a-z0-9-]{3,40}" maxlength="40" placeholder="my-site"></label><button type="submit" class="hd-btn hd-btn--primary">${icon('fa-plus')} Create site</button>`, { cls: 'hd-form hd-form--row' }) : ''}`, { sub: 'Each site is served at its own address under openvibe.website.' })}
-${card('Members', `<div class="hd-table-wrap"><table class="hd-table"><thead><tr><th>Principal</th><th>Role</th><th></th></tr></thead><tbody>${memberRows}</tbody></table></div>
+${card('Members', `<div class="hd-table-wrap" data-ovk-scroll><table class="hd-table"><thead><tr><th>Principal</th><th>Role</th><th></th></tr></thead><tbody>${memberRows}</tbody></table></div>
 ${role === 'owner' ? form(`/projects/${p.id}/members`, csrf, `<label class="hd-field">Principal <input name="principal" required placeholder="usr_… or app:app_…"></label>
 <label class="hd-field">Role <select name="role"><option value="deployer">deployer</option><option value="maintainer">maintainer</option></select></label><button type="submit" class="hd-btn">Add or change</button>`, { cls: 'hd-form hd-form--row' }) : ''}`, { sub: 'Deployers upload and activate; maintainers also manage sites, domains and configuration.' })}
 </div>
@@ -93,7 +94,7 @@ function domainBlock(d, instructions, csrf) {
     let body = `<li class="hd-domain"><div class="hd-domain__head"><strong>${esc(d.hostname)}</strong> ${badge(d.kind)} ${status}</div>${d.last_error ? `<p class="hd-muted">${esc(d.last_error)}</p>` : ''}`;
     if (instructions) {
         const rec = (r) => `<tr><td>${badge(r.type)}</td><td><code>${esc(r.name)}</code></td><td><code class="hd-wrap">${esc(r.value)}</code></td><td class="hd-muted">${esc(r.note)}</td></tr>`;
-        body += `<details class="hd-details"${d.status === 'verified' ? '' : ' open'}><summary>DNS records</summary><div class="hd-table-wrap"><table class="hd-table hd-table--dns"><thead><tr><th>Type</th><th>Name</th><th>Value</th><th></th></tr></thead><tbody>`
+        body += `<details class="hd-details"${d.status === 'verified' ? '' : ' open'}><summary>DNS records</summary><div class="hd-table-wrap" data-ovk-scroll><table class="hd-table hd-table--dns"><thead><tr><th>Type</th><th>Name</th><th>Value</th><th></th></tr></thead><tbody>`
             + rec(instructions.verification) + instructions.routing.map(rec).join('')
             + `</tbody></table></div><p class="hd-muted">${esc(instructions.tls)}</p></details>`;
         body += '<div class="hd-domain__actions">';
@@ -123,9 +124,9 @@ function site({ site: s, project: p, role, deploys, activations, domains, siteCo
     const history = activations.slice(0, 10).map((a) => `<li>${when(a.created_at)} <span>${esc(a.kind)} → <code>${short(a.deploy_id)}</code>${a.previous_deploy_id ? ` <span class="hd-muted">(was <code>${short(a.previous_deploy_id)}</code>)</span>` : ''} <span class="hd-muted">by <code>${esc(a.actor)}</code></span></span></li>`).join('');
     const status = s.active_deploy_id ? `${badge('live', 'ok')} <code>${short(s.active_deploy_id)}</code>` : badge('nothing published');
     const rollback = canDeploy && s.active_deploy_id ? form(`/sites/${s.id}/rollback`, csrf, `<input type="hidden" name="expected_active" value="${esc(s.active_deploy_id)}"><button type="submit" class="hd-btn hd-btn--small">${icon('fa-clock-rotate-left')} Roll back to the previous deploy</button>`, { cls: 'hd-inline' }) : '';
-    return `<header class="hd-head">${crumbs([['/dashboard', 'Projects'], [`/projects/${p.id}`, p.name]])}
-<h1>${esc(s.name)}</h1>
-<p class="hd-chips"><a class="hd-url hd-url--big" href="${esc(url)}" rel="noopener">${esc(url.replace(/^https?:\/\//, ''))} ${icon('fa-arrow-up-right-from-square')}</a> ${status} <code>${esc(s.id)}</code></p></header>
+    return `<div class="hd-head">${crumbs([['/dashboard', 'Projects'], [`/projects/${p.id}`, p.name]])}
+${kit.pageHead({ title: `${s.name}`, icon: 'server', back: { href: '/', label: 'Home' } })}
+<p class="hd-chips"><a class="hd-url hd-url--big" href="${esc(url)}" rel="noopener">${esc(url.replace(/^https?:\/\//, ''))} ${icon('fa-arrow-up-right-from-square')}</a> ${status} <code>${esc(s.id)}</code></p></div>
 ${canDeploy ? card('Upload a deploy', form(`/sites/${s.id}/deploys`, csrf, `<div class="hd-sources">
 <fieldset class="hd-source"><legend>${icon('fa-folder-open')} A folder</legend><input type="file" name="files" multiple webkitdirectory aria-label="A folder to upload"><input type="hidden" name="strip" value="folder"></fieldset>
 <fieldset class="hd-source"><legend>${icon('fa-box-archive')} …or an archive (.tar.gz / .tar)</legend><input type="file" name="archive" accept=".tar,.tgz,.gz,application/gzip,application/x-tar" aria-label="An archive to upload (.tar.gz or .tar)"></fieldset>
@@ -139,7 +140,7 @@ ${canDeploy ? card('Upload a deploy', form(`/sites/${s.id}/deploys`, csrf, `<div
 <button type="submit" class="hd-btn hd-btn--primary">${icon('fa-cloud-arrow-up')} Upload</button>`, { cls: 'hd-form', enctype: 'multipart/form-data' }),
     { sub: 'Static files only: HTML, CSS, JavaScript, JSON, images, fonts, audio, video, PDF, WebAssembly. No build runs and nothing is executed. Hidden files (except <code>.well-known/</code>), links and server-side code are refused.' }) : ''}
 ${card('Deploys', `${previewId ? `<p class="hd-notice">${icon('fa-eye')} A preview of <code>${short(previewId)}</code> is open to members of this project at <a href="${esc(previewHref(previewId))}" target="_blank" rel="noopener">${esc(previewHref(previewId))}</a> until ${when(Number(s.preview_expires_at))}. It is never indexed, and activating or rolling back ends it.</p>` : ''}
-${deploys.length ? `<div class="hd-table-wrap"><table class="hd-table"><thead><tr><th>Deploy</th><th>State</th><th class="hd-num">Files</th><th class="hd-num">Size</th><th>Uploaded</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>` : `<div class="hd-empty hd-empty--small">${icon('fa-box-open')}<p>No deploys yet.</p></div>`}
+${deploys.length ? `<div class="hd-table-wrap" data-ovk-scroll><table class="hd-table"><thead><tr><th>Deploy</th><th>State</th><th class="hd-num">Files</th><th class="hd-num">Size</th><th>Uploaded</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>` : `<div class="hd-empty hd-empty--small">${icon('fa-box-open')}<p>No deploys yet.</p></div>`}
 ${history ? `<details class="hd-details"><summary>Activation history</summary><ul class="hd-history">${history}</ul></details>` : ''}`, { actions: rollback, sub: 'Every deploy is kept. Activating one switches the site at once; nothing is rebuilt.' })}
 ${card('Domains', `<ul class="hd-domains">${domains.map((d) => domainBlock(d.domain, d.instructions, csrf)).join('')}</ul>
 ${canMaintain && p.environment !== 'sandbox' ? form(`/sites/${s.id}/domains`, csrf, `<label class="hd-field">Custom domain <input name="hostname" required placeholder="www.example.org"></label><button type="submit" class="hd-btn">${icon('fa-plus')} Add domain</button>`, { cls: 'hd-form hd-form--row' }) : ''}`, { sub: 'A custom domain is served once its TXT record is found.' })}
@@ -155,17 +156,17 @@ function deploy({ deploy: d, site: s, project: p, files, log, active }) {
     const LEVEL_TONE = { error: 'bad', warn: 'warn', info: 'neutral' };
     const logLines = log.map((l) => `<li class="hd-log__line hd-log__line--${esc(l.level)}">${badge(l.level, LEVEL_TONE[l.level] || 'neutral')}<span>${esc(l.message)}</span></li>`).join('');
     const fileRows = files.slice(0, 2000).map((f) => `<tr><td><code class="hd-wrap">${esc(f.path)}</code></td><td class="hd-muted">${esc(f.content_type)}</td><td class="hd-num">${bytes(f.size)}</td><td><code title="${esc(f.sha256)}">${esc(f.sha256.slice(0, 12))}</code></td></tr>`).join('');
-    return `<header class="hd-head">${crumbs([['/dashboard', 'Projects'], [`/projects/${p.id}`, p.name], [`/sites/${s.id}`, s.name]])}
-<h1>Deploy <code>${short(d.id)}</code></h1>
+    return `<div class="hd-head">${crumbs([['/dashboard', 'Projects'], [`/projects/${p.id}`, p.name], [`/sites/${s.id}`, s.name]])}
+${kit.pageHead({ title: `Deploy ${short(d.id)}`, icon: 'server', back: { href: '/', label: 'Home' } })}
 <p class="hd-chips">${badge(d.state, STATE_TONE[d.state] || 'neutral')}${active ? ` ${badge('active', 'accent')}` : ''}</p>
-<dl class="hd-facts hd-facts--wide"><div><dt>Files</dt><dd>${esc(d.file_count)}</dd></div><div><dt>Size</dt><dd>${bytes(d.total_bytes)}</dd></div><div><dt>Uploaded</dt><dd>${when(d.created_at)}</dd></div><div><dt>By</dt><dd><code>${esc(d.created_by)}</code></dd></div>${d.manifest_sha256 ? `<div><dt>Manifest</dt><dd><code title="${esc(d.manifest_sha256)}">${esc(d.manifest_sha256.slice(0, 16))}</code></dd></div>` : ''}</dl></header>
+<dl class="hd-facts hd-facts--wide"><div><dt>Files</dt><dd>${esc(d.file_count)}</dd></div><div><dt>Size</dt><dd>${bytes(d.total_bytes)}</dd></div><div><dt>Uploaded</dt><dd>${when(d.created_at)}</dd></div><div><dt>By</dt><dd><code>${esc(d.created_by)}</code></dd></div>${d.manifest_sha256 ? `<div><dt>Manifest</dt><dd><code title="${esc(d.manifest_sha256)}">${esc(d.manifest_sha256.slice(0, 16))}</code></dd></div>` : ''}</dl></div>
 ${card('Upload log', `<ul class="hd-log">${logLines}</ul>`)}
-${files.length ? card('Files', `<div class="hd-table-wrap"><table class="hd-table"><thead><tr><th>Path</th><th>Type</th><th class="hd-num">Size</th><th>sha256</th></tr></thead><tbody>${fileRows}</tbody></table></div>${files.length > 2000 ? `<p class="hd-muted">…and ${files.length - 2000} more.</p>` : ''}`, { sub: 'Stored once by content: a file that did not change since an earlier deploy of this project is not stored again.' }) : ''}`;
+${files.length ? card('Files', `<div class="hd-table-wrap" data-ovk-scroll><table class="hd-table"><thead><tr><th>Path</th><th>Type</th><th class="hd-num">Size</th><th>sha256</th></tr></thead><tbody>${fileRows}</tbody></table></div>${files.length > 2000 ? `<p class="hd-muted">…and ${files.length - 2000} more.</p>` : ''}`, { sub: 'Stored once by content: a file that did not change since an earlier deploy of this project is not stored again.' }) : ''}`;
 }
 
 function errorPage({ status, message }) {
     return `<div class="hd-error">${icon(status === 404 ? 'fa-circle-question' : status === 403 ? 'fa-lock' : status === 401 ? 'fa-right-to-bracket' : 'fa-triangle-exclamation')}
-<h1>${status === 404 ? 'Not found' : status === 403 ? 'Not allowed' : status === 401 ? 'Sign in first' : 'Something went wrong'}</h1><p>${esc(message)}</p><p><a class="hd-btn" href="/dashboard">Back to your projects</a></p></div>`;
+${kit.pageHead({ title: `${status === 404 ? 'Not found' : status === 403 ? 'Not allowed' : status === 401 ? 'Sign in first' : 'Something went wrong'}`, icon: 'server', back: { href: '/', label: 'Home' } })}<p>${esc(message)}</p><p><a class="hd-btn" href="/dashboard">Back to your projects</a></p></div>`;
 }
 
 module.exports = { home, project, site, deploy, errorPage, bytes };

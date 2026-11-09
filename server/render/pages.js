@@ -104,7 +104,7 @@ curl -X POST "https://openvibe.space/api/v1/sites/$SITE_ID/deploys?activate=1" \
             source: 'https://github.com/OpenVibers/OpenVibe.Space/blob/main/server/hosting-config.js',
         }) },
     ];
-    const body = sc.hero({
+    const body = sc.hero({ pageHead: { icon: 'home' },
         eyebrow: 'OpenVibe.Space · spaces',
         title: 'Make a space.',
         // The hero's picture is this site's own (2026-11-01): it drew the generic aura, the same on six homes.
@@ -166,7 +166,7 @@ function errorPage({ status = 500, title = 'Something went wrong', message = '',
     const body = `
 <section class="error">
   <p class="eyebrow">${status}</p>
-  <h1>${esc(title)}</h1>
+  ${kit.pageHead({ title: `${title}`, icon: 'home', back: { href: '/', label: 'Home' } })}
   ${message ? `<p class="lede">${esc(message)}</p>` : ''}
   ${links ? `<p><a class="btn" href="/">Home</a> <a class="btn" href="${esc(FORUM_URL)}">The forum</a></p>` : ''}
 </section>`;

@@ -54,7 +54,7 @@ function templateCards(templates, { viewer, csrf, compact = false }) {
 }
 
 function galleryPage({ viewer, spaces, templates, q, sort, csrf }) {
-    const hero = sc.hero({
+    const hero = sc.hero({ pageHead: { icon: 'home' },
         eyebrow: 'OpenVibe.Space · spaces',
         title: 'Make a space.',
         accent: 'An app on your OpenVibe account.',
@@ -108,7 +108,7 @@ function newPage({ viewer, templates, csrf, error, prompt, aiOn, buildsLeft, pic
 </section>` : '';
     const body = `<div class="sp-wrap">
   <p class="eyebrow">New space</p>
-  <h1 class="sp-title">${pick ? 'Make it yours' : 'What do you want to make?'}</h1>
+  ${kit.pageHead({ title: `${pick ? 'Make it yours' : 'What do you want to make?'}`, icon: 'home', back: { href: '/', label: 'Home' } })}
   ${error ? `<p class="sp-flash is-bad" role="alert">${esc(error)}</p>` : ''}
   ${picked}
   ${handedOver(from, prompt)}
@@ -129,7 +129,7 @@ function newPage({ viewer, templates, csrf, error, prompt, aiOn, buildsLeft, pic
 
 function minePage({ spaces }) {
     const body = `<div class="sp-wrap">
-  <div class="sp-head"><h1 class="sp-title">Your spaces</h1><a class="sp-btn" href="/spaces/new"><i class="fa-solid fa-plus" aria-hidden="true"></i> New space</a></div>
+  <div class="sp-head">${kit.pageHead({ title: `Your spaces`, icon: 'home', back: { href: '/', label: 'Home' } })}<a class="sp-btn" href="/spaces/new"><i class="fa-solid fa-plus" aria-hidden="true"></i> New space</a></div>
   ${spaces.length ? `<div class="sp-grid">${spaces.map((s) => card(s, { mine: true })).join('')}</div>` : '<p class="sp-empty">You have not made a space yet. <a href="/spaces/new">Make your first one</a>: describe it, or start from a template.</p>'}
 </div>`;
     return page({ title: 'Your spaces', path: '/spaces/mine', robots: 'noindex,nofollow', body });
@@ -142,7 +142,7 @@ function minePage({ spaces }) {
 function sharedGate({ id, signedInAs = null, signInUrl = '/auth/login' }) {
     const body = `<div class="sp-wrap">
   <p class="eyebrow">A space on OpenVibe.Space</p>
-  <h1 class="sp-title">This is shared with specific people.</h1>
+  ${kit.pageHead({ title: `This is shared with specific people.`, icon: 'home', back: { href: '/', label: 'Home' } })}
   <div id="share-gate" data-ov-share-gate data-kind="space" data-id="${esc(String(id))}" data-signed-in-as="${esc(signedInAs || '')}" data-sign-in-url="${esc(signInUrl)}">
     <p class="sp-muted">This space is shared with specific people on OpenVibe.Space.</p>
     <p><a class="sp-btn" href="${esc(signInUrl)}">Sign in</a></p>
@@ -164,7 +164,7 @@ function spacePage({ viewer, space, owner, url, csrf, forkedFrom }) {
     ].join('');
     const body = `<div class="sp-wrap">
   <p class="eyebrow">${live ? 'Space' : 'Draft space'}</p>
-  <div class="sp-head"><h1 class="sp-title">${esc(space.name)}</h1><div class="sp-actions">${actions}</div></div>
+  <div class="sp-head">${kit.pageHead({ title: `${space.name}`, icon: 'home', back: { href: '/', label: 'Home' } })}<div class="sp-actions">${actions}</div></div>
   <p class="sp-lede">${esc(space.description || 'No description yet.')}</p>
   <p class="sp-muted">by <a href="https://openvibe.network/@${esc(encodeURIComponent(space.owner_username))}">@${esc(space.owner_username)}</a>${forkedFrom ? ` · forked from <a href="/spaces/${esc(forkedFrom.slug)}">${esc(forkedFrom.name)}</a>` : ''}${space.forks ? ` · ${Number(space.forks)} fork${space.forks === 1 ? '' : 's'}` : ''}${live ? ` · <a href="${esc(url)}">${esc(url.replace(/^https?:\/\//, ''))}</a>` : ''}</p>
   ${live ? `<div class="sp-frame"><iframe src="${esc(url)}" title="${esc(space.name)}" loading="lazy" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation-by-user-activation"></iframe></div>`
@@ -222,7 +222,7 @@ function editorPage({ space, files, csrf, canPublish, url, aiOn, buildsLeft, tem
   <div class="sp-ed-switch" role="tablist" aria-label="Show"><button type="button" role="tab" data-view="preview" aria-selected="true"><i class="fa-solid fa-eye" aria-hidden="true"></i> Preview</button><button type="button" role="tab" data-view="code" aria-selected="false"><i class="fa-solid fa-code" aria-hidden="true"></i> Code</button></div>
   <div class="sp-ed-main">
     <section class="sp-ed-code" aria-label="Files">
-      <div class="sp-ed-tabs" id="ed-tabs" role="tablist"></div>
+      <div class="sp-ed-tabs" data-ovk-scroll id="ed-tabs" role="tablist"></div>
       <textarea id="ed-code" spellcheck="false" aria-label="File contents"></textarea>
     </section>
     <section class="sp-ed-preview" aria-label="Preview">
@@ -282,8 +282,7 @@ function guestPage({ templates, error, prompt, aiOn, pick = null, from = null })
 </div>`).join('');
     const body = `<div class="sp-wrap">
   <p class="eyebrow">OpenVibe.Space</p>
-  <h1 class="sp-title">Make a site.</h1>
-  <p class="sp-lede">No account needed. Start from a template or describe what you want and OpenVibe AI writes it. You get a private link to edit it; sign in later to keep it.</p>
+  ${kit.pageHead({ title: `Make a site.`, icon: 'home', back: { href: '/', label: 'Home' } , lede: `No account needed. Start from a template or describe what you want and OpenVibe AI writes it. You get a private link to edit it; sign in later to keep it.` })}
   ${error ? `<p class="sp-flash is-bad" role="alert">${esc(error)}</p>` : ''}
   ${picked}
   ${handedOver(from, prompt)}
@@ -304,7 +303,7 @@ function connectPage({ viewer, space, csrf, challenge, state, returnPath }) {
     const body = `<div class="sp-wrap sp-connect">
   <div class="sp-connect-card">
     <p class="eyebrow">Sign in to a space</p>
-    <h1 class="sp-title">${esc(space.name)}</h1>
+    ${kit.pageHead({ title: `${space.name}`, icon: 'home', back: { href: '/', label: 'Home' } })}
     <p class="sp-muted">by @${esc(space.owner_username)} · ${esc(`${space.slug}`)}.openvibe.website</p>
     <p>Signed in as <strong>${esc(u.display_name || u.username || 'you')}</strong>. If you continue, this space may:</p>
     ${capList(caps(space).length ? caps(space) : ['profile'])}
@@ -327,15 +326,14 @@ function connectPage({ viewer, space, csrf, challenge, state, returnPath }) {
 function signInPage({ path, next, title = 'Sign in to continue' }) {
     const body = `<div class="sp-wrap">
   <p class="eyebrow">OpenVibe.Space</p>
-  <h1 class="sp-title">${esc(title)}</h1>
-  <p class="sp-lede">Spaces are made with your OpenVibe account. Sign in and you come straight back here.</p>
+  ${kit.pageHead({ title: `${title}`, icon: 'home', back: { href: '/', label: 'Home' } , lede: `Spaces are made with your OpenVibe account. Sign in and you come straight back here.` })}
   <p><a class="sp-btn" href="${esc(signInHref(next))}">Sign in with OpenVibe</a></p>
 </div>`;
     return page({ title, path, robots: 'noindex,nofollow', body });
 }
 
 function errorBody(status, message) {
-    return page({ title: status === 404 ? 'Space not found' : 'Spaces', path: '/spaces', robots: 'noindex,nofollow', body: `<div class="sp-wrap"><p class="eyebrow">Error ${Number(status)}</p><h1 class="sp-title">${status === 404 ? 'No such space' : 'That did not work'}</h1><p class="sp-lede">${esc(message)}</p><p><a class="sp-btn" href="/spaces">Back to spaces</a></p></div>` });
+    return page({ title: status === 404 ? 'Space not found' : 'Spaces', path: '/spaces', robots: 'noindex,nofollow', body: `<div class="sp-wrap"><p class="eyebrow">Error ${Number(status)}</p>${kit.pageHead({ title: `${status === 404 ? 'No such space' : 'That did not work'}`, icon: 'home', back: { href: '/', label: 'Home' } , lede: `${message}` })}<p><a class="sp-btn" href="/spaces">Back to spaces</a></p></div>` });
 }
 
 module.exports = { sharedGate, galleryPage, newPage, minePage, spacePage, editorPage, guestPage, connectPage, signInPage, errorBody, CAP_TEXT };
