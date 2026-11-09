@@ -1,4 +1,6 @@
 'use strict';
+const kit = require('openvibe-shared/kit');
+const sectionIcon = (name) => kit.icon(name, { cls: 'ovk-heading-icon' });
 
 /**
  * Page templates. Plain template strings, every value escaped, no framework. The markup is the whole
@@ -102,7 +104,7 @@ curl -X POST "https://openvibe.space/api/v1/sites/$SITE_ID/deploys?activate=1" \
             source: 'https://github.com/OpenVibers/OpenVibe.Space/blob/main/server/hosting-config.js',
         }) },
     ];
-    const body = sc.hero({
+    const body = sc.hero({ pageHead: { icon: 'home' },
         eyebrow: 'OpenVibe.Space · spaces',
         title: 'Make a space.',
         // The hero's picture is this site's own (2026-11-01): it drew the generic aura, the same on six homes.
@@ -140,8 +142,8 @@ curl -X POST "https://openvibe.space/api/v1/sites/$SITE_ID/deploys?activate=1" \
         ],
     }) + foldBlock({
         id: 'questions',
-        head: '<h2 id="space-faq-h">Questions</h2>',
-        html: `<section class="sc-sec" id="questions" aria-labelledby="space-faq-h"><h2>Questions</h2>${HOME_FAQ.map((f) => `<details class="space-faq"><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`).join('')}</section>`,
+        head: `<h2 id="space-faq-h" class="ovk-titled">${sectionIcon('help')}Questions</h2>`,
+        html: `<section class="sc-sec" id="questions" aria-labelledby="space-faq-h"><h2 class="ovk-titled">${sectionIcon('help')}Questions</h2>${HOME_FAQ.map((f) => `<details class="space-faq"><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`).join('')}</section>`,
     }) + sc.cta({
         title: 'Looking for the forum?',
         text: 'The forum moved to OpenVibe.Community.',
@@ -149,7 +151,7 @@ curl -X POST "https://openvibe.space/api/v1/sites/$SITE_ID/deploys?activate=1" \
     });
     const site = String(config.publicUrl || config.baseUrl || 'https://openvibe.space').replace(/\/+$/, '');
     return renderPage({
-        canonicalPath: '/', active: 'home', styles: [sc.STYLESHEET], body, description: HOME_DESCRIPTION,
+        canonicalPath: '/', active: 'home', styles: ['kit.css', sc.STYLESHEET], body, description: HOME_DESCRIPTION,
         agentLayer: true, llms: '/llms.txt',
         // The rule that shows the picked part of the home's pick block: one per part, written for this page.
         jsonLd: [
@@ -164,7 +166,7 @@ function errorPage({ status = 500, title = 'Something went wrong', message = '',
     const body = `
 <section class="error">
   <p class="eyebrow">${status}</p>
-  <h1>${esc(title)}</h1>
+  ${kit.pageHead({ title: `${title}`, icon: 'home', back: { href: '/', label: 'Home' } })}
   ${message ? `<p class="lede">${esc(message)}</p>` : ''}
   ${links ? `<p><a class="btn" href="/">Home</a> <a class="btn" href="${esc(FORUM_URL)}">The forum</a></p>` : ''}
 </section>`;

@@ -136,14 +136,14 @@ function renderPage(o) {
         summary: description, url: canonical, updated: o.modified,
         navbar: nav, home: '/', navLinks: nav.links.map(({ label, href }) => ({ label, href })),
         footer: { service: 'space', variant: 'auto', path: o.canonicalPath, updates: '/updates' },   // full on the front page only (Shared 4.19)
-        head: [
+        head: [`<script src="${ovServe.url('kit-web.js')}" defer></script>`,
             o.published ? `<meta property="article:published_time" content="${escapeHtml(o.published)}">` : '',
             o.modified ? `<meta property="article:modified_time" content="${escapeHtml(o.modified)}">` : '',
             appIcon.headTags({ site: 'space', iconBase: '/assets' }),
             // The shared card is 1200×630; a page's own image carries its own dimensions.
             image === DEFAULT_OG_IMAGE ? '<meta property="og:image:width" content="1200">\n<meta property="og:image:height" content="630">' : '',
             ...feeds.map((f) => `<link rel="alternate" type="application/rss+xml" title="${escapeHtml(f.title)}" href="${escapeHtml(f.href)}">`),
-            ...(o.styles || []).map((name) => `<link rel="stylesheet" href="${ovServe.url(name)}">`),
+            ...[...new Set(['kit.css', ...(o.styles || [])])].map((name) => `<link rel="stylesheet" href="${ovServe.url(name)}">`),
             `<link rel="stylesheet" href="${asset('css/space.css')}">`,
             // Page-only stylesheets of this site (the dashboard's hosting.css), after space.css; the home page loads none.
             ...(o.localStyles || []).map((rel) => `<link rel="stylesheet" href="${asset(rel)}">`),

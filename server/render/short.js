@@ -26,7 +26,7 @@ function pickBlock({ key, label, head = '', panes }) {
     // The pane carries the id the page already links to (an anchor in the hero, for instance), so a link to it still
     // opens that pane on a phone (the CSS shows the pane a link points at).
     const body = panes.map((p) => `<div class="pick-pane" id="${esc(p.id)}">${p.html}</div>`).join('');
-    return `<div class="pick" id="pick-${esc(key)}"><div class="pick-bar"><div class="pick-head"><h2>${esc(head || label)}</h2></div><nav class="pick-row" aria-label="${esc(label)}">${chips}</nav></div><div class="pick-body">${body}</div></div>`;
+    return `<div class="pick" id="pick-${esc(key)}"><div class="pick-bar"><div class="pick-head"><h2>${esc(head || label)}</h2></div><nav class="pick-row" data-ovk-scroll aria-label="${esc(label)}">${chips}</nav></div><div class="pick-body">${body}</div></div>`;
 }
 
 

@@ -68,7 +68,7 @@ async function check(name, fn) {
             assert.strictEqual(r.status, 200);
             const html = await r.text();
             assert.match(html, /<title>OpenVibe\.Space — spaces and static hosting<\/title>/);
-            assert.match(html, /<h1>Make a space\.<span class="sc-accent"> An app on your OpenVibe account\.<\/span><\/h1>/);
+            assert.match(html, /<h1>Make a space\. An app on your OpenVibe account\.<\/h1>/);
             assert.match(html, /The forum moved to OpenVibe\.Community/);
             assert.match(html, /href="https:\/\/openvibe\.community\/forum"/);
         });

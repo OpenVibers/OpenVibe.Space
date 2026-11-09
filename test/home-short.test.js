@@ -19,7 +19,7 @@ const { boot, check, done } = require('./helpers/app');
             // From the block to the end of the page: its panes grew past a fixed window when section heads gained an icon (Shared 4.160.0).
             const block = page.slice(page.indexOf('<div class="pick" id="pick-parts">'));
             assert.ok(block.startsWith('<div class="pick" id="pick-parts">'), 'the pick block is on the home');
-            assert.match(block, /<nav class="pick-row" aria-label="What Space does">/);
+            assert.match(block, /<nav class="pick-row" data-ovk-scroll aria-label="What Space does">/);
             const chips = [...block.matchAll(/<a class="pick-chip" href="#(?:pp-parts-)?([a-z]+)">()([^<]+)<\/a>/g)];
             assert.ok(chips.length >= 5, `a chip per part (${chips.length})`);
             assert.ok(!/type="radio"/.test(block), 'no chip is a radio: nothing is picked, every pane shows');
