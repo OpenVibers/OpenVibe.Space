@@ -19,6 +19,15 @@ const { ApiError } = require('../http/errors');
  * https://openvibe.design/api/v1/components and cached; a slow or missing registry never fails a build, it just
  * builds without the vocabulary. The definitions are public and need no token.
  */
+const VOCABULARY_LIMIT = 12000;
+function compactVocabulary(components) {
+    const text = JSON.stringify({ columns: ['id', 'purpose', 'props'], components: components.map((c) => [
+        c.name, String(c.summary || '').replace(/\s+/g, ' ').trim(), c.props || {},
+    ]) });
+    if (text.length > VOCABULARY_LIMIT) throw new Error(`component vocabulary exceeds ${VOCABULARY_LIMIT} characters`);
+    return text;
+}
+
 let vocabularyCache = { key: '', at: 0, text: '' };
 async function registryVocabulary(config, { fetchImpl = global.fetch, log = console, now = Date.now } = {}) {
     if (typeof fetchImpl !== 'function') return '';
@@ -31,11 +40,7 @@ async function registryVocabulary(config, { fetchImpl = global.fetch, log = cons
         const res = await fetchImpl(`${base}/api/v1/components`, { headers: { accept: 'application/json' }, signal: controller && controller.signal });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const body = await res.json();
-        const lines = (body.components || []).map((c) => {
-            const p = c.platforms || {};
-            return `${c.name} — ${c.summary} States: ${(c.states || []).join(', ')}. Tokens: ${(c.tokens || []).join(', ')}. Web: ${p.web && p.web.markup}. Android: ${p.android && p.android.material3}. iOS: ${p.ios && p.ios.specification}`;
-        }).filter(Boolean);
-        vocabularyCache = { key: base, at: now(), text: lines.join('\n') };
+        vocabularyCache = { key: base, at: now(), text: compactVocabulary(body.components || []) };
         return vocabularyCache.text;
     } catch (err) {
         log.warn(`[Spaces AI] component registry: ${err && err.message}`);
@@ -126,4 +131,4 @@ function createSpacesAi({ config, client: injected = null, log = console }) {
     return { enabled, build, result, ask };
 }
 
-module.exports = { createSpacesAi, registryVocabulary };
+module.exports = { createSpacesAi, registryVocabulary, compactVocabulary, VOCABULARY_LIMIT };
