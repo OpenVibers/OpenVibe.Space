@@ -5,7 +5,7 @@
  */
 const assert = require('assert');
 const http = require('http');
-const { registryVocabulary, createSpacesAi } = require('../server/spaces/ai');
+const { registryVocabulary, createSpacesAi, compactVocabulary, VOCABULARY_LIMIT } = require('../server/spaces/ai');
 
 const LISTEN = (handler) => new Promise((resolve) => {
     const server = http.createServer(handler);
@@ -30,9 +30,22 @@ const quiet = { warn: () => {} };
         ] }));
     });
     const text = await registryVocabulary(configFor(server.url), { log: quiet });
-    assert.match(text, /^sheet — A modal task surface\./);
-    assert.match(text, /Android: SurfaceContainerHigh/);
-    assert.match(text, /ai-choice/);
+    assert.deepStrictEqual(JSON.parse(text), { columns: ['id', 'purpose', 'props'], components: [
+        ['sheet', 'A modal task surface.', {}], ['ai-choice', 'The selected model.', {}],
+    ] });
+    assert.ok(!text.includes('kit.sheet') && !text.includes('Android'), 'no examples or platform prose');
+    const fixture = require('./fixtures/design-components.json').components;
+    const compact = compactVocabulary(fixture);
+    assert.ok(compact.length < VOCABULARY_LIMIT, `${compact.length} characters exceeds the builder budget`);
+    const rows = JSON.parse(compact).components;
+    assert.strictEqual(rows.length, 52, 'all recorded components remain in the fixture');
+    assert.deepStrictEqual(rows.map(row => row[0]), fixture.map(c => c.name), 'no component dropped');
+    for (let i = 0; i < rows.length; i++) {
+        assert.strictEqual(rows[i][1], fixture[i].summary.replace(/\s+/g, ' ').trim());
+        assert.deepStrictEqual(rows[i][2], fixture[i].props, 'prop names and allowed values stay intact');
+    }
+    assert.throws(() => compactVocabulary([{ name: 'huge', summary: 'x'.repeat(VOCABULARY_LIMIT), props: {} }]), /exceeds/);
+    console.log(`  ok  ${rows.length} components fit in ${compact.length} characters`);
     assert.strictEqual(hits, 1, 'one read');
     await registryVocabulary(configFor(server.url), { log: quiet });
     assert.strictEqual(hits, 1, 'the second build uses the cache');

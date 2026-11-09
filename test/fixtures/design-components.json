@@ -1,0 +1,673 @@
+{
+  "source": "https://openvibe.design/api/v1/components",
+  "recorded_at": "2026-11-09",
+  "components": [
+    {
+      "name": "action",
+      "summary": "A button that posts, with an optional confirm: leave, remove, stop.",
+      "props": {
+        "href": "any?",
+        "icon": "string?",
+        "kind": "string?",
+        "name": "any?",
+        "type": "string?",
+        "attrs": "any?",
+        "label": "string?",
+        "small": "boolean?",
+        "value": "any?",
+        "action": "any",
+        "hidden": "object?",
+        "method": "string?",
+        "confirm": "string?"
+      }
+    },
+    {
+      "name": "answer",
+      "summary": "The answer first, then its rows, then what to do next.",
+      "props": {
+        "id": "any?",
+        "body": "string?",
+        "live": "any?",
+        "next": "list?",
+        "rows": "list?",
+        "tone": "string?",
+        "badge": "any?",
+        "title": "string?",
+        "actions": "list?"
+      }
+    },
+    {
+      "name": "ask-agent",
+      "summary": "The chip that asks: a tap hands the question to your own agent in the Dock, with this page's context, and it never sends for you.",
+      "props": {
+        "text": "string?",
+        "label": "string?",
+        "small": "any?"
+      }
+    },
+    {
+      "name": "badge",
+      "summary": "A word beside a title: live, new, a state. Five tones.",
+      "props": {
+        "text": "any",
+        "tone": "string?"
+      }
+    },
+    {
+      "name": "button",
+      "summary": "One clear action: primary, quiet, ghost or danger. A link with href, a form button without.",
+      "props": {
+        "href": "any?",
+        "icon": "string?",
+        "kind": "string?",
+        "name": "any?",
+        "type": "string?",
+        "attrs": "any?",
+        "label": "string?",
+        "small": "boolean?",
+        "value": "any?"
+      }
+    },
+    {
+      "name": "card",
+      "summary": "A stream, a clip, a room or a place: picture first, the title, who, and one line.",
+      "props": {
+        "alt": "string?",
+        "sub": "string?",
+        "who": "string?",
+        "date": "any?",
+        "href": "string?",
+        "live": "boolean?",
+        "more": "any?",
+        "peek": "string?",
+        "save": "any?",
+        "type": "string?",
+        "when": "any?",
+        "badge": "string?",
+        "count": "any?",
+        "image": "string?",
+        "level": "number?",
+        "ratio": "string?",
+        "share": "boolean?",
+        "title": "string?",
+        "video": "string?",
+        "avatar": "string?",
+        "corner": "string?",
+        "remind": "any?",
+        "preview": "string?",
+        "whoHtml": "any?"
+      }
+    },
+    {
+      "name": "chart",
+      "summary": "Line, area, bar or scatter. Text stays its real size at every width, and a table with the same numbers sits behind it.",
+      "props": {
+        "x": "object?",
+        "y": "object?",
+        "id": "any?",
+        "note": "string?",
+        "type": "string?",
+        "label": "string?",
+        "title": "string?",
+        "height": "number?",
+        "points": "list?",
+        "series": "list?"
+      }
+    },
+    {
+      "name": "chips",
+      "summary": "Filters you can turn on and off, or one of a few.",
+      "props": {
+        "name": "any",
+        "label": "string?",
+        "single": "boolean?",
+        "options": "list?"
+      }
+    },
+    {
+      "name": "dock",
+      "summary": "The one thing you type, pinned at the bottom. Enter sends; it grows as you write.",
+      "props": {
+        "id": "string?",
+        "name": "string?",
+        "send": "string?",
+        "label": "string?",
+        "value": "string?",
+        "action": "string?",
+        "before": "string?",
+        "hidden": "object?",
+        "maxlength": "number?",
+        "placeholder": "string?"
+      }
+    },
+    {
+      "name": "dot",
+      "summary": "How many are new. Nothing at zero; 9+ past nine.",
+      "props": {
+        "n": "any"
+      }
+    },
+    {
+      "name": "drop",
+      "summary": "Where a file goes: a real file input, plus drag and drop, paste and the phone's camera.",
+      "props": {
+        "id": "any?",
+        "auto": "any?",
+        "hint": "string?",
+        "name": "string?",
+        "label": "string?",
+        "accept": "string?",
+        "camera": "boolean?",
+        "multiple": "boolean?",
+        "required": "boolean?"
+      }
+    },
+    {
+      "name": "empty",
+      "summary": "What a page says when there is nothing yet, and the one thing to do about it.",
+      "props": {
+        "icon": "string?",
+        "text": "string?",
+        "title": "string?",
+        "action": "any?"
+      }
+    },
+    {
+      "name": "family",
+      "summary": "The tools next to this one.",
+      "props": {
+        "more": "any?",
+        "items": "list?",
+        "label": "string?",
+        "title": "string?"
+      }
+    },
+    {
+      "name": "find",
+      "summary": "A search, or \"add by name\": a pill with an icon, the field and a round button.",
+      "props": {
+        "id": "any?",
+        "icon": "string?",
+        "name": "string?",
+        "type": "string?",
+        "extra": "string?",
+        "inset": "boolean?",
+        "label": "string?",
+        "value": "string?",
+        "action": "string?",
+        "button": "any?",
+        "hidden": "object?",
+        "method": "string?",
+        "pattern": "any?",
+        "required": "boolean?",
+        "maxlength": "any?",
+        "placeholder": "string?"
+      }
+    },
+    {
+      "name": "fold",
+      "summary": "A card that opens: setup, extras, the danger zone. It says what is inside and how much.",
+      "props": {
+        "id": "any?",
+        "body": "string?",
+        "icon": "string?",
+        "meta": "string?",
+        "open": "boolean?",
+        "tone": "string?",
+        "title": "string?"
+      }
+    },
+    {
+      "name": "head",
+      "summary": "The top of an app page: back, the title, one muted line, icon actions and the tabs. It sticks under the navbar.",
+      "props": {
+        "sub": "string?",
+        "back": "any?",
+        "icon": "string?",
+        "tabs": "string?",
+        "level": "number?",
+        "title": "string?",
+        "sticky": "any?",
+        "actions": "list?",
+        "subHtml": "any?",
+        "titleHtml": "any?"
+      }
+    },
+    {
+      "name": "home-edit",
+      "summary": "The menu's Edit button: turns arranging Home on, and says Done while dragging and removing apps is on.",
+      "props": {
+        "edit": "boolean",
+        "label": "string?"
+      }
+    },
+    {
+      "name": "home-grid",
+      "summary": "The menu's Home screen: your apps in a grid you arrange by long-press or Edit, with folders and the app drawer.",
+      "props": {
+        "apps": "list?",
+        "back": "any",
+        "look": "function?",
+        "user": "object?",
+        "token": "string?",
+        "tools": "list?",
+        "usage": "any",
+        "yours": "list?",
+        "groups": "list?",
+        "onOpen": "any",
+        "apiBase": "any",
+        "feedLive": "function?",
+        "onPosted": "function?",
+        "actorBase": "any",
+        "frameBase": "any",
+        "toolCount": "any",
+        "mountIcons": "any",
+        "pulseReady": "function?",
+        "feedMissing": "function?"
+      }
+    },
+    {
+      "name": "icon-button",
+      "summary": "An action that is only an icon. Its label is what a screen reader says and what the tooltip shows.",
+      "props": {
+        "href": "any?",
+        "icon": "string?",
+        "kind": "string?",
+        "name": "any?",
+        "type": "string?",
+        "attrs": "any?",
+        "label": "string?",
+        "value": "any?"
+      }
+    },
+    {
+      "name": "labels",
+      "summary": "What a stream, recording, picture or post carries (nudity, strong language, graphic, 18+, flashing lights, spoilers), in words. Only the labels in force: a suggestion is the creator's to confirm. The page marks the thing itself with kit.labelsAttr so each viewer's own choice (show, blur, hide) applies.",
+      "props": {
+        "list": "any",
+        "label": "string?"
+      }
+    },
+    {
+      "name": "list",
+      "summary": "Rows under a title, with a link to all of them.",
+      "props": {
+        "more": "any?",
+        "rows": "list?",
+        "empty": "string?",
+        "flush": "boolean?",
+        "title": "string?"
+      }
+    },
+    {
+      "name": "mark",
+      "summary": "A person or a place: their picture, or up to two letters on a colour that comes from the name.",
+      "props": {
+        "hue": "any?",
+        "src": "string?",
+        "name": "string?",
+        "size": "any?",
+        "square": "boolean?"
+      }
+    },
+    {
+      "name": "meter",
+      "summary": "How full something is. With tone auto, a limit turns amber from 75 % and red from 90 %.",
+      "props": {
+        "max": "number?",
+        "text": "string?",
+        "tone": "string?",
+        "label": "string?",
+        "value": "number?"
+      }
+    },
+    {
+      "name": "more",
+      "summary": "The rest of a row's actions, behind one button. Dangerous ones confirm.",
+      "props": {
+        "icon": "string?",
+        "items": "list?",
+        "label": "string?"
+      }
+    },
+    {
+      "name": "notice",
+      "summary": "A sentence about what just happened: ok, info, warn or error. Errors are announced.",
+      "props": {
+        "html": "any?",
+        "kind": "string?",
+        "text": "string?"
+      }
+    },
+    {
+      "name": "num",
+      "summary": "A number the way a reader wants it: money, compact, percent, time. Missing is \"–\", never 0.",
+      "props": {
+        "v": "any",
+        "fmt": "string?"
+      }
+    },
+    {
+      "name": "page",
+      "summary": "The whole shape of an app page in one call; the side column sits beside the content from 1024 px, under it below.",
+      "props": {
+        "id": "string?",
+        "body": "string?",
+        "dock": "string?",
+        "head": "string?",
+        "side": "string?",
+        "wide": "boolean?"
+      }
+    },
+    {
+      "name": "page-head",
+      "summary": "The top of a page: the way back, the page's icon and title, its actions, and one line saying what it is for.",
+      "props": {
+        "back": "any?",
+        "icon": "string?",
+        "lede": "string?",
+        "title": "string?",
+        "actions": "list?"
+      }
+    },
+    {
+      "name": "rail",
+      "summary": "A row of cards that scrolls sideways on a phone and wraps on a computer when asked. A long list never makes a long page.",
+      "props": {
+        "id": "string?",
+        "icon": "string?",
+        "more": "any?",
+        "size": "string?",
+        "wrap": "boolean?",
+        "items": "list?",
+        "label": "string?",
+        "title": "string?"
+      }
+    },
+    {
+      "name": "range-row",
+      "summary": "An amount: the label, the slider and its value.",
+      "props": {
+        "max": "number?",
+        "min": "number?",
+        "name": "any",
+        "step": "number?",
+        "unit": "string?",
+        "label": "any",
+        "value": "number?"
+      }
+    },
+    {
+      "name": "rank",
+      "summary": "A leaderboard: the place, the name, the value with its interval, the change, a bar in proportion.",
+      "props": {
+        "fmt": "string?",
+        "base": "number?",
+        "unit": "string?",
+        "items": "list?",
+        "label": "string?",
+        "start": "number?"
+      }
+    },
+    {
+      "name": "receipt",
+      "summary": "A result and what it took: the answer first, then one quiet line of facts.",
+      "props": {
+        "id": "any?",
+        "body": "string?",
+        "tone": "string?",
+        "facts": "list?",
+        "title": "string?",
+        "actions": "list?"
+      }
+    },
+    {
+      "name": "row",
+      "summary": "A mark, the title with a badge and the time on one line, one muted line under it. The whole row is the link.",
+      "props": {
+        "rel": "string?",
+        "sub": "string?",
+        "href": "any?",
+        "mark": "string?",
+        "meta": "string?",
+        "attrs": "any?",
+        "badge": "string?",
+        "title": "string?",
+        "trail": "string?",
+        "unread": "number?",
+        "metaIso": "string?",
+        "subHtml": "any?",
+        "titleHtml": "any?"
+      }
+    },
+    {
+      "name": "save-bar",
+      "summary": "The save button of a settings form, kept in reach above the phone's app bar.",
+      "props": {
+        "name": "any?",
+        "label": "string?",
+        "value": "any?"
+      }
+    },
+    {
+      "name": "section",
+      "summary": "A titled block of a page, with its count and one quiet note.",
+      "props": {
+        "id": "any?",
+        "cls": "string?",
+        "body": "string?",
+        "icon": "string?",
+        "note": "string?",
+        "count": "any?",
+        "title": "string?",
+        "actions": "list?"
+      }
+    },
+    {
+      "name": "seg",
+      "summary": "Two to four choices you can see at once.",
+      "props": {
+        "name": "any",
+        "label": "string?",
+        "value": "string?",
+        "options": "list?"
+      }
+    },
+    {
+      "name": "segmented",
+      "summary": "Three or four equal choices filling the row, each with an icon; the radios post without JavaScript.",
+      "props": {
+        "name": "any",
+        "items": "list?",
+        "label": "string?",
+        "value": "string?",
+        "ariaLabel": "string?"
+      }
+    },
+    {
+      "name": "select-row",
+      "summary": "One choice of several, as a row.",
+      "props": {
+        "hint": "string?",
+        "name": "any",
+        "label": "any",
+        "value": "string?",
+        "options": "list?"
+      }
+    },
+    {
+      "name": "share",
+      "summary": "The one Share button: it opens the network's Share sheet, or copies the link where there is no sheet.",
+      "props": {
+        "id": "any?",
+        "url": "any?",
+        "kind": "any?",
+        "text": "string?",
+        "embed": "any?",
+        "image": "any?",
+        "label": "string?",
+        "quiet": "any?",
+        "small": "boolean?",
+        "title": "string?"
+      }
+    },
+    {
+      "name": "sheet",
+      "summary": "More choices without leaving the page: up from the bottom on a phone, a dialog on a computer.",
+      "props": {
+        "id": "any",
+        "body": "string?",
+        "title": "string?"
+      }
+    },
+    {
+      "name": "sidebar",
+      "summary": "Navigation down the left on a computer, a drawer on a phone.",
+      "props": {
+        "id": "string?",
+        "nav": "list?",
+        "find": "any?",
+        "foot": "string?",
+        "label": "string?",
+        "action": "any?",
+        "sections": "list?"
+      }
+    },
+    {
+      "name": "skeleton",
+      "summary": "The shape of what is coming, so nothing jumps when it arrives. It never spins.",
+      "props": {
+        "kind": "string?",
+        "count": "number?",
+        "label": "string?"
+      }
+    },
+    {
+      "name": "snippet",
+      "summary": "Code to copy, with a copy button in the corner.",
+      "props": {
+        "id": "any?",
+        "code": "string?",
+        "label": "string?"
+      }
+    },
+    {
+      "name": "stats",
+      "summary": "A strip of numbers that matter. Zero and unknown are left out; it scrolls sideways on a phone.",
+      "props": {
+        "items": "list?",
+        "label": "string?"
+      }
+    },
+    {
+      "name": "steps",
+      "summary": "A flow of a few steps. Done steps link back; later ones never link ahead.",
+      "props": {
+        "items": "list?",
+        "label": "string?",
+        "current": "number?"
+      }
+    },
+    {
+      "name": "switch-row",
+      "summary": "An on/off setting: the label and a hint on the left, the switch on the right.",
+      "props": {
+        "on": "any?",
+        "hint": "any?",
+        "icon": "any?",
+        "line": "any?",
+        "name": "any",
+        "label": "any?",
+        "title": "any?",
+        "value": "string?",
+        "checked": "any?"
+      }
+    },
+    {
+      "name": "table",
+      "summary": "Plans, prices, endpoints: anything compared across columns. On a phone each row becomes a card.",
+      "props": {
+        "id": "any?",
+        "rows": "list?",
+        "empty": "string?",
+        "label": "string?",
+        "stack": "boolean?",
+        "caption": "string?",
+        "columns": "list?"
+      }
+    },
+    {
+      "name": "tabs",
+      "summary": "Links, so they work without JavaScript. For settings and explainers, never to hide content.",
+      "props": {
+        "base": "string?",
+        "items": "list?",
+        "label": "string?",
+        "param": "string?",
+        "active": "string?"
+      }
+    },
+    {
+      "name": "tool",
+      "summary": "One order for every tool page: head, input, answer, family, folds, related.",
+      "props": {
+        "id": "any?",
+        "head": "string?",
+        "folds": "list?",
+        "input": "string?",
+        "answer": "string?",
+        "family": "string?",
+        "related": "string?"
+      }
+    },
+    {
+      "name": "tool-head",
+      "summary": "What the tool does, in its colour, with the facts that matter (free, no sign-in, what is kept).",
+      "props": {
+        "hue": "any?",
+        "icon": "string?",
+        "task": "string?",
+        "crumb": "any?",
+        "facts": "list?",
+        "level": "any?",
+        "title": "string?",
+        "family": "string?",
+        "iconHtml": "any?"
+      }
+    },
+    {
+      "name": "tool-input",
+      "summary": "The one field a tool needs, its button, and examples to try.",
+      "props": {
+        "id": "any?",
+        "icon": "string?",
+        "name": "string?",
+        "type": "string?",
+        "label": "string?",
+        "tries": "any?",
+        "value": "string?",
+        "action": "string?",
+        "button": "string?",
+        "hidden": "object?",
+        "method": "string?",
+        "pattern": "any?",
+        "required": "boolean?",
+        "inputmode": "any?",
+        "maxlength": "any?",
+        "placeholder": "string?",
+        "autocomplete": "string?"
+      }
+    },
+    {
+      "name": "tries",
+      "summary": "Examples a person can run with one tap.",
+      "props": {
+        "run": "string?",
+        "name": "string?",
+        "items": "list?",
+        "label": "string?",
+        "target": "string?"
+      }
+    }
+  ]
+}
