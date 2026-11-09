@@ -14,6 +14,38 @@
  */
 const { ApiError } = require('../http/errors');
 
+/**
+ * OpenVibe.Design's public registry (design.component@1) as the AI builder's interface vocabulary. It is read from
+ * https://openvibe.design/api/v1/components and cached; a slow or missing registry never fails a build, it just
+ * builds without the vocabulary. The definitions are public and need no token.
+ */
+let vocabularyCache = { key: '', at: 0, text: '' };
+async function registryVocabulary(config, { fetchImpl = global.fetch, log = console, now = Date.now } = {}) {
+    if (typeof fetchImpl !== 'function') return '';
+    const base = String((config.spaces && config.spaces.ai && config.spaces.ai.designUrl) || 'https://openvibe.design').replace(/\/+$/, '');
+    const age = vocabularyCache.key === base ? now() - vocabularyCache.at : Infinity;
+    if (age < (vocabularyCache.text ? 60 * 60 * 1000 : 5 * 60 * 1000)) return vocabularyCache.text;
+    const controller = typeof AbortController === 'function' ? new AbortController() : null;
+    const timer = controller ? setTimeout(() => controller.abort(), 2500) : null;
+    try {
+        const res = await fetchImpl(`${base}/api/v1/components`, { headers: { accept: 'application/json' }, signal: controller && controller.signal });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const body = await res.json();
+        const lines = (body.components || []).map((c) => {
+            const p = c.platforms || {};
+            return `${c.name} — ${c.summary} States: ${(c.states || []).join(', ')}. Tokens: ${(c.tokens || []).join(', ')}. Web: ${p.web && p.web.markup}. Android: ${p.android && p.android.material3}. iOS: ${p.ios && p.ios.specification}`;
+        }).filter(Boolean);
+        vocabularyCache = { key: base, at: now(), text: lines.join('\n') };
+        return vocabularyCache.text;
+    } catch (err) {
+        log.warn(`[Spaces AI] component registry: ${err && err.message}`);
+        vocabularyCache = { key: base, at: now(), text: '' };
+        return '';
+    } finally {
+        if (timer) clearTimeout(timer);
+    }
+}
+
 function createSpacesAi({ config, client: injected = null, log = console }) {
     let ai = injected;
     const enabled = () => Boolean(injected || (config.spaces.ai.enabled && config.oauth.clientSecret));
@@ -39,7 +71,9 @@ function createSpacesAi({ config, client: injected = null, log = console }) {
      */
     async function build(person, { prompt, name, current, spaceId }) {
         if (!enabled()) throw unavailable();
-        const input = { prompt: String(prompt || '').slice(0, 4000), ...(name ? { name: String(name).slice(0, 40) } : {}), ...(current && current.length ? { current } : {}) };
+        // The public component registry is the builder's vocabulary. Tests inject the AI client, so they never fetch it.
+        const components = injected ? '' : await registryVocabulary(config, { log });
+        const input = { prompt: String(prompt || '').slice(0, 4000), ...(name ? { name: String(name).slice(0, 40) } : {}), ...(current && current.length ? { current } : {}), ...(components ? { components } : {}) };
         let body;
         try {
             body = await client().runs.create('space.app.build', input, {
@@ -92,4 +126,4 @@ function createSpacesAi({ config, client: injected = null, log = console }) {
     return { enabled, build, result, ask };
 }
 
-module.exports = { createSpacesAi };
+module.exports = { createSpacesAi, registryVocabulary };

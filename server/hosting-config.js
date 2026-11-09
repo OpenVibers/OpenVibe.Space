@@ -188,6 +188,9 @@ function load(env = process.env) {
             ai: {
                 enabled: String(env.SPACE_AI || 'on').trim().toLowerCase() !== 'off',
                 url: trim(env.OV_AI_INTERNAL_URL || env.OV_AI_URL || 'http://127.0.0.1:4700'),
+                // The AI builder reads OpenVibe.Design's public component registry (design.component@1) as its
+                // interface vocabulary. A build never waits long for it: on failure the prompt goes without it.
+                designUrl: trim(env.OV_DESIGN_URL || 'https://openvibe.design'),
             },
             // Guest drafts (openvibe.website, plan 5.9): a visitor who is not signed in makes a draft with a
             // secret edit link and claims it later. These limits are the abuse screen's first half: what one
