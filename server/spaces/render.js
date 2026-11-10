@@ -323,7 +323,6 @@ function connectPage({ viewer, space, csrf, challenge, state, returnPath }) {
  */
 function signInPage({ path, next, title = 'Sign in to continue' }) {
     const body = `<div class="sp-wrap">
-  <p class="eyebrow">OpenVibe.Space</p>
   ${kit.pageHead({ title: `${title}`, icon: 'home', back: { href: '/', label: 'Home' } , lede: `Spaces are made with your OpenVibe account. Sign in and you come straight back here.` })}
   <p><a class="sp-btn" href="${esc(signInHref(next))}">Sign in with OpenVibe</a></p>
 </div>`;
