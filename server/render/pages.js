@@ -39,6 +39,24 @@ function defaultQuotas() {
     return quotas;
 }
 
+/**
+ * The home's picture: a sentence in, an app out. The request a person types ("A sign-up sheet for our game night"),
+ * and under it the space that comes back, as a small window: its address, a title, the list people add themselves
+ * to, and its one button. Plain markup and CSS (public/css/space.css, .sp-scene): the window rises in and its rows
+ * arrive once, and everything is simply in place under reduced motion. The words in it are an example, and the caption
+ * says so.
+ */
+function spaceScene() {
+    return `<figure class="sp-scene" aria-label="An example: a request, and the space it becomes">
+<p class="sp-scene-ask"><span>You ask</span><b>A sign-up sheet for our game night</b></p>
+<div class="sp-scene-win">
+<p class="sp-scene-bar"><i></i><i></i><i></i><span>game-night.openvibe.space</span></p>
+<div class="sp-scene-app"><b>Game night, Friday</b>
+<ul><li><span class="sp-scene-av" style="--h:200">M</span>maru<em>bringing snacks</em></li><li><span class="sp-scene-av" style="--h:120">K</span>kiwi<em>two guests</em></li><li><span class="sp-scene-av" style="--h:320">T</span>teddy</li></ul>
+<span class="sp-scene-btn">Add my name</span></div></div>
+<figcaption>An example: one sentence in, a space people can sign in to and use.</figcaption></figure>`;
+}
+
 /** Hosting is working for staff; dynamic pages and spaces are the next stage. */
 function homePage() {
     const q = defaultQuotas();
@@ -107,24 +125,9 @@ curl -X POST "https://openvibe.space/api/v1/sites/$SITE_ID/deploys?activate=1" \
     const body = sc.hero({ pageHead: { icon: 'home' },
         eyebrow: 'OpenVibe.Space · spaces',
         title: 'Make a space.',
-        // The hero's picture is this site's own (2026-11-01): it drew the generic aura, the same on six homes.
-        // What a space is made of, around the space: sign-in, AI, data, hosting and the editor.
-        orbit: {
-            label: 'What a space has',
-            center: { title: 'Your space', sub: 'an app on your account' },
-            inner: [
-                { icon: 'ov:account', label: 'Sign-in', href: '/spaces/new' },
-                { icon: 'ov:ai', label: 'AI', href: '/spaces/new' },
-                { icon: 'ov:drive', label: 'Your data', href: '/spaces/new' },
-                { icon: 'ov:website', label: 'Hosting', href: '/dashboard' },
-                { icon: 'ov:code', label: 'Editor', href: '/spaces/new' },
-            ],
-            outer: [
-                { icon: 'ov:network', label: 'Network', href: 'https://openvibe.network/' },
-                { icon: 'ov:media', label: 'Media', href: 'https://openvibe.media/' },
-                { icon: 'ov:community', label: 'Community', href: 'https://openvibe.community/' },
-            ],
-        },
+        // The hero's picture is what Space does, drawn (2026-11-10; the owner: no more "generic circled" homes): what
+        // a person asks for, and the small app that comes back at its own address. An example, and it says so.
+        aside: { html: spaceScene() },
         accent: 'An app on your OpenVibe account.',
         lede: 'Describe what you want and OpenVibe AI builds it, or start from a template and change anything in the editor. A space signs visitors in with OpenVibe, keeps shared lists and private data, and talks to OpenVibe AI.',
         actions: [
