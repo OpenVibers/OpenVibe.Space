@@ -8,7 +8,7 @@ body {
 
 /* The showcase sections carry their own width and gutters; the page only spaces them from the footer. */
 .page {
-  padding: 0 0 72px;
+  padding: 0;
 }
 
 /* Error pages: one centred column in the same type as the showcase hero. */
