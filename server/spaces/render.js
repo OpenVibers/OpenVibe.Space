@@ -55,7 +55,6 @@ function templateCards(templates, { viewer, csrf, compact = false }) {
 
 function galleryPage({ viewer, spaces, templates, q, sort, csrf }) {
     const hero = sc.hero({ pageHead: { icon: 'home' },
-        eyebrow: 'OpenVibe.Space · spaces',
         title: 'Make a space.',
         accent: 'An app on your OpenVibe account.',
         lede: 'Describe it and OpenVibe AI builds it, or start from a template and change anything in the editor. Spaces sign visitors in with OpenVibe, keep shared lists and private data, talk to OpenVibe AI and run their own server code.',
@@ -281,7 +280,6 @@ function guestPage({ templates, error, prompt, aiOn, pick = null, from = null })
   <form method="post" action="/spaces/guest"><input type="hidden" name="template" value="${esc(t.id)}"><button class="sp-btn">Start from this</button></form>
 </div>`).join('');
     const body = `<div class="sp-wrap">
-  <p class="eyebrow">OpenVibe.Space</p>
   ${kit.pageHead({ title: `Make a site.`, icon: 'home', back: { href: '/', label: 'Home' } , lede: `No account needed. Start from a template or describe what you want and OpenVibe AI writes it. You get a private link to edit it; sign in later to keep it.` })}
   ${error ? `<p class="sp-flash is-bad" role="alert">${esc(error)}</p>` : ''}
   ${picked}
