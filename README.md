@@ -2,6 +2,9 @@
 
 **https://openvibe.space — spaces (apps people make on their OpenVibe account) and static hosting for the OpenVibe network.**
 
+**Live site:** https://openvibe.space · **API docs:** https://openvibe.services · **For AI:** https://openvibe.space/llms.txt
+**Run it:** `npm ci && npm run dev` (Node 22 or newer) · **Tests:** `npm test`
+
 ## Purpose and status
 
 Space owns static hosting. The Stage B engine moved here from OpenVibe.Host as code; production had no projects, sites or deploys to migrate. It supports projects and members, immutable content-addressed deploys, activation and one-step rollback, private previews, CI Git ingest, per-site configuration, verified custom domains, takedowns, Media-backed objects, Host-header tenant serving, and a resource index. Tenant names serve at `<name>.openvibe.website`.
