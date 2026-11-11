@@ -53,7 +53,7 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, outb
         ownedCount: db.prepare("SELECT COUNT(*) AS n FROM space_apps WHERE owner_subject = ? AND status = 'active'"),
         mine: db.prepare("SELECT * FROM space_apps WHERE owner_subject = ? AND status = 'active' ORDER BY updated_at DESC LIMIT 100"),
         insert: db.prepare(`INSERT INTO space_apps (id, slug, owner_subject, owner_username, owner_name, name, description, instructions, capabilities,
-                            template, forked_from, visibility, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'public', ?, ?)`),
+                            template, forked_from, visibility, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`),
         files: db.prepare('SELECT path, content FROM space_app_files WHERE space_id = ? ORDER BY path'),
         clearFiles: db.prepare('DELETE FROM space_app_files WHERE space_id = ?'),
         addFile: db.prepare('INSERT INTO space_app_files (space_id, path, content, updated_at) VALUES (?, ?, ?, ?)'),
@@ -211,9 +211,11 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, outb
         const now = store.now();
         const id = `spc_${ids.ulid(now)}`;
         const slug = input.slug ? await fixedSlug(input.slug) : await uniqueSlug(name);
+        const publishedAudience = sharing ? await sharing.defaultAudience(person.subject) : 'public';
         await store.tx(async () => {
             await q.insert.run(id, slug, person.subject, person.username, person.name, name, text(input.description, 400), String(input.instructions || '').trim().slice(0, 4000),
-                JSON.stringify(capsOf(input.capabilities)), input.template ? text(input.template, 40) : null, input.forked_from || null, now, now);
+                JSON.stringify(capsOf(input.capabilities)), input.template ? text(input.template, 40) : null, input.forked_from || null,
+                publishedAudience === 'link' ? 'unlisted' : 'public', now, now);
             for (const f of fileList) await q.addFile.run(id, f.path, f.content, now);
             // A new space is a draft: Only me until its maker shares it or publishes it.
             if (sharing) await sharing.register(viewer, id, 'private');

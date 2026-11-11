@@ -116,6 +116,33 @@ function createSharing({ db, config, outbox, publication, now = Date.now, fetchI
     const sv = (viewer) => shareViewer(viewer);
     const at = (id) => refOf(id);
 
+    async function defaultAudience(owner) {
+        const row = await db.maybe('SELECT audience FROM space_share_defaults WHERE owner_subject = $1', [owner]);
+        return row ? row.audience : 'public';
+    }
+    async function setDefaultAudience(owner, audience) {
+        if (!['public', 'link'].includes(audience)) throw new Error('Invalid published space default');
+        await db.exec(`INSERT INTO space_share_defaults (owner_subject, audience) VALUES ($1, $2)
+            ON CONFLICT (owner_subject) DO UPDATE SET audience = excluded.audience, updated_at = now()`, [owner, audience]);
+    }
+    async function applyDefault(owner, audience) {
+        if (!['public', 'link'].includes(audience)) throw new Error('Invalid published space default');
+        const rows = await db.many(`SELECT id FROM space_apps WHERE owner_subject = $1 AND status = 'active' AND site_id IS NOT NULL`, [owner]);
+        let changed = 0;
+        for (const row of rows) {
+            const current = await db.maybe('SELECT audience FROM shares WHERE service = $1 AND kind = $2 AND resource_id = $3', [SERVICE, KIND, row.id]);
+            if (!current) {
+                await shares.register(at(row.id), { owner_subject: { type: 'user', id: owner }, audience });
+                await onAudienceChange(at(row.id), audience, db);
+                changed++;
+            } else if (current.audience !== audience) {
+                await shares.setAudience(sv({ subject: owner }), at(row.id), audience);
+                changed++;
+            }
+        }
+        return changed;
+    }
+
     return {
         shares,
         SERVICE,
@@ -123,6 +150,7 @@ function createSharing({ db, config, outbox, publication, now = Date.now, fetchI
         AUDIENCES,
         refOf,
         shareViewer,
+        defaultAudience, setDefaultAudience, applyDefault,
         /** Register a post with the sharing system (inside the post's own transaction). */
         register: async (viewer, id, audience = 'private') => await shares.register(at(id), {
             owner_subject: viewer && viewer.subject ? { type: String(viewer.subject).startsWith('gst_') ? 'guest' : 'user', id: viewer.subject } : { type: 'service', id: SERVICE },

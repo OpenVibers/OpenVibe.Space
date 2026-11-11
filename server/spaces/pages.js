@@ -290,7 +290,17 @@ function createSpacesPages(ctx) {
 
     router.get('/spaces/mine', view(async (req, res) => {
         if (!signedIn(req)) throw new ApiError(401, 'auth.required', 'sign in first');
-        html(res, 200, render.minePage({ spaces: await spaces.mine(req.viewer) }));
+        html(res, 200, render.minePage({ spaces: await spaces.mine(req.viewer),
+            shareDefault: await ctx.sharing.defaultAudience(req.viewer.subject), csrf: csrfOf(req) }));
+    }));
+
+    router.post('/spaces/mine/share-default', ...action(async (req, res) => {
+        const audience = String((req.body || {}).audience || '');
+        if (!['public', 'link'].includes(audience)) throw new ApiError(422, 'space.invalid_default', 'choose Everyone or Anyone with the link for published spaces');
+        const owner = spaces.personOf(req.viewer).subject;
+        await ctx.sharing.setDefaultAudience(owner, audience);
+        if (req.body && req.body.apply === '1') await ctx.sharing.applyDefault(owner, audience);
+        res.redirect(303, '/spaces/mine');
     }));
 
     router.get('/spaces/:slug', view(async (req, res) => {
