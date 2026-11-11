@@ -57,6 +57,11 @@ function createSpacesApi({ config, spaces, data, sites, takedowns, log = console
         } catch (err) { sendError(res, err); }
     };
 
+    router.get('/gallery', async (req, res) => {
+        try { send(res, 200, await spaces.galleryFeed({ before: req.query.cursor, limit: req.query.limit })); }
+        catch (err) { sendError(res, err); }
+    });
+
     // Preflight: answered for the space's own origin only.
     router.options('/:id/*', async (req, res) => {
         try {

@@ -171,6 +171,10 @@ function fakeAi() {
     });
 
     await check('the gallery and the sitemap list a published public space; its page embeds it', async () => {
+        const feed = await t.api('GET', '/api/v1/apps/gallery?limit=1');
+        assert.strictEqual(feed.status, 200, feed.text);
+        assert.ok(feed.json().spaces.some((x) => x.id === space.id && x.url === url));
+        assert.strictEqual((await t.api('GET', '/api/v1/apps/gallery?cursor=bad')).status, 400);
         assert.match((await t.api('GET', '/spaces')).text, new RegExp(`href="/spaces/${slug}"`));
         assert.match((await t.api('GET', '/sitemap.xml')).text, new RegExp(`/spaces/${slug}</loc>`));
         const p = await t.api('GET', `/spaces/${slug}`, { session: bob });
@@ -291,6 +295,7 @@ function fakeAi() {
 
     await check('unpublishing stops the address and the API; deleting removes the space', async () => {
         await edit(alice, 'POST', `/spaces/${slug}/unpublish`);
+        assert.ok(!(await t.api('GET', '/api/v1/apps/gallery')).json().spaces.some((x) => x.id === space.id));
         assert.notStrictEqual((await t.get(`${slug}.openvibe.website`, '/')).status, 200);
         assert.strictEqual((await t.api('GET', `/api/v1/apps/${space.id}/items/notes`, { headers: { origin: url } })).status, 404);
         assert.strictEqual((await t.api('GET', `/spaces/${slug}`, { session: bob })).status, 404, 'a draft again');
