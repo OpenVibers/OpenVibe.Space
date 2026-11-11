@@ -72,6 +72,9 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, outb
         gallery: db.prepare(`SELECT * FROM space_apps WHERE status = 'active' AND site_id IS NOT NULL AND visibility = 'public'
                              AND (? = '' OR name ILIKE ? OR description ILIKE ? OR owner_username ILIKE ?)
                              ORDER BY CASE WHEN ? = 'popular' THEN forks ELSE 0 END DESC, published_at DESC LIMIT ?`),
+        galleryFeed: db.prepare(`SELECT * FROM space_apps WHERE status = 'active' AND site_id IS NOT NULL AND visibility = 'public'
+                             AND (?::bigint IS NULL OR published_at < ?::bigint OR (published_at = ?::bigint AND id < ?))
+                             ORDER BY published_at DESC, id DESC LIMIT ?`),
         counter: db.prepare(`INSERT INTO space_app_counters (scope, day, n) VALUES (?, ?, 1)
                              ON CONFLICT (scope, day) DO UPDATE SET n = space_app_counters.n + 1 RETURNING n`),
         counterGet: db.prepare('SELECT n FROM space_app_counters WHERE scope = ? AND day = ?'),
@@ -513,11 +516,29 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, outb
         }
         return out;
     }
+    async function galleryFeed({ before = null, limit = 40 } = {}) {
+        const match = before ? /^(\d{10,16}):(spc_[0-9A-HJKMNP-TV-Z]{26})$/.exec(String(before)) : null;
+        if (before && !match) throw new ApiError(400, 'space.invalid_cursor', 'invalid gallery cursor');
+        const at = match ? Number(match[1]) : null;
+        const id = match ? match[2] : '';
+        const take = Math.min(100, Math.max(1, Number.parseInt(limit, 10) || 40));
+        const rows = await q.galleryFeed.all(at, at, at, id, take + 1);
+        const visible = [];
+        for (const r of rows) {
+            const site = await sites.get(r.site_id);
+            if (site && site.status === 'active' && !(takedowns && await takedowns.ofSite(site))) visible.push(r);
+        }
+        const page = visible.slice(0, take);
+        const last = rows.length > take ? rows[take - 1] : null;
+        return { spaces: page.map((r) => ({ id: r.id, slug: r.slug, name: r.name, description: r.description,
+            url: urlOf(r), owner_name: r.owner_name, owner_username: r.owner_username,
+            published_at: Number(r.published_at) })), next_cursor: last ? `${last.published_at}:${last.id}` : null };
+    }
     async function mine(viewer) { return await q.mine.all(personOf(viewer).subject); }
 
     return {
         CAPABILITIES, isSpaceId, get, getBySlug, forSite, load, isOwner, files, create, saveFiles, updateSettings, fork,
-        startBuild, finishBuild, failBuild, spend, used, canPublish, publish, unpublish, publishedFiles, remove, gallery, mine, hostnameOf, urlOf,
+        startBuild, finishBuild, failBuild, spend, used, canPublish, publish, unpublish, publishedFiles, remove, gallery, galleryFeed, mine, hostnameOf, urlOf,
         personOf, capsOf, checkFiles, DAY,
         // The person's one agent (plan 2026-10-22 §Z stage Z1)
         ownedOf, mineOf, viewerOf, setAgentTask, setAgentState, setAgentStep, agentRunning,
