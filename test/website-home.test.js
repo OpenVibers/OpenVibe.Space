@@ -40,11 +40,13 @@ assert.match(hostingSrc, /target\.kind === 'dashboard' \|\| target\.kind === 'we
             assert.strictEqual((r.text.match(/<h1[\s>]/g) || []).length, 1, 'one h1');
             assert.ok(r.text.includes('"@type":"FAQPage"'), 'its questions are structured data');
             assert.ok(r.text.includes('href="https://connect.openvibe.website/"'), 'the other half of openvibe.website: your own computer, through Connect');
+            assert.ok(r.text.includes('src="/js/website-arrival.js"'), 'a Network account continues on Space without a Website cookie');
         });
 
         await check('no cookie, ever: none set, none read, no sign-in or API on this host', async () => {
             const home = await t.get('openvibe.website', '/', { headers: { cookie: 'ov_token=x; sp_sess=y' } });
             assert.strictEqual(home.headers['set-cookie'], undefined, 'the home sets no cookie');
+            assert.strictEqual((await t.get('openvibe.website', '/js/website-arrival.js')).status, 200);
             for (const p of ['/auth/login', '/api/v1/projects', '/dashboard', '/spaces/new', '/updates']) {
                 const r = await t.get('openvibe.website', p);
                 assert.strictEqual(r.status, 404, `${p} is not served here`);

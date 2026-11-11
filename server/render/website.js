@@ -119,7 +119,7 @@ function page({ base, title, canonicalPath, body, jsonLd, robots }) {
         name: NAME, service: 'space', lang: 'en', title, siteName: NAME, description: DESCRIPTION,
         canonical: `${base}${canonicalPath}`, robots: robots || 'index,follow', type: 'website', summary: DESCRIPTION, url: `${base}${canonicalPath}`,
         jsonLd,
-        // Nobody is ever signed in on this host (server/website.js): the navbar's sign-in goes to openvibe.space.
+        // The cookie-free front door sends a Network-signed-in person to Space's own account session.
         navbar: { service: 'space', apiBase: 'https://openvibe.network', links, sessionUrl: '/auth/me', loginUrl: `${SPACE}/auth/login?next=/spaces/mine` },
         home: '/', navLinks: links.map(({ label, href }) => ({ label, href })),
         footer: { service: 'space', variant: 'auto', path: canonicalPath },
@@ -129,6 +129,7 @@ function page({ base, title, canonicalPath, body, jsonLd, robots }) {
             `<link rel="stylesheet" href="${ovServe.url('room.css')}">`,
             `<link rel="stylesheet" href="${asset('css/space.css')}">`,
             `<link rel="stylesheet" href="${asset('css/website.css')}">`,
+            '<script src="/js/website-arrival.js" defer></script>',
         ].join('\n'),
         bodyAttributes: { 'data-page': 'website' },
         body: `<div id="navbar-mount"></div>\n<main id="main" class="page">\n${body}\n</main>`,
