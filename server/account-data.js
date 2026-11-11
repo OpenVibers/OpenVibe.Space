@@ -23,6 +23,7 @@ const TABLES = [
     { table: 'space_app_tokens', subject: 'subject', file: null },
     { table: 'space_app_codes', subject: 'subject', file: null },
     { table: 'space_app_counters', subject: 'scope', value: (usr) => `build:${usr}`, file: null },
+    { table: 'space_share_defaults', subject: 'owner_subject', file: 'space-share-defaults.json', columns: ['audience', 'updated_at'] },
     { table: 'space_project_members', subject: 'principal', file: 'hosting-project-roles.json', columns: ['project_id', 'role', 'created_at'] },
     // The forum spaces this person started: the space stays as the community's record, without its creator.
     { table: 'spaces', subject: 'created_by', file: 'forum-spaces.json', columns: ['id', 'slug', 'name', 'description', 'visibility', 'created_at'], order: 'id', erase: { anonymize: {} } },

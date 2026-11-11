@@ -126,9 +126,14 @@ function newPage({ viewer, templates, csrf, error, prompt, aiOn, buildsLeft, pic
     return page({ title: 'New space', path: '/spaces/new', robots: 'noindex,nofollow', body });
 }
 
-function minePage({ spaces }) {
+function minePage({ spaces, shareDefault = 'public', csrf = '' }) {
     const body = `<div class="sp-wrap">
   <div class="sp-head">${kit.pageHead({ title: `Your spaces`, icon: 'home', back: { href: '/', label: 'Home' } })}<a class="sp-btn" href="/spaces/new"><i class="fa-solid fa-plus" aria-hidden="true"></i> New space</a></div>
+  <form method="post" action="/spaces/mine/share-default"><input type="hidden" name="csrf" value="${esc(csrf)}">
+    <label>New published spaces <select name="audience"><option value="public"${shareDefault === 'public' ? ' selected' : ''}>Everyone</option><option value="link"${shareDefault === 'link' ? ' selected' : ''}>Anyone with the link</option></select></label>
+    <label><input type="checkbox" name="apply" value="1"> Apply to all my published spaces</label>
+    <button class="sp-btn sp-btn-quiet" type="submit">Save default</button><p class="sp-muted">Drafts stay Only me until you share or publish them.</p>
+  </form>
   ${spaces.length ? `<div class="sp-grid">${spaces.map((s) => card(s, { mine: true })).join('')}</div>` : '<p class="sp-empty">You have not made a space yet. <a href="/spaces/new">Make your first one</a>: describe it, or start from a template.</p>'}
 </div>`;
     return page({ title: 'Your spaces', path: '/spaces/mine', robots: 'noindex,nofollow', body });
