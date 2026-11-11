@@ -524,13 +524,12 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, outb
         const take = Math.min(100, Math.max(1, Number.parseInt(limit, 10) || 40));
         const rows = await q.galleryFeed.all(at, at, at, id, take + 1);
         const visible = [];
-        for (const r of rows) {
+        for (const r of rows.slice(0, take)) {
             const site = await sites.get(r.site_id);
             if (site && site.status === 'active' && !(takedowns && await takedowns.ofSite(site))) visible.push(r);
         }
-        const page = visible.slice(0, take);
         const last = rows.length > take ? rows[take - 1] : null;
-        return { spaces: page.map((r) => ({ id: r.id, slug: r.slug, name: r.name, description: r.description,
+        return { spaces: visible.map((r) => ({ id: r.id, slug: r.slug, name: r.name, description: r.description,
             url: urlOf(r), owner_name: r.owner_name, owner_username: r.owner_username,
             published_at: Number(r.published_at) })), next_cursor: last ? `${last.published_at}:${last.id}` : null };
     }
