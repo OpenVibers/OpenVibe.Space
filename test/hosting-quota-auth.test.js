@@ -18,6 +18,17 @@ const DAY = 24 * 3600 * 1000;
     const site = await t.site(alice, project.id, 'quota-site');
     const setQuota = (q) => t.api('PUT', `/api/v1/projects/${project.id}/quota`, { as: staff, json: q });
 
+    await check('site upload form shows the shared picker and its live project limits', async () => {
+        const page = await t.api('GET', `/sites/${site.id}`, { session: alice });
+        assert.strictEqual(page.status, 200);
+        assert.match(page.text, /ov-upload\.css/);
+        assert.match(page.text, /ov-upload\.js/);
+        assert.match(page.text, /js\/hosting-upload\.js/);
+        assert.match(page.text, /data-folder-picker/);
+        assert.match(page.text, /data-archive-picker/);
+        assert.match(page.text, /data-max-upload-bytes="65536"/);
+    });
+
     await check('only staff change quotas; the owner reads them', async () => {
         const mine = await t.api('PUT', `/api/v1/projects/${project.id}/quota`, { as: alice, json: { deploys_per_day: 1000 } });
         assert.strictEqual(mine.status, 403);
