@@ -26,8 +26,8 @@ function createDashboard(ctx) {
     if (ctx.actorLimits) router.use(ctx.actorLimits);
     router.use((req, res, next) => { privateNoStore(res); next(); });
 
-    function page(req, res, status, title, body, notice, { indexable = false, styles, css, jsonLd } = {}) {
-        res.status(status).type('html').send(renderPage({ title, body, viewer: req.viewer, config, path: req.originalUrl, notice, indexable, styles, css, jsonLd }));
+    function page(req, res, status, title, body, notice, { indexable = false, styles, css, jsonLd, uploadKit = false } = {}) {
+        res.status(status).type('html').send(renderPage({ title, body, viewer: req.viewer, config, path: req.originalUrl, notice, indexable, styles, css, jsonLd, uploadKit }));
     }
 
     function fail(req, res, err) {
@@ -84,11 +84,12 @@ function createDashboard(ctx) {
         const cfg = await siteConfig.getForSite(site.id);
         page(req, res, 200, site.name, pages.site({
             site, project, role, url: siteUrl(site), csrf: csrfToken(config, req.viewer), now: ctx.store.now(),
+            uploadLimits: { ...(await deploys.limitsFor(project)), maxUploadBytes: config.uploads.maxUploadBytes },
             deploys: await deploys.list(site.id, 50), activations: await deploys.activationsOf(site.id, 10),
             domains: (await domains.listForSite(site.id)).map((d) => ({ domain: d, instructions: domains.instructions(d, site) })),
             siteConfig: { ...cfg, headersText: siteConfig.headersToText(cfg.headers), redirectsText: siteConfig.redirectsToText(cfg.redirects) },
             source: await siteSources.forSite(site.id),
-        }), takedownNotice(await ctx.takedowns.ofSite(site)) || notice(req));
+        }), takedownNotice(await ctx.takedowns.ofSite(site)) || notice(req), { uploadKit: true });
     }));
 
     router.get('/deploys/:id', view(async (req, res) => {

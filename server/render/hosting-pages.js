@@ -105,7 +105,7 @@ function domainBlock(d, instructions, csrf) {
     return `${body}</li>`;
 }
 
-function site({ site: s, project: p, role, deploys, activations, domains, siteConfig, csrf, url, now = Date.now() }) {
+function site({ site: s, project: p, role, deploys, activations, domains, siteConfig, csrf, url, uploadLimits, now = Date.now() }) {
     const canMaintain = role === 'owner' || role === 'maintainer' || role === 'staff';
     const canDeploy = role !== 'staff';
     // The site's one live preview (plan T12 J4): served to project members on this dashboard until it expires.
@@ -127,10 +127,11 @@ function site({ site: s, project: p, role, deploys, activations, domains, siteCo
     return `<div class="hd-head">${crumbs([['/dashboard', 'Projects'], [`/projects/${p.id}`, p.name]])}
 ${kit.pageHead({ title: `${s.name}`, icon: 'server', back: { href: '/', label: 'Home' } })}
 <p class="hd-chips"><a class="hd-url hd-url--big" href="${esc(url)}" rel="noopener">${esc(url.replace(/^https?:\/\//, ''))} ${icon('fa-arrow-up-right-from-square')}</a> ${status} <code>${esc(s.id)}</code></p></div>
-${canDeploy ? card('Upload a deploy', form(`/sites/${s.id}/deploys`, csrf, `<div class="hd-sources">
-<fieldset class="hd-source"><legend>${icon('fa-folder-open')} A folder</legend><input type="file" name="files" multiple webkitdirectory aria-label="A folder to upload"><input type="hidden" name="strip" value="folder"></fieldset>
-<fieldset class="hd-source"><legend>${icon('fa-box-archive')} …or an archive (.tar.gz / .tar)</legend><input type="file" name="archive" accept=".tar,.tgz,.gz,application/gzip,application/x-tar" aria-label="An archive to upload (.tar.gz or .tar)"></fieldset>
+${canDeploy ? card('Upload a deploy', form(`/sites/${s.id}/deploys`, csrf, `<div class="hd-sources" data-max-files="${uploadLimits.maxFiles}" data-max-file-bytes="${uploadLimits.maxFileBytes}" data-max-upload-bytes="${uploadLimits.maxUploadBytes}">
+<fieldset class="hd-source"><legend>${icon('fa-folder-open')} A folder</legend><input type="file" name="files" multiple webkitdirectory aria-label="A folder to upload" data-deploy-folder><div data-folder-picker></div><input type="hidden" name="strip" value="folder"></fieldset>
+<fieldset class="hd-source"><legend>${icon('fa-box-archive')} …or an archive (.tar.gz / .tar)</legend><input type="file" name="archive" accept=".tar,.tgz,.gz,application/gzip,application/x-tar" aria-label="An archive to upload (.tar.gz or .tar)" data-deploy-archive><div data-archive-picker></div></fieldset>
 </div>
+<p class="hd-muted" id="deploy-limit">Up to ${uploadLimits.maxFiles.toLocaleString('en-US')} files, ${bytes(uploadLimits.maxFileBytes)} per file and ${bytes(uploadLimits.maxUploadBytes)} per upload. Archives must be .tar, .tgz or .tar.gz.</p><p role="alert" data-deploy-error hidden></p><div data-deploy-progress></div>
 <label class="hd-field hd-field--narrow">Deploy from subfolder (optional) <input name="root" placeholder="dist"></label>
 <fieldset class="hd-choices"><legend>When it is ready</legend>
 <label class="hd-choice"><input type="radio" name="mode" value="activate" checked><span><strong>Activate it</strong><span class="hd-muted">Live as soon as it is checked.</span></span></label>

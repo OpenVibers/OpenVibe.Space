@@ -137,6 +137,7 @@ function renderPage(o) {
         navbar: nav, home: '/', navLinks: nav.links.map(({ label, href }) => ({ label, href })),
         footer: { service: 'space', variant: 'auto', path: o.canonicalPath, updates: '/updates' },   // full on the front page only (Shared 4.19)
         head: [`<script src="${ovServe.url('kit-web.js')}" defer></script>`,
+            o.uploadKit ? `<script src="${ovServe.url('ov-upload.js')}" defer></script><script src="${asset('js/hosting-upload.js')}" defer></script>` : '',
             o.published ? `<meta property="article:published_time" content="${escapeHtml(o.published)}">` : '',
             o.modified ? `<meta property="article:modified_time" content="${escapeHtml(o.modified)}">` : '',
             appIcon.headTags({ site: 'space', iconBase: '/assets' }),
