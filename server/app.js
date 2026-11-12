@@ -174,7 +174,16 @@ async function createApp(opts = {}) {
     // /auth/me is the navbar's who-is-signed-in read on every page, so it is not counted with sign-ins: 60 page views in 15 minutes made a signed-in visitor look signed out.
     app.use('/auth/', rateLimit({ windowMs: 15 * 60_000, max: 60, skip: (req) => req.path === '/me', standardHeaders: true, legacyHeaders: false }));
     app.use('/auth', createAuthRoutes(config, auth));
-    { const legal = require('openvibe-shared/legal'); app.get(legal.PATHS, legal.handler({ id: 'space', service: 'space', host: 'openvibe.space', name: 'OpenVibe.Space', profile: 'ugc' })); app.get('/tos', (_req, res) => res.redirect(301, '/terms')); }
+    { const legal = require('openvibe-shared/legal');
+    // Shared's legal template starts the navbar without links, so /terms and /privacy showed its fallback
+    // (Home, My Account, Themes) instead of Space's own pages. Add Space's list to that init call.
+    const navLinks = JSON.stringify(require('./render/layout').navbarInit({ active: '' }).links.map(({ label, href }) => ({ label, href })));
+    app.get(legal.PATHS, (req, res, next) => {
+        const send = res.send.bind(res);
+        res.send = (body) => send(String(body).replace('try{OpenVibeNavbar.init({service:', `try{OpenVibeNavbar.init({links:${navLinks},service:`));
+        next();
+    }, legal.handler({ id: 'space', service: 'space', host: 'openvibe.space', name: 'OpenVibe.Space', profile: 'ugc' }));
+    app.get('/tos', (_req, res) => res.redirect(301, '/terms')); }
 
     // /updates: what shipped on OpenVibe.Space, the shared update log every OpenVibe site has (it pointed at the
     // community's log, which lists the community's changes, not this site's).
