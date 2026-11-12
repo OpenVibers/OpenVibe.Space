@@ -70,7 +70,7 @@ function navbarInit(opts) {
             { label: 'Home', href: '/', active: opts.active === 'home' },
             { label: 'Spaces', href: '/spaces', active: opts.active === 'spaces' },
             { label: 'Hosting', href: '/dashboard' },
-            { label: 'The forum', href: `${config.communityUrl}/forum` },
+            { label: 'Community', href: `${config.communityUrl}/forum` },
         ],
         menu: { after: [{ label: 'OpenVibe.Network', href: NETWORK_URL, icon: 'fa-globe' }] },
         history: { type: opts.historyType || 'page', title: opts.historyTitle || opts.title },
@@ -169,4 +169,4 @@ document.addEventListener('DOMContentLoaded', function () {
     return html;
 }
 
-module.exports = { renderPage, asset, assetVersion, abs, setRelease, escapeHtml, SITE_NAME, DEFAULT_DESCRIPTION, DEFAULT_OG_IMAGE };
+module.exports = { renderPage, asset, assetVersion, abs, setRelease, escapeHtml, SITE_NAME, DEFAULT_DESCRIPTION, DEFAULT_OG_IMAGE, navbarInit };
