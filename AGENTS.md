@@ -75,7 +75,7 @@ Vhosts live in `deploy/nginx/` (installed with `ov-vhost-install`). The `.gitign
 
 ```bash
 npm ci
-npm run dev                 # http://127.0.0.1:PORT
+npm run dev                 # http://127.0.0.1:4940
 npm test                    # every test/*.test.js, in-process Network/Media/Chat/VIP mocks
 npm test -- spaces deploy   # only matching files
 npm run test:pg             # the same on the PostgreSQL containers
