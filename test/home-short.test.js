@@ -12,31 +12,28 @@ const { boot, check, done } = require('./helpers/app');
 (async () => {
     const t = await boot();
     try {
-        await check('the home is one pick block: a chip per part, the first picked, every part in the page', async () => {
+        await check('the home is one pick block: on a phone its parts are tabs, the first open, every part in the page', async () => {
             const r = await t.get('/');
             assert.strictEqual(r.status, 200, r.text);
             const page = r.text;
             // From the block to the end of the page: its panes grew past a fixed window when section heads gained an icon (Shared 4.160.0).
             const block = page.slice(page.indexOf('<div class="pick" id="pick-parts">'));
             assert.ok(block.startsWith('<div class="pick" id="pick-parts">'), 'the pick block is on the home');
-            assert.match(block, /<nav class="pick-row" data-ovk-scroll aria-label="What Space does">/);
-            const chips = [...block.matchAll(/<a class="pick-chip" href="#(?:pp-parts-)?([a-z]+)">()([^<]+)<\/a>/g)];
-            assert.ok(chips.length >= 5, `a chip per part (${chips.length})`);
-            assert.ok(!/type="radio"/.test(block), 'no chip is a radio: nothing is picked, every pane shows');
-            // Every part stays in the page, with the id its chip picks.
+            // The owner, 11-11: "self-contained tabs, so the page isn't so freaking huge … at least on mobile" (Shared's
+            // showcase.parts, a front page: tabs at 600 px and under; the old chips only jumped, so every pane showed).
+            assert.match(block, /<div class="ov-parts ov-parts--front" data-parts="\d">/);
+            const tabs = [...block.matchAll(/<label for="ovp-parts-([a-z]+)">([^<]+)<\/label>/g)];
+            assert.ok(tabs.length >= 5, `a tab per part (${tabs.length})`);
+            assert.ok(block.includes(`id="ovp-parts-${tabs[0][1]}" value="${tabs[0][1]}" checked>`), 'the first part is open');
+            assert.ok(!block.includes('class="pick-chip"'), 'no jump chips beside the tabs');
+            // Every part stays in the page, with the id a link opens it by.
             const panes = [...block.matchAll(/<div class="pick-pane" id="([a-z]+)">/g)].map((m) => m[1]);
-            assert.deepStrictEqual(panes, chips.map((m) => m[1]), 'every part is in the page, one per chip');
+            assert.deepStrictEqual(panes, tabs.map((m) => m[1]), 'every part is in the page, one per tab');
             // The parts themselves are all there: nothing was removed.
             for (const title of ['Start from a template', 'How a space comes together', 'How a deploy works', 'What works now', 'The same over the API', 'Quotas per project']) {
                 assert.ok(page.includes(title), `${title} is on the page`);
             }
-        });
-
-        await check('the CSS guard: the chips are hidden and the parts all show until 640 px and where :has() is understood', async () => {
-            const r = await t.get('/');
-            const page = r.text;
-            const css = fs.readFileSync(path.join(__dirname, '..', 'public', 'css', 'space.css'), 'utf8');
-            assert.match(css, /\.pick-row \{ display: none; \}/, 'the chips are hidden by default');
+            assert.match(page, /<link rel="stylesheet" href="\/shared\/ov-parts\.css[^"]*">/, 'the tabs\' look is linked before the page draws');
         });
 
         await check('the parts a reader rarely needs are folds, open in the page and closed on a phone', async () => {

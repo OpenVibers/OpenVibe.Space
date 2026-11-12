@@ -2,9 +2,9 @@
 /**
  * The home on a phone (the owner's short-pages rule, 2026-10-30): one or two screens, app-like.
  *
- *   pickBlock()  several blocks of the same kind, one at a time on a phone, picked with a row of chips. Radio
- *                inputs and :has(), no script: every block stays in the page for crawlers, and a wider screen (or a
- *                browser without :has()) shows them all and no chips.
+ *   pickBlock()  several blocks of the same kind, one at a time on a phone as tabs (showcase.parts): radios and
+ *                :has(), no script; every block stays in the page for crawlers, and a wider screen (or a browser
+ *                without :has()) shows them all.
  *   foldBlock()  a part a reader rarely needs, closed on a phone and open where there is room. The page's own markup
  *                keeps it open, so a browser without the script shows it as before; the script closes it on a narrow
  *                screen and remembers the reader's choice.
@@ -12,21 +12,19 @@
  * The CSS for both lives in public/css/space.css; the rule that shows the picked block is written for the page,
  * because there is one per block.
  */
+const { pick } = require('openvibe-shared/showcase');
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 /**
- * A pick block. The panes are the page's own blocks; each one keeps its heading on a wide screen, and on a phone the
- * heading gives way to the chip that names it.
+ * A pick block: the page's own blocks, one at a time as tabs on a phone (openvibe-shared showcase.parts, the same tabs
+ * as every OpenVibe page; the owner, 2026-11-11: "self-contained tabs, so the page isn't so freaking huge … at least on
+ * mobile"). Every pane stays in the page for crawlers, a wider screen stacks them, and a link to a pane's id (an
+ * anchor in the hero) opens its tab. The old chips only jumped to a pane, so a phone still showed all of them.
  *
  *   pickBlock({ key, label, head, panes })   panes: [{ id, label, html }]
  */
 function pickBlock({ key, label, head = '', panes }) {
-    if (!panes.length) return '';
-    const chips = panes.map((p) => `<a class="pick-chip" href="#${esc(p.id)}">${esc(p.label)}</a>`).join('');
-    // The pane carries the id the page already links to (an anchor in the hero, for instance), so a link to it still
-    // opens that pane on a phone (the CSS shows the pane a link points at).
-    const body = panes.map((p) => `<div class="pick-pane" id="${esc(p.id)}">${p.html}</div>`).join('');
-    return `<div class="pick" id="pick-${esc(key)}"><div class="pick-bar"><div class="pick-head"><h2>${esc(head || label)}</h2></div><nav class="pick-row" data-ovk-scroll aria-label="${esc(label)}">${chips}</nav></div><div class="pick-body">${body}</div></div>`;
+    return pick({ key, label, head, panes });
 }
 
 
