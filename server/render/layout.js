@@ -72,7 +72,7 @@ function navbarInit(opts) {
             { label: 'Hosting', href: '/dashboard' },
             { label: 'Community', href: `${config.communityUrl}/forum` },
         ],
-        menu: { after: [{ label: 'OpenVibe.Network', href: NETWORK_URL, icon: 'fa-globe' }] },
+        menu: { after: [{ label: 'OpenVibe.Network', href: NETWORK_URL, icon: 'globe' }] },
         history: { type: opts.historyType || 'page', title: opts.historyTitle || opts.title },
         silentLogin: `${config.baseUrl}/auth/login?silent=1&next={url}`,
         sessionUrl: '/auth/me',

@@ -1,6 +1,8 @@
 'use strict';
 const kit = require('openvibe-shared/kit');
 const sectionIcon = (name) => kit.icon(name, { cls: 'ovk-heading-icon' });
+// A template's glyph, in the ring icon the shared showcase draws (it only knows Font Awesome names otherwise).
+const RING = { 'book-open': 'docs', robot: 'bot', chart: 'report', zap: 'live', help: 'help', steps: 'quest', store: 'trade', pencil: 'design', calendar: 'calendar', link: 'link', rocket: 'space', file: 'docs' };
 
 /**
  * Page templates. Plain template strings, every value escaped, no framework. The markup is the whole
@@ -67,7 +69,7 @@ function homePage() {
         { id: 'templates', label: 'Templates', html: sc.features({
             title: 'Start from a template',
             lede: 'Each one is a working space you can open in the editor and change: sign-in, data and AI already wired.',
-            items: TEMPLATES.filter((t) => t.id !== 'blank').map((t) => ({ icon: t.icon, title: t.name, text: t.description, href: '/spaces/new' })),
+            items: TEMPLATES.filter((t) => t.id !== 'blank').map((t) => ({ icon: `ov:${RING[t.icon] || 'space'}`, title: t.name, text: t.description, href: '/spaces/new' })),
         }) },
         { id: 'make', label: 'Making one', html: sc.steps({
             title: 'How a space comes together',
@@ -89,14 +91,14 @@ function homePage() {
         { id: 'now', label: 'What works', html: sc.features({
             title: 'What works now',
             items: [
-                { icon: 'fa-cubes', title: 'Immutable deploys', text: 'Every deploy is content-addressed and kept: files are stored once by their hash, and a deploy never changes after upload.' },
-                { icon: 'fa-clock-rotate-left', title: 'Previews and rollback', text: 'A private preview for the project\'s members, one-step activation, and a rollback to the deploy that was live before.' },
-                { icon: 'fa-code-branch', title: 'Git deploys', text: 'Point a site at a public repository and branch; each ingest lands as a preview for someone to approve.' },
-                { icon: 'fa-globe', title: 'Your own address', text: 'Sites serve under openvibe.website. A custom domain is served once its TXT record proves it is yours.' },
-                { icon: 'fa-sliders', title: 'Headers and redirects', text: 'Per-site response headers, redirects and a single-page-app fallback. Platform security headers always win.' },
-                { icon: 'fa-users', title: 'Members and roles', text: 'Owners, maintainers and deployers per project; an app can deploy too, with a grant and a role, never as the owner.' },
-                { icon: 'fa-shield-halved', title: 'Takedowns kept for review', text: 'OpenVibe staff can stop serving a site or a whole project while its content is kept for review, and lift it again.' },
-                { icon: 'fa-terminal', title: 'An API for all of it', text: 'Projects, sites, deploys, domains and configuration over /api/v1, with OpenVibe.Network tokens and space.* capabilities.' },
+                { icon: 'ov:space', title: 'Immutable deploys', text: 'Every deploy is content-addressed and kept: files are stored once by their hash, and a deploy never changes after upload.' },
+                { icon: 'ov:history', title: 'Previews and rollback', text: 'A private preview for the project\'s members, one-step activation, and a rollback to the deploy that was live before.' },
+                { icon: 'ov:git', title: 'Git deploys', text: 'Point a site at a public repository and branch; each ingest lands as a preview for someone to approve.' },
+                { icon: 'ov:website', title: 'Your own address', text: 'Sites serve under openvibe.website. A custom domain is served once its TXT record proves it is yours.' },
+                { icon: 'ov:theme', title: 'Headers and redirects', text: 'Per-site response headers, redirects and a single-page-app fallback. Platform security headers always win.' },
+                { icon: 'ov:community', title: 'Members and roles', text: 'Owners, maintainers and deployers per project; an app can deploy too, with a grant and a role, never as the owner.' },
+                { icon: 'ov:shield', title: 'Takedowns kept for review', text: 'OpenVibe staff can stop serving a site or a whole project while its content is kept for review, and lift it again.' },
+                { icon: 'ov:code', title: 'An API for all of it', text: 'Projects, sites, deploys, domains and configuration over /api/v1, with OpenVibe.Network tokens and space.* capabilities.' },
             ],
         }) },
         { id: 'api', label: 'The API', html: sc.code({
@@ -131,8 +133,8 @@ curl -X POST "https://openvibe.space/api/v1/sites/$SITE_ID/deploys?activate=1" \
         accent: 'An app on your OpenVibe account.',
         lede: 'Describe what you want and OpenVibe AI builds it, or start from a template and change anything in the editor. A space signs visitors in with OpenVibe, keeps shared lists and private data, and talks to OpenVibe AI.',
         actions: [
-            { label: 'Make a space', href: '/spaces/new', primary: true, icon: 'fa-wand-magic-sparkles' },
-            { label: 'Browse spaces', href: '/spaces', icon: 'fa-shapes' },
+            { label: 'Make a space', href: '/spaces/new', primary: true, icon: 'ov:ai' },
+            { label: 'Browse spaces', href: '/spaces', icon: 'ov:space' },
         ],
         note: 'The builder, the editor and the preview work for everyone signed in. Publishing a space at its own address opens with public hosting.',
     }) + pickBlock({ key: 'parts', label: 'What Space does', head: 'What Space does', panes: parts })

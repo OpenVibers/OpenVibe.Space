@@ -10,10 +10,10 @@ const sectionIcon = (name) => kit.icon(name, { cls: 'ovk-heading-icon' });
 const { renderPage, escapeHtml: esc, asset } = require('../render/layout');
 
 const CAP_TEXT = {
-    profile: { icon: 'fa-user', text: 'Know who you are: your username and display name' },
-    data: { icon: 'fa-list', text: 'Add things you write to its shared lists, under your name' },
-    kv: { icon: 'fa-box-archive', text: 'Keep your own private data in this space' },
-    ai: { icon: 'fa-wand-magic-sparkles', text: 'Ask OpenVibe AI for you (it counts against your daily AI allowance)' },
+    profile: { icon: 'user', text: 'Know who you are: your username and display name' },
+    data: { icon: 'list', text: 'Add things you write to its shared lists, under your name' },
+    kv: { icon: 'archive', text: 'Keep your own private data in this space' },
+    ai: { icon: 'wand', text: 'Ask OpenVibe AI for you (it counts against your daily AI allowance)' },
 };
 const caps = (s) => { try { return JSON.parse(s.capabilities || '[]'); } catch { return []; } };
 const ago = (ms) => {
@@ -30,7 +30,7 @@ function page(o) {
 }
 
 const signInHref = (next) => `/auth/login?next=${encodeURIComponent(next)}`;
-const capList = (list) => `<ul class="sp-caps">${list.filter((c) => CAP_TEXT[c]).map((c) => `<li><i class="fa-solid ${CAP_TEXT[c].icon}" aria-hidden="true"></i> ${esc(CAP_TEXT[c].text)}</li>`).join('')}</ul>`;
+const capList = (list) => `<ul class="sp-caps">${list.filter((c) => CAP_TEXT[c]).map((c) => `<li><i class="ovg-fill" data-ov-icon="${CAP_TEXT[c].icon}" aria-hidden="true"></i> ${esc(CAP_TEXT[c].text)}</li>`).join('')}</ul>`;
 
 function card(s, { mine = false } = {}) {
     const live = Boolean(s.site_id);
@@ -40,13 +40,13 @@ function card(s, { mine = false } = {}) {
     <h3>${esc(s.name)}</h3>
     <p>${esc(s.description || 'No description yet.')}</p>
   </a>
-  <footer><span>${mine ? `edited ${esc(ago(s.updated_at))}` : `by @${esc(s.owner_username || 'someone')}`}</span>${s.forks ? `<span><i class="fa-solid fa-code-fork" aria-hidden="true"></i> ${Number(s.forks)}</span>` : ''}</footer>
+  <footer><span>${mine ? `edited ${esc(ago(s.updated_at))}` : `by @${esc(s.owner_username || 'someone')}`}</span>${s.forks ? `<span><i class="ovg-fill" data-ov-icon="branch" aria-hidden="true"></i> ${Number(s.forks)}</span>` : ''}</footer>
 </article>`;
 }
 
 function templateCards(templates, { viewer, csrf, compact = false }) {
     return `<div class="sp-templates ${compact ? 'is-compact' : ''}">${templates.map((t) => `<div class="sp-template" style="--tpl:${esc(t.accent)}">
-  <span class="sp-template-icon"><i class="fa-solid ${esc(t.icon)}" aria-hidden="true"></i></span>
+  <span class="sp-template-icon"><i class="ovg-fill" data-ov-icon="${esc(t.icon)}" aria-hidden="true"></i></span>
   <h3>${esc(t.name)}</h3><p>${esc(t.description)}</p>
   ${viewer ? `<form method="post" action="/spaces/new"><input type="hidden" name="csrf" value="${esc(csrf)}"><input type="hidden" name="template" value="${esc(t.id)}"><button class="sp-btn">Start from this</button></form>`
         : `<a class="sp-btn" href="${signInHref('/spaces/new')}">Sign in to start</a>`}
@@ -59,8 +59,8 @@ function galleryPage({ viewer, spaces, templates, q, sort, csrf }) {
         accent: 'An app on your OpenVibe account.',
         lede: 'Describe it and OpenVibe AI builds it, or start from a template and change anything in the editor. Spaces sign visitors in with OpenVibe, keep shared lists and private data, talk to OpenVibe AI and run their own server code.',
         actions: [
-            { label: 'Make a space', href: viewer ? '/spaces/new' : signInHref('/spaces/new'), primary: true, icon: 'fa-wand-magic-sparkles' },
-            ...(viewer ? [{ label: 'Your spaces', href: '/spaces/mine', icon: 'fa-shapes' }] : []),
+            { label: 'Make a space', href: viewer ? '/spaces/new' : signInHref('/spaces/new'), primary: true, icon: 'ov:ai' },
+            ...(viewer ? [{ label: 'Your spaces', href: '/spaces/mine', icon: 'ov:space' }] : []),
         ],
     });
     const list = spaces.length ? `<div class="sp-grid">${spaces.map((s) => card(s)).join('')}</div>`
@@ -84,10 +84,10 @@ function galleryPage({ viewer, spaces, templates, q, sort, csrf }) {
 <section class="sp-section sp-how" aria-labelledby="sp-how">
   <h2 id="sp-how" class="ovk-titled">${sectionIcon('members')}What a space can do</h2>
   <div class="sp-how-grid">
-    <div><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i><h3>Sign in with OpenVibe</h3><p>Visitors sign in with their OpenVibe account and approve what the space may do, once.</p></div>
-    <div><i class="fa-solid fa-list" aria-hidden="true"></i><h3>Shared lists</h3><p>Guestbooks, polls, leaderboards: things visitors add, under their name, that everyone can read.</p></div>
-    <div><i class="fa-solid fa-box-archive" aria-hidden="true"></i><h3>Private storage</h3><p>Each visitor's own data in your space: to-dos, saves, settings.</p></div>
-    <div><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i><h3>OpenVibe AI</h3><p>Give your space an AI with your own instructions; it answers your visitors.</p></div>
+    <div><i class="ovg-fill" data-ov-icon="enter" aria-hidden="true"></i><h3>Sign in with OpenVibe</h3><p>Visitors sign in with their OpenVibe account and approve what the space may do, once.</p></div>
+    <div><i class="ovg-fill" data-ov-icon="list" aria-hidden="true"></i><h3>Shared lists</h3><p>Guestbooks, polls, leaderboards: things visitors add, under their name, that everyone can read.</p></div>
+    <div><i class="ovg-fill" data-ov-icon="archive" aria-hidden="true"></i><h3>Private storage</h3><p>Each visitor's own data in your space: to-dos, saves, settings.</p></div>
+    <div><i class="ovg-fill" data-ov-icon="wand" aria-hidden="true"></i><h3>OpenVibe AI</h3><p>Give your space an AI with your own instructions; it answers your visitors.</p></div>
   </div>
   <p class="sp-note">Spaces are plain HTML, CSS and JavaScript with the space SDK (<code>/_openvibe/sdk.js</code>). The AI builder, the editor and the preview work for everyone signed in. Publishing a space at its own address opens together with OpenVibe.Space's public hosting.</p>
 </section>`;
@@ -96,12 +96,12 @@ function galleryPage({ viewer, spaces, templates, q, sort, csrf }) {
 
 // A description handed over from another OpenVibe site: say so, and put the Build button one press away.
 const handedOver = (from, prompt) => (prompt && from === 'codes'
-    ? '<p class="sp-handover" role="status"><i class="fa-solid fa-code" aria-hidden="true"></i> From OpenVibe Codes: check what you wrote, then press Build it.</p>'
+    ? '<p class="sp-handover" role="status"><i class="ovg-fill" data-ov-icon="code" aria-hidden="true"></i> From OpenVibe Codes: check what you wrote, then press Build it.</p>'
     : '');
 
 function newPage({ viewer, templates, csrf, error, prompt, aiOn, buildsLeft, pick = null, from = null }) {
     const picked = pick ? `<section class="sp-pick" style="--tpl:${esc(pick.accent)}" aria-labelledby="sp-pick-h">
-  <span class="sp-template-icon"><i class="fa-solid ${esc(pick.icon)}" aria-hidden="true"></i></span>
+  <span class="sp-template-icon"><i class="ovg-fill" data-ov-icon="${esc(pick.icon)}" aria-hidden="true"></i></span>
   <div class="sp-pick-text"><p class="eyebrow">The template you picked</p><h2 id="sp-pick-h" class="ovk-titled">${sectionIcon('grid')}${esc(pick.name)}</h2><p>${esc(pick.description)}</p></div>
   <form method="post" action="/spaces/new"><input type="hidden" name="csrf" value="${esc(csrf)}"><input type="hidden" name="template" value="${esc(pick.id)}"><button class="sp-btn">Start from this</button></form>
 </section>` : '';
@@ -115,7 +115,7 @@ function newPage({ viewer, templates, csrf, error, prompt, aiOn, buildsLeft, pic
     <input type="hidden" name="csrf" value="${esc(csrf)}">
     <label for="sp-prompt">Describe it and OpenVibe AI builds it</label>
     <textarea id="sp-prompt" name="prompt" rows="4" maxlength="4000" placeholder="A trivia quiz about 90s cartoons with a leaderboard…" ${aiOn ? '' : 'disabled'}>${esc(prompt || '')}</textarea>
-    <div class="sp-row"><button class="sp-btn" ${aiOn ? '' : 'disabled'}${prompt && aiOn ? ' autofocus' : ''}><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> Build it</button>
+    <div class="sp-row"><button class="sp-btn" ${aiOn ? '' : 'disabled'}${prompt && aiOn ? ' autofocus' : ''}><i class="ovg-fill" data-ov-icon="wand" aria-hidden="true"></i> Build it</button>
       <span class="sp-muted">${aiOn ? `${Number(buildsLeft)} AI builds left today. It takes about a minute; you can change everything after.` : 'OpenVibe AI is not available right now; start from a template instead.'}</span></div>
     <div class="sp-ideas" aria-label="Ideas">${['A daily mood check-in with a shared chart', 'A pixel art board everyone can paint on', 'A recipe idea generator that asks what is in my fridge', 'A study flashcard deck I can quiz myself with'].map((i) => `<button type="button" class="sp-chip" data-idea="${esc(i)}">${esc(i)}</button>`).join('')}</div>
   </form>
@@ -128,7 +128,7 @@ function newPage({ viewer, templates, csrf, error, prompt, aiOn, buildsLeft, pic
 
 function minePage({ spaces, shareDefault = 'public', csrf = '' }) {
     const body = `<div class="sp-wrap">
-  <div class="sp-head">${kit.pageHead({ title: `Your spaces`, icon: 'home', back: { href: '/', label: 'Home' } })}<a class="sp-btn" href="/spaces/new"><i class="fa-solid fa-plus" aria-hidden="true"></i> New space</a></div>
+  <div class="sp-head">${kit.pageHead({ title: `Your spaces`, icon: 'home', back: { href: '/', label: 'Home' } })}<a class="sp-btn" href="/spaces/new"><i class="ovg-fill" data-ov-icon="plus" aria-hidden="true"></i> New space</a></div>
   <form method="post" action="/spaces/mine/share-default"><input type="hidden" name="csrf" value="${esc(csrf)}">
     <label>New published spaces <select name="audience"><option value="public"${shareDefault === 'public' ? ' selected' : ''}>Everyone</option><option value="link"${shareDefault === 'link' ? ' selected' : ''}>Anyone with the link</option></select></label>
     <label><input type="checkbox" name="apply" value="1"> Apply to all my published spaces</label>
@@ -161,10 +161,10 @@ function spacePage({ viewer, space, owner, url, csrf, forkedFrom }) {
     const live = Boolean(space.site_id);
     const share = kit.share({ title: space.name, url: live && url ? url : null, text: space.description || '', kind: 'space', id: space.id });
     const actions = [
-        live ? `<a class="sp-btn" href="${esc(url)}" rel="noopener"><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i> Open</a>` : '', share,
-        owner ? `<a class="sp-btn ${live ? 'sp-btn-quiet' : ''}" href="/spaces/${esc(space.slug)}/edit"><i class="fa-solid fa-pen" aria-hidden="true"></i> Edit</a>` : '',
-        viewer ? `<form method="post" action="/spaces/${esc(space.slug)}/fork"><input type="hidden" name="csrf" value="${esc(csrf)}"><button class="sp-btn sp-btn-quiet"><i class="fa-solid fa-code-fork" aria-hidden="true"></i> Fork</button></form>`
-            : `<a class="sp-btn sp-btn-quiet" href="${signInHref(`/spaces/${space.slug}`)}"><i class="fa-solid fa-code-fork" aria-hidden="true"></i> Sign in to fork</a>`,
+        live ? `<a class="sp-btn" href="${esc(url)}" rel="noopener"><i class="ovg-fill" data-ov-icon="open" aria-hidden="true"></i> Open</a>` : '', share,
+        owner ? `<a class="sp-btn ${live ? 'sp-btn-quiet' : ''}" href="/spaces/${esc(space.slug)}/edit"><i class="ovg-fill" data-ov-icon="pencil" aria-hidden="true"></i> Edit</a>` : '',
+        viewer ? `<form method="post" action="/spaces/${esc(space.slug)}/fork"><input type="hidden" name="csrf" value="${esc(csrf)}"><button class="sp-btn sp-btn-quiet"><i class="ovg-fill" data-ov-icon="branch" aria-hidden="true"></i> Fork</button></form>`
+            : `<a class="sp-btn sp-btn-quiet" href="${signInHref(`/spaces/${space.slug}`)}"><i class="ovg-fill" data-ov-icon="branch" aria-hidden="true"></i> Sign in to fork</a>`,
     ].join('');
     const body = `<div class="sp-wrap">
   <p class="eyebrow">${live ? 'Space' : 'Draft space'}</p>
@@ -197,45 +197,45 @@ function editorPage({ space, files, csrf, canPublish, url, aiOn, buildsLeft, tem
     };
     // The claim (openvibe.website, plan 5.9): a signed-in person who holds the secret keeps the draft.
     const claim = guest ? (guest.signedIn
-        ? `<form method="post" action="/spaces/${esc(guest.id)}/claim"><input type="hidden" name="key" value="${esc(guest.key)}"><input type="hidden" name="csrf" value="${esc(guest.claimCsrf || '')}"><button class="sp-btn" type="submit"><i class="fa-solid fa-book" aria-hidden="true"></i> Keep this site</button></form>`
+        ? `<form method="post" action="/spaces/${esc(guest.id)}/claim"><input type="hidden" name="key" value="${esc(guest.key)}"><input type="hidden" name="csrf" value="${esc(guest.claimCsrf || '')}"><button class="sp-btn" type="submit"><i class="ovg-fill" data-ov-icon="book" aria-hidden="true"></i> Keep this site</button></form>`
         : `<p class="sp-muted">This draft is yours until you sign in. <a class="sp-btn sp-btn-quiet" href="${esc(`/auth/login?next=${encodeURIComponent(`/spaces/${guest.id}/edit?key=${guest.key}`)}`)}">Sign in to keep it</a></p>`) : '';
     const body = `<div class="sp-editor" id="sp-editor" data-view="preview">
   <header class="sp-ed-bar">
-    <a class="sp-ed-back" href="${guest ? '/spaces/guest' : `/spaces/${esc(space.slug)}`}" aria-label="Back"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a>
+    <a class="sp-ed-back" href="${guest ? '/spaces/guest' : `/spaces/${esc(space.slug)}`}" aria-label="Back"><i class="ovg-fill" data-ov-icon="arrow-left" aria-hidden="true"></i></a>
     <h1 class="sp-ed-name" id="ed-name">${esc(space.name)}</h1>
     <span class="sp-ed-status" id="ed-status" role="status"></span>
     <div class="sp-ed-actions">
-      <button class="sp-btn sp-btn-quiet" id="ed-settings" type="button"><i class="fa-solid fa-sliders" aria-hidden="true"></i> Settings</button>
-      <button class="sp-btn sp-btn-quiet" id="ed-save" type="button"><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> Save</button>
-      ${guest ? '' : `<button class="sp-btn" id="ed-publish" type="button"><i class="fa-solid fa-globe" aria-hidden="true"></i> ${space.site_id ? 'Update' : 'Publish'}</button>`}
+      <button class="sp-btn sp-btn-quiet" id="ed-settings" type="button"><i class="ovg-fill" data-ov-icon="sliders" aria-hidden="true"></i> Settings</button>
+      <button class="sp-btn sp-btn-quiet" id="ed-save" type="button"><i class="ovg-fill" data-ov-icon="save" aria-hidden="true"></i> Save</button>
+      ${guest ? '' : `<button class="sp-btn" id="ed-publish" type="button"><i class="ovg-fill" data-ov-icon="globe" aria-hidden="true"></i> ${space.site_id ? 'Update' : 'Publish'}</button>`}
     </div>
   </header>
   ${claim ? `<div class="sp-ed-claim"><p><strong>Keep this site</strong> — sign in and it becomes yours, with an address of its own.</p>${claim}</div>` : ''}
   <div class="sp-ed-ai">
     <form id="ed-ai-form"><label class="sr-only" for="ed-ai">Ask OpenVibe AI to change this space</label>
-      <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
+      <i class="ovg-fill" data-ov-icon="wand" aria-hidden="true"></i>
       <input id="ed-ai" maxlength="4000" autocomplete="off" placeholder="${aiOn ? 'Ask AI to change it: “make the buttons bigger and add a dark mode toggle”' : 'OpenVibe AI is not available right now'}" ${aiOn ? '' : 'disabled'}>
       <button class="sp-btn" ${aiOn ? '' : 'disabled'}>Change</button></form>
     <div class="sp-ed-agent" id="ed-agent" role="status" aria-live="polite" data-state="running" hidden>
       <span class="sp-ed-agent-dot" aria-hidden="true"></span>
       <span class="sp-ed-agent-words"><b id="ed-agent-title">Your agent is building this</b> <span class="sp-muted" id="ed-agent-text"></span></span>
-      <button class="sp-btn sp-btn-quiet sp-btn-sm" id="ed-agent-open" type="button"><i class="fa-solid fa-list-check" aria-hidden="true"></i> <span id="ed-agent-open-label">Watch in your Dock</span></button>
+      <button class="sp-btn sp-btn-quiet sp-btn-sm" id="ed-agent-open" type="button"><i class="ovg-fill" data-ov-icon="steps" aria-hidden="true"></i> <span id="ed-agent-open-label">Watch in your Dock</span></button>
       <button class="sp-ed-agent-x" id="ed-agent-x" type="button" aria-label="Hide" hidden>×</button>
     </div>
   </div>
-  <div class="sp-ed-switch" role="tablist" aria-label="Show"><button type="button" role="tab" data-view="preview" aria-selected="true"><i class="fa-solid fa-eye" aria-hidden="true"></i> Preview</button><button type="button" role="tab" data-view="code" aria-selected="false"><i class="fa-solid fa-code" aria-hidden="true"></i> Code</button></div>
+  <div class="sp-ed-switch" role="tablist" aria-label="Show"><button type="button" role="tab" data-view="preview" aria-selected="true"><i class="ovg-fill" data-ov-icon="eye" aria-hidden="true"></i> Preview</button><button type="button" role="tab" data-view="code" aria-selected="false"><i class="ovg-fill" data-ov-icon="code" aria-hidden="true"></i> Code</button></div>
   <div class="sp-ed-main">
     <section class="sp-ed-code" aria-label="Files">
       <div class="sp-ed-tabs" data-ovk-scroll id="ed-tabs" role="tablist"></div>
       <textarea id="ed-code" spellcheck="false" aria-label="File contents"></textarea>
     </section>
     <section class="sp-ed-preview" aria-label="Preview">
-      <div class="sp-ed-preview-bar"><span><i class="fa-solid fa-eye" aria-hidden="true"></i> Preview <span class="sp-muted">(runs as you)</span></span><button class="sp-btn sp-btn-quiet sp-btn-sm" id="ed-run" type="button"><i class="fa-solid fa-rotate-right" aria-hidden="true"></i> Run</button></div>
+      <div class="sp-ed-preview-bar"><span><i class="ovg-fill" data-ov-icon="eye" aria-hidden="true"></i> Preview <span class="sp-muted">(runs as you)</span></span><button class="sp-btn sp-btn-quiet sp-btn-sm" id="ed-run" type="button"><i class="ovg-fill" data-ov-icon="retry" aria-hidden="true"></i> Run</button></div>
       <iframe id="ed-frame" title="Preview of the space" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-pointer-lock"></iframe>
-      <details class="sp-ed-fnlog" id="ed-fnlog" hidden><summary><i class="fa-solid fa-terminal" aria-hidden="true"></i> Function log <span class="sp-muted" id="ed-fnlog-last"></span></summary><ol id="ed-fnlog-list"></ol></details>
+      <details class="sp-ed-fnlog" id="ed-fnlog" hidden><summary><i class="ovg-fill" data-ov-icon="terminal" aria-hidden="true"></i> Function log <span class="sp-muted" id="ed-fnlog-last"></span></summary><ol id="ed-fnlog-list"></ol></details>
     </section>
   </div>
-  <div class="sp-ed-building" id="ed-building" hidden><div><i class="fa-solid fa-wand-magic-sparkles fa-bounce" aria-hidden="true"></i><h2 id="ed-building-title" class="ovk-titled">${sectionIcon('grid')}OpenVibe AI is building…</h2><p id="ed-building-text"></p><p class="sp-muted">This usually takes under a minute or two. You can leave and come back.</p></div></div>
+  <div class="sp-ed-building" id="ed-building" hidden><div><i class="ovg-fill" data-ov-icon="busy" data-ovg="busy" aria-hidden="true"></i><h2 id="ed-building-title" class="ovk-titled">${sectionIcon('grid')}OpenVibe AI is building…</h2><p id="ed-building-text"></p><p class="sp-muted">This usually takes under a minute or two. You can leave and come back.</p></div></div>
   <dialog class="sp-ed-dialog" id="ed-dialog">
     <form method="dialog" id="ed-settings-form">
       <h2 class="ovk-titled">${sectionIcon('grid')}Settings</h2>
@@ -275,12 +275,12 @@ function editorPage({ space, files, csrf, canPublish, url, aiOn, buildsLeft, tem
  */
 function guestPage({ templates, error, prompt, aiOn, pick = null, from = null }) {
     const picked = pick ? `<section class="sp-pick" style="--tpl:${esc(pick.accent)}" aria-labelledby="sp-pick-h">
-  <span class="sp-template-icon"><i class="fa-solid ${esc(pick.icon)}" aria-hidden="true"></i></span>
+  <span class="sp-template-icon"><i class="ovg-fill" data-ov-icon="${esc(pick.icon)}" aria-hidden="true"></i></span>
   <div class="sp-pick-text"><p class="eyebrow">The template you picked</p><h2 id="sp-pick-h" class="ovk-titled">${sectionIcon('grid')}${esc(pick.name)}</h2><p>${esc(pick.description)}</p></div>
   <form method="post" action="/spaces/guest"><input type="hidden" name="template" value="${esc(pick.id)}"><button class="sp-btn">Start from this</button></form>
 </section>` : '';
     const cards = templates.map((t) => `<div class="sp-template" style="--tpl:${esc(t.accent)}">
-  <span class="sp-template-icon"><i class="fa-solid ${esc(t.icon)}" aria-hidden="true"></i></span>
+  <span class="sp-template-icon"><i class="ovg-fill" data-ov-icon="${esc(t.icon)}" aria-hidden="true"></i></span>
   <h3>${esc(t.name)}</h3><p>${esc(t.description)}</p>
   <form method="post" action="/spaces/guest"><input type="hidden" name="template" value="${esc(t.id)}"><button class="sp-btn">Start from this</button></form>
 </div>`).join('');
@@ -292,7 +292,7 @@ function guestPage({ templates, error, prompt, aiOn, pick = null, from = null })
   <form class="sp-ai-form" method="post" action="/spaces/guest">
     <label for="sp-prompt">Describe it and OpenVibe AI builds it</label>
     <textarea id="sp-prompt" name="prompt" rows="4" maxlength="4000" placeholder="A bakery site with today&rsquo;s hours, where to find us and how to order…" ${aiOn ? '' : 'disabled'}>${esc(prompt || '')}</textarea>
-    <div class="sp-row"><button class="sp-btn" ${aiOn ? '' : 'disabled'}${prompt && aiOn ? ' autofocus' : ''}><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> Build it</button>
+    <div class="sp-row"><button class="sp-btn" ${aiOn ? '' : 'disabled'}${prompt && aiOn ? ' autofocus' : ''}><i class="ovg-fill" data-ov-icon="wand" aria-hidden="true"></i> Build it</button>
       <span class="sp-muted">${aiOn ? 'It takes about a minute; you can change everything after.' : 'OpenVibe AI is not available right now; start from a template instead.'}</span></div>
   </form>
   <h2 class="ovk-titled sp-subtitle">${sectionIcon('grid')}Or start from a template</h2>
