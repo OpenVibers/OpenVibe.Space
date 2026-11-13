@@ -112,7 +112,7 @@ function normalize(input = {}) {
 
 function defaults() { return { headers: {}, redirects: [], spa: false }; }
 
-// ── Dashboard text form (one "Name: value" per line; one "from -> to [status]" per line) ──
+// ── Dashboard text form (one "Name: value" per line; one "from to to [status]" per line, words) ──
 function headersToText(headers) {
     return Object.entries(headers || {}).map(([k, v]) => `${k}: ${v}`).join('\n');
 }
@@ -130,15 +130,15 @@ function parseHeadersText(text) {
     return cleanHeaders(obj);
 }
 function redirectsToText(redirects) {
-    return (redirects || []).map((r) => `${r.from} -> ${r.to}${r.status && r.status !== 301 ? ` ${r.status}` : ''}`).join('\n');
+    return (redirects || []).map((r) => `${r.from} to ${r.to}${r.status && r.status !== 301 ? ` ${r.status}` : ''}`).join('\n');
 }
 function parseRedirectsText(text) {
     const list = [];
     for (const raw of String(text || '').split('\n')) {
         const line = raw.trim();
         if (!line) continue;
-        const m = /^(\S+)\s*->\s*(\S+)(?:\s+(\d{3}))?$/.exec(line);
-        if (!m) fail('site_config.redirect_syntax', `each redirect line must be "from -> to [status]" (got "${line.slice(0, 60)}")`);
+        const m = /^(\S+)\s+(?:->|to)\s+(\S+)(?:\s+(\d{3}))?$/.exec(line);
+        if (!m) fail('site_config.redirect_syntax', `each redirect line must be "from <path> to <path> [status]" (got "${line.slice(0, 60)}")`);
         list.push({ from: m[1], to: m[2], status: m[3] ? Number(m[3]) : 301 });
     }
     return cleanRedirects(list);

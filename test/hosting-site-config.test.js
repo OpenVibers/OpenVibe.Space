@@ -8,6 +8,7 @@
  */
 const assert = require('assert');
 const { boot, check, done } = require('./stageb/boot');
+const { redirectsToText, parseRedirectsText } = require('../server/domain/site-config');
 
 const EMPTY = { headers: {}, redirects: [], spa: false };
 
@@ -30,6 +31,14 @@ const EMPTY = { headers: {}, redirects: [], spa: false };
         assert.strictEqual(r.status, 200, r.text);
         assert.deepStrictEqual(r.json().config, EMPTY);
         assert.strictEqual((await t.ctx.store.db.prepare('SELECT COUNT(*) AS n FROM space_site_config').get()).n, 0);
+    });
+
+    await check('the redirect text form says to in words, and still reads the old arrow', () => {
+        assert.strictEqual(redirectsToText([{ from: '/old', to: '/new', status: 308 }]), '/old to /new 308');
+        assert.deepStrictEqual(parseRedirectsText('/old to /new 308\n/a -> /b'), [
+            { from: '/old', to: '/new', status: 308 },
+            { from: '/a', to: '/b', status: 301 },
+        ]);
     });
 
     await check('the API sets, reads and resets a config', async () => {
