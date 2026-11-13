@@ -54,7 +54,7 @@ function cleanHeaderValue(name, value) {
 /** name → value object of configurable headers, or throws ApiError(422). */
 function cleanHeaders(input) {
     if (input == null) return {};
-    if (typeof input !== 'object' || Array.isArray(input)) fail('site_config.headers', 'headers must be an object of name → value');
+    if (typeof input !== 'object' || Array.isArray(input)) fail('site_config.headers', 'headers must be an object of name/value pairs');
     const names = Object.keys(input);
     if (names.length > MAX_HEADERS) fail('site_config.too_many', `a site may set at most ${MAX_HEADERS} headers`);
     const out = {};

@@ -49,7 +49,7 @@ async function check(name, fn) {
             if (!up) await sleep(100);
         }
         assert.ok(up, `the server did not start:\n${out}`);
-        assert.match(out, /\[Space\] test on http:\/\/127\.0\.0\.1:\d+ → http:\/\/127\.0\.0\.1:\d+/, 'the process announces itself');
+        assert.match(out, /\[Space\] test on http:\/\/127\.0\.0\.1:\d+ \(public http:\/\/127\.0\.0\.1:\d+\)/, 'the process announces itself');
 
         await check('a fresh database: migrations ran, /api/ready is 2xx and names the store', async () => {
             const r = await fetch(`${base}/api/ready`);

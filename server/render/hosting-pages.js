@@ -21,7 +21,7 @@ function form(action, csrf, inner, { cls = '', confirm = null, enctype = null } 
 }
 
 function crumbs(list) {
-    return `<nav class="hd-crumbs" aria-label="Breadcrumb">${list.map(([href, label]) => `<a href="${esc(href)}">${esc(label)}</a>`).join('<span aria-hidden="true">›</span>')}</nav>`;
+    return `<nav class="hd-crumbs" aria-label="Breadcrumb">${list.map(([href, label]) => `<a href="${esc(href)}">${esc(label)}</a>`).join('<span class="hd-crumb-sep" aria-hidden="true"><i data-ov-icon="chevron"></i></span>')}</nav>`;
 }
 
 function card(title, inner, { sub = '', actions = '', cls = '', id = '' } = {}) {
@@ -121,7 +121,7 @@ function site({ site: s, project: p, role, deploys, activations, domains, siteCo
         return `<tr${active ? ' class="hd-active"' : ''}><td><a href="/deploys/${esc(d.id)}"><code>${short(d.id)}</code></a>${active ? ` ${badge('active', 'accent')}` : ''}${previewing ? ` ${badge('preview', 'warn')}` : ''}</td>`
             + `<td>${badge(d.state, STATE_TONE[d.state] || 'neutral')}${d.failure_code ? ` <code>${esc(d.failure_code)}</code>` : ''}</td><td class="hd-num">${esc(d.file_count)}</td><td class="hd-num">${bytes(d.total_bytes)}</td><td>${when(d.created_at)}</td><td class="hd-actions">${actions.join(' ')}</td></tr>`;
     }).join('');
-    const history = activations.slice(0, 10).map((a) => `<li>${when(a.created_at)} <span>${esc(a.kind)} → <code>${short(a.deploy_id)}</code>${a.previous_deploy_id ? ` <span class="hd-muted">(was <code>${short(a.previous_deploy_id)}</code>)</span>` : ''} <span class="hd-muted">by <code>${esc(a.actor)}</code></span></span></li>`).join('');
+    const history = activations.slice(0, 10).map((a) => `<li>${when(a.created_at)} <span>${esc(a.kind)} deployed <code>${short(a.deploy_id)}</code>${a.previous_deploy_id ? ` <span class="hd-muted">(was <code>${short(a.previous_deploy_id)}</code>)</span>` : ''} <span class="hd-muted">by <code>${esc(a.actor)}</code></span></span></li>`).join('');
     const status = s.active_deploy_id ? `${badge('live', 'ok')} <code>${short(s.active_deploy_id)}</code>` : badge('nothing published');
     const rollback = canDeploy && s.active_deploy_id ? form(`/sites/${s.id}/rollback`, csrf, `<input type="hidden" name="expected_active" value="${esc(s.active_deploy_id)}"><button type="submit" class="hd-btn hd-btn--small">${icon('history')} Roll back to the previous deploy</button>`, { cls: 'hd-inline' }) : '';
     return `<div class="hd-head">${crumbs([['/dashboard', 'Projects'], [`/projects/${p.id}`, p.name]])}
