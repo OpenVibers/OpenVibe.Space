@@ -120,7 +120,7 @@
     var lines = [];
     var head = document.createElement('li');
     head.className = 'is-call' + (r.status >= 400 || !r.status ? ' is-error' : '');
-    head.textContent = 'functions/' + name + '.js → ' + (r.status || 'error') + ' · ' + ms + ' ms' + (r.status >= 400 || !r.status ? ' · ' + String(r.body || '').slice(0, 300) : '');
+    head.textContent = 'functions/' + name + '.js returned ' + (r.status || 'error') + ' · ' + ms + ' ms' + (r.status >= 400 || !r.status ? ' · ' + String(r.body || '').slice(0, 300) : '');
     lines.push(head);
     (r.logs || []).forEach(function (l) {
       var li = document.createElement('li');
@@ -130,7 +130,7 @@
     });
     for (var i = lines.length - 1; i >= 0; i--) fnLogList.insertBefore(lines[i], fnLogList.firstChild);
     while (fnLogList.children.length > 200) fnLogList.removeChild(fnLogList.lastChild);
-    $('ed-fnlog-last').textContent = '· ' + name + ' → ' + (r.status || 'error');
+    $('ed-fnlog-last').textContent = '· ' + name + ' returned ' + (r.status || 'error');
     fnLogBox.hidden = false;
   }
 
