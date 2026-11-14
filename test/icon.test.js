@@ -47,7 +47,7 @@ const pngSize = (buf) => [buf.readUInt32BE(16), buf.readUInt32BE(20)];
     await check('the tab shows the file this site ships', async () => {
         const r = await t.get('/');
         assert.strictEqual(r.status, 200);
-        assert.ok(r.text.includes('<link rel="icon" type="image/svg+xml" data-ov-icon="space" href="/assets/logo.svg">'), 'Space\'s own icon');
+        assert.ok(r.text.includes('<link rel="icon" type="image/svg+xml" href="/assets/logo.svg">'), 'Space\'s own icon');
         assert.ok(!r.text.includes('href="data:image/svg+xml,'), 'the shared inline copy is not inlined any more');
         assert.ok(r.text.includes('<link rel="apple-touch-icon" href="/assets/logo-192.png">'), 'the touch icon is still the file');
     });

@@ -144,7 +144,7 @@ function renderPage(o) {
             // scripts/build-icons.js): the shared head would otherwise inline the network's default copy, and the
             // file this site ships would never be the one a person sees.
             appIcon.headTags({ site: 'space', iconBase: '/assets' }).split('\n').filter((line) => !line.startsWith('<link rel="icon"')).join('\n'),
-            '<link rel="icon" type="image/svg+xml" data-ov-icon="space" href="/assets/logo.svg">',
+            '<link rel="icon" type="image/svg+xml" href="/assets/logo.svg">',
             // The shared card is 1200×630; a page's own image carries its own dimensions.
             image === DEFAULT_OG_IMAGE ? '<meta property="og:image:width" content="1200">\n<meta property="og:image:height" content="630">' : '',
             ...feeds.map((f) => `<link rel="alternate" type="application/rss+xml" title="${escapeHtml(f.title)}" href="${escapeHtml(f.href)}">`),
