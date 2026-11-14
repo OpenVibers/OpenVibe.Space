@@ -140,7 +140,11 @@ function renderPage(o) {
             o.uploadKit ? `<script src="${ovServe.url('ov-upload.js')}" defer></script><script src="${asset('js/hosting-upload.js')}" defer></script>` : '',
             o.published ? `<meta property="article:published_time" content="${escapeHtml(o.published)}">` : '',
             o.modified ? `<meta property="article:modified_time" content="${escapeHtml(o.modified)}">` : '',
-            appIcon.headTags({ site: 'space', iconBase: '/assets' }),
+            // Space's own icon file is the one the tab shows (public/assets/logo.svg, built by
+            // scripts/build-icons.js): the shared head would otherwise inline the network's default copy, and the
+            // file this site ships would never be the one a person sees.
+            appIcon.headTags({ site: 'space', iconBase: '/assets' }).split('\n').filter((line) => !line.startsWith('<link rel="icon"')).join('\n'),
+            '<link rel="icon" type="image/svg+xml" href="/assets/logo.svg">',
             // The shared card is 1200×630; a page's own image carries its own dimensions.
             image === DEFAULT_OG_IMAGE ? '<meta property="og:image:width" content="1200">\n<meta property="og:image:height" content="630">' : '',
             ...feeds.map((f) => `<link rel="alternate" type="application/rss+xml" title="${escapeHtml(f.title)}" href="${escapeHtml(f.href)}">`),

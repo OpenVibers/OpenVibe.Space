@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **Space's app icon, drawn on the shared corner scale** (plan AB.29, 2026-11-14): the tile is the network's dark
+  ground with the OpenVibe mark in its heavy form, and its corner is now the scale's "round" one — 22.5 % of the
+  side, the same number OpenVibe.Design's glyph export uses (`server/glyphs/rounding.js` there), so the menu's app
+  icons, a site's mark and the generator agree. The mark fills the tile a little more than before, so the icon reads
+  at 16 px as well as at 32 and 180. The files are built by `node scripts/build-icons.js` (`public/assets/logo.svg`,
+  `logo-72/192/512.png`, `logo-maskable-192/512.png`), and the tab now shows this site's own file instead of the
+  network's inlined copy. `test/icon.test.js`.
+
 - **The AI builder speaks the shared component registry** (design 2026-11-09): before starting a `space.app.build` run, Space reads OpenVibe.Design's public `design.component@1` registry (`GET /api/v1/components`) and passes the definitions as the run's `components` input, so a built space is made from the same navbar, menu, Dock, composer, sheet, rows and settings as the rest of OpenVibe. The read is cached for an hour, times out after 2.5 s, and a missing registry only means a build without the vocabulary: it never fails a build. The URL is `OV_DESIGN_URL` (default `https://openvibe.design`). `test/spaces-registry.test.js`.
 - **The builder is the person's own agent** (plan 2026-10-22 §Z, stage Z1): "Describe it and OpenVibe AI builds it" starts a task of the person's one agent (OpenVibe.Actor) instead of Space's own AI loop. The space is the task's subject; the agent writes its files through Space's builder API (`/api/v1/builder/spaces`, the capabilities `space.build.read|create|write|publish`), and the editor opens the Dock at that task and shows the space as the agent writes it. The step reaches the network's agent namespace (`agent.step.started|updated|ended`, product `space`), so the Dock's one timeline shows it. Publishing is never done on its own: the agent asks, the person's answer lands in the Dock ("Needs you") and nothing goes live until they say yes (`POST /api/v1/agent/approvals/:id/decide`). The old builder stays behind `SPACE_BUILDER=legacy` until the new one is proven; nothing is deleted. `test/spaces-agent.test.js`.
 - **The forum's links follow Community's move to `/forum`** (design 2026-11-07): Space's forum redirect now
