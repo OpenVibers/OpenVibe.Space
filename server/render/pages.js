@@ -149,11 +149,7 @@ curl -X POST "https://openvibe.space/api/v1/sites/$SITE_ID/deploys?activate=1" \
         id: 'questions',
         head: `<h2 id="space-faq-h" class="ovk-titled">${sectionIcon('help')}Questions</h2>`,
         html: `<section class="sc-sec" id="questions" aria-labelledby="space-faq-h"><h2 class="ovk-titled">${sectionIcon('help')}Questions</h2>${HOME_FAQ.map((f) => `<details class="space-faq"><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`).join('')}</section>`,
-    }) + sc.cta({
-        title: 'Looking for the forum?',
-        text: 'The forum moved to OpenVibe.Community.',
-        actions: [{ label: 'Open the forum', href: FORUM_URL, primary: true }],
-    });
+    });   // 11-14 (the owner): no "Looking for the forum?" here: people come to Space to host a site.
     const site = String(config.publicUrl || config.baseUrl || 'https://openvibe.space').replace(/\/+$/, '');
     return renderPage({
         canonicalPath: '/', active: 'home', styles: ['kit.css', sc.STYLESHEET], body, description: HOME_DESCRIPTION,
