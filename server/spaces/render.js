@@ -94,35 +94,51 @@ function galleryPage({ viewer, spaces, templates, q, sort, csrf }) {
     return page({ title: 'Spaces', description: 'Make a space: a small app on your OpenVibe account, built by OpenVibe AI or from a template, with sign-in, shared lists, private storage and AI.', path: '/spaces', showcase: true, styles: ['kit.css'], body });
 }
 
+/**
+ * Who builds it (2026-11-15, the owner on this page: "should fully use tools like codes or actor, depending on the user
+ * selection"): your Actor (it writes the space's files with its tools), a quick build (OpenVibe AI, about a minute),
+ * or Codes (a full project with its own repository, then published here). Cards that are radios; no script.
+ */
+function builderChoice({ agentOn, aiOn, builder }) {
+    const opts = [
+        agentOn ? ['actor', 'Your Actor', 'Builds it step by step with its tools; you watch it work.', 'spark'] : null,
+        aiOn ? ['quick', 'Quick build', 'OpenVibe AI makes it in about a minute.', 'wand'] : null,
+        ['codes', 'Codes', 'A full project with its own repository, for bigger apps.', 'code'],
+    ].filter(Boolean);
+    const pick = opts.some(([id]) => id === builder) ? builder : opts[0][0];
+    return `<fieldset class="sp-builders"><legend>Who builds it</legend>${opts.map(([id, t, d, ic]) => `<label class="sp-builder"><input type="radio" name="builder" value="${id}"${id === pick ? ' checked' : ''}><i class="ovg-fill" data-ov-icon="${ic}" aria-hidden="true"></i><span><b>${t}</b><small>${d}</small></span></label>`).join('')}</fieldset>`;
+}
+
 // A description handed over from another OpenVibe site: say so, and put the Build button one press away.
 const handedOver = (from, prompt) => (prompt && from === 'codes'
     ? '<p class="sp-handover" role="status"><i class="ovg-fill" data-ov-icon="code" aria-hidden="true"></i> From OpenVibe Codes: check what you wrote, then press Build it.</p>'
     : '');
 
-function newPage({ viewer, templates, csrf, error, prompt, aiOn, buildsLeft, pick = null, from = null }) {
+function newPage({ viewer, templates, csrf, error, prompt, aiOn, buildsLeft, pick = null, from = null, agentOn = false, builder = '' }) {
     const picked = pick ? `<section class="sp-pick" style="--tpl:${esc(pick.accent)}" aria-labelledby="sp-pick-h">
   <span class="sp-template-icon"><i class="ovg-fill" data-ov-icon="${esc(pick.icon)}" aria-hidden="true"></i></span>
   <div class="sp-pick-text"><p class="eyebrow">The template you picked</p><h2 id="sp-pick-h" class="ovk-titled">${sectionIcon('grid')}${esc(pick.name)}</h2><p>${esc(pick.description)}</p></div>
   <form method="post" action="/spaces/new"><input type="hidden" name="csrf" value="${esc(csrf)}"><input type="hidden" name="template" value="${esc(pick.id)}"><button class="sp-btn">Start from this</button></form>
 </section>` : '';
     const body = `<div class="sp-wrap">
-  <p class="eyebrow">New space</p>
   ${kit.pageHead({ title: `${pick ? 'Make it yours' : 'What do you want to make?'}`, icon: 'home', back: { href: '/', label: 'Home' } })}
   ${error ? `<p class="sp-flash is-bad" role="alert">${esc(error)}</p>` : ''}
   ${picked}
   ${handedOver(from, prompt)}
   <form class="sp-ai-form" method="post" action="/spaces/new">
     <input type="hidden" name="csrf" value="${esc(csrf)}">
-    <label for="sp-prompt">Describe it and OpenVibe AI builds it</label>
-    <textarea id="sp-prompt" name="prompt" rows="4" maxlength="4000" placeholder="A trivia quiz about 90s cartoons with a leaderboard…" ${aiOn ? '' : 'disabled'}>${esc(prompt || '')}</textarea>
-    <div class="sp-row"><button class="sp-btn" ${aiOn ? '' : 'disabled'}${prompt && aiOn ? ' autofocus' : ''}><i class="ovg-fill" data-ov-icon="wand" aria-hidden="true"></i> Build it</button>
-      <span class="sp-muted">${aiOn ? `${Number(buildsLeft)} AI builds left today. It takes about a minute; you can change everything after.` : 'OpenVibe AI is not available right now; start from a template instead.'}</span></div>
+    <label for="sp-prompt" class="sp-sr">Describe it</label>
+    <div class="sp-box"><textarea id="sp-prompt" name="prompt" rows="3" maxlength="4000" placeholder="A trivia quiz about 90s cartoons with a leaderboard…">${esc(prompt || '')}</textarea></div>
     <div class="sp-ideas" aria-label="Ideas">${['A daily mood check-in with a shared chart', 'A pixel art board everyone can paint on', 'A recipe idea generator that asks what is in my fridge', 'A study flashcard deck I can quiz myself with'].map((i) => `<button type="button" class="sp-chip" data-idea="${esc(i)}">${esc(i)}</button>`).join('')}</div>
+    ${builderChoice({ agentOn, aiOn, builder })}
+    <div class="sp-go-row"><button class="sp-btn sp-go"${prompt ? ' autofocus' : ''}><i class="ovg-fill" data-ov-icon="wand" aria-hidden="true"></i> <span data-sp-go>Build it</span></button>
+      <span class="sp-muted">${aiOn || agentOn ? `${Number(buildsLeft)} builds left today. You can change everything after.` : 'Building here is not available right now: Codes or a template still work.'}</span></div>
   </form>
   <h2 class="ovk-titled sp-subtitle">${sectionIcon('grid')}Or start from a template</h2>
   ${templateCards(templates, { viewer, csrf, compact: true })}
 </div>
-<script>document.querySelectorAll('.sp-chip').forEach(function (b) { b.addEventListener('click', function () { var t = document.getElementById('sp-prompt'); t.value = b.getAttribute('data-idea'); t.focus(); }); });</script>`;
+<script>(function () { var go = document.querySelector('[data-sp-go]'); var say = function () { var c = document.querySelector('input[name=builder]:checked'); if (go) go.textContent = c && c.value === 'codes' ? 'Continue in Codes' : 'Build it'; }; document.querySelectorAll('input[name=builder]').forEach(function (r) { r.addEventListener('change', say); }); say(); })();
+document.querySelectorAll('.sp-chip').forEach(function (b) { b.addEventListener('click', function () { var t = document.getElementById('sp-prompt'); t.value = b.getAttribute('data-idea'); t.focus(); }); });</script>`;
     return page({ title: 'New space', path: '/spaces/new', robots: 'noindex,nofollow', body });
 }
 
