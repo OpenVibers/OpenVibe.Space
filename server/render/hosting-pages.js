@@ -105,7 +105,7 @@ function domainBlock(d, instructions, csrf) {
     return `${body}</li>`;
 }
 
-function site({ site: s, project: p, role, deploys, activations, domains, siteConfig, csrf, url, uploadLimits, now = Date.now() }) {
+function site({ site: s, project: p, role, deploys, activations, domains, siteConfig, csrf, url, uploadLimits, now = Date.now(), publish = null }) {
     const canMaintain = role === 'owner' || role === 'maintainer' || role === 'staff';
     const canDeploy = role !== 'staff';
     // The site's one live preview (plan T12 J4): served to project members on this dashboard until it expires.
@@ -140,6 +140,7 @@ ${canDeploy ? card('Upload a deploy', form(`/sites/${s.id}/deploys`, csrf, `<div
 </fieldset>
 <button type="submit" class="hd-btn hd-btn--primary">${icon('upload')} Upload</button>`, { cls: 'hd-form', enctype: 'multipart/form-data' }),
     { sub: 'Static files only: HTML, CSS, JavaScript, JSON, images, fonts, audio, video, PDF, WebAssembly. No build runs and nothing is executed. Hidden files (except <code>.well-known/</code>), links and server-side code are refused.' }) : ''}
+${publishCard(s, publish, csrf)}
 ${card('Deploys', `${previewId ? `<p class="hd-notice">${icon('eye')} A preview of <code>${short(previewId)}</code> is open to members of this project at <a href="${esc(previewHref(previewId))}" target="_blank" rel="noopener">${esc(previewHref(previewId))}</a> until ${when(Number(s.preview_expires_at))}. It is never indexed, and activating or rolling back ends it.</p>` : ''}
 ${deploys.length ? `<div class="hd-table-wrap" data-ovk-scroll><table class="hd-table"><thead><tr><th>Deploy</th><th>State</th><th class="hd-num">Files</th><th class="hd-num">Size</th><th>Uploaded</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>` : `<div class="hd-empty hd-empty--small">${icon('box')}<p>No deploys yet.</p></div>`}
 ${history ? `<details class="hd-details"><summary>Activation history</summary><ul class="hd-history">${history}</ul></details>` : ''}`, { actions: rollback, sub: 'Every deploy is kept. Activating one switches the site at once; nothing is rebuilt.' })}
@@ -151,6 +152,34 @@ ${canMaintain ? card('Per-site configuration', form(`/sites/${s.id}/config`, csr
 <button type="submit" class="hd-btn hd-btn--primary">Save configuration</button>`, { cls: 'hd-form' }),
     { sub: 'Headers, redirects and an SPA fallback, applied to every response of this site. Platform headers (Content-Security-Policy, Strict-Transport-Security, Set-Cookie, X-Forwarded-*, caching) cannot be set here, and a redirect target must be a local path.' }) : ''}
 ${canMaintain ? card('Delete site', form(`/sites/${s.id}/delete`, csrf, '<button type="submit" class="hd-btn hd-btn--danger">Delete this site</button>', { cls: 'hd-form', confirm: `${s.name} stops being served at once` }), { cls: 'hd-card--danger', sub: 'The site and its deploys are deleted; its address stops answering.' }) : ''}`;
+}
+
+/** Published from OpenVibe.Git (plan §AD.10 step 2): choose one of your repositories, a branch and a folder; Git sends
+ *  each push of that branch here as a preview. Nothing runs here: the folder's files are served as they are. */
+function publishCard(s, pub, csrf) {
+    if (!pub || !pub.enabled) return '';
+    const head = `${icon('branch')} From a repository`;
+    if (pub.error && !pub.repo) return card(head, `<p class="hd-notice hd-notice--error">${esc(pub.error)}</p>`);
+    if (pub.repo) {
+        const st = pub.status;
+        const last = st && st.last;
+        const tone = last ? (last.state === 'deployed' ? 'ok' : last.state === 'failed' ? 'bad' : 'neutral') : 'neutral';
+        const lastLine = last ? `<p>${badge(last.state === 'deployed' ? 'sent' : last.state, tone)} ${last.sha ? `<code>${esc(String(last.sha).slice(0, 12))}</code> ` : ''}${when(Date.parse(last.at))}${last.detail ? ` <span class="hd-muted">${esc(last.detail)}</span>` : ''}</p>` : '<p class="hd-muted">Nothing sent yet: the next push to the branch arrives here.</p>';
+        const what = st ? `<p class="hd-chips"><a class="hd-url" href="https://git.openvibe.codes/${esc(pub.repo)}" rel="noopener">${esc(pub.repo)} ${icon('open')}</a> ${badge(st.branch, 'accent')} ${st.folder ? `<code>${esc(st.folder)}/</code>` : '<span class="hd-muted">the whole repository</span>'}</p>` : `<p class="hd-chips">${esc(pub.repo)}</p>`;
+        const err = pub.error ? `<p class="hd-notice hd-notice--error">${esc(pub.error)}</p>` : '';
+        const acts = `${form(`/sites/${s.id}/git-publish/deploy`, csrf, `<button type="submit" class="hd-btn hd-btn--small">${icon('upload')} Deploy now</button>`, { cls: 'hd-inline' })}${pub.maintain ? form(`/sites/${s.id}/git-publish/stop`, csrf, '<button type="submit" class="hd-link hd-link--danger">Stop publishing</button>', { cls: 'hd-inline' }) : ''}`;
+        return card(head, `${what}${lastLine}${err}`, { actions: acts, sub: 'Each push to the branch arrives here as a preview from OpenVibe.Git; make it live from Deploys.' });
+    }
+    if (pub.other) return '';
+    if (!pub.maintain) return '';
+    const repos = Array.isArray(pub.repos) ? pub.repos : [];
+    if (!repos.length) return card(head, `<p class="hd-muted">You have no repositories on OpenVibe.Git yet. <a href="https://git.openvibe.codes/new" rel="noopener">Make one</a>, or ask your Actor to, then publish it here.</p>`);
+    const options = repos.map((r) => `<option value="${esc(r.full_name)}" data-branch="${esc(r.default_branch)}">${esc(r.full_name)}${r.visibility === 'private' ? ' (private)' : ''}</option>`).join('');
+    return card(head, form(`/sites/${s.id}/git-publish`, csrf, `<label class="hd-field">Repository <select name="repo" required>${options}</select></label>
+<div class="hd-row"><label class="hd-field hd-field--narrow">Branch <input name="branch" value="${esc(repos[0].default_branch || 'main')}" required maxlength="200" spellcheck="false"></label>
+<label class="hd-field hd-field--narrow">Folder (optional) <input name="folder" placeholder="dist" maxlength="200" spellcheck="false"></label></div>
+<button type="submit" class="hd-btn hd-btn--primary">${icon('branch')} Publish from this repository</button>`, { cls: 'hd-form' }),
+    { sub: 'Choose one of your OpenVibe.Git repositories: every push to the branch sends that folder here, as a preview you make live. No build runs; the files are served as they are.' });
 }
 
 function deploy({ deploy: d, site: s, project: p, files, log, active }) {

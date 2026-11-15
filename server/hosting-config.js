@@ -60,6 +60,12 @@ function load(env = process.env) {
         objectStore: {
             mode: String(env.SPACE_OBJECT_STORE || '').toLowerCase() === 'media' ? 'media' : 'local',
         },
+        // OpenVibe.Git (plan §AD.10 step 2, domain/git-publish.js): where a site published from a person's repository
+        // asks Git to send it (Git sends the files; Host never fetches one). Its public address names the repository.
+        git: {
+            internalUrl: trim(env.OV_GIT_INTERNAL_URL || (env.NODE_ENV === 'production' ? 'http://127.0.0.1:5270' : '')),
+            url: trim(env.OV_GIT_URL || 'https://git.openvibe.codes'),
+        },
         media: {
             url: trim(env.OV_MEDIA_URL || 'http://127.0.0.1:4100'),
             namespace: String(env.OV_MEDIA_NAMESPACE || 'space').trim() || 'space',
