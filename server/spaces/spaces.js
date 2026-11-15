@@ -540,7 +540,7 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, outb
     return {
         CAPABILITIES, isSpaceId, get, getBySlug, forSite, load, isOwner, files, create, saveFiles, updateSettings, fork,
         startBuild, finishBuild, failBuild, spend, used, canPublish, publish, unpublish, publishedFiles, remove, gallery, galleryFeed, mine, hostnameOf, urlOf,
-        personOf, capsOf, checkFiles, DAY,
+        personOf, capsOf, checkFiles, DAY, spacesProject,
         // The person's one agent (plan 2026-10-22 §Z stage Z1)
         ownedOf, mineOf, viewerOf, setAgentTask, setAgentState, setAgentStep, agentRunning,
         askPublish, publishRequest, decidePublish,

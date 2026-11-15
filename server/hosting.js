@@ -158,6 +158,8 @@ function createHosting(app, { db, auth, config: suppliedConfig, now, resolver, f
         // works through, and where the person's answer to its publish request lands. It is mounted before
         // /api/v1, which answers everything else.
         app.use('/api/v1/builder/spaces', rateLimit({ windowMs: 60_000, max: 240, standardHeaders: true, legacyHeaders: false }), viewers.middleware('api'), require('./spaces/agent-api').createSpacesBuilderApi({ config, spaces: ctx.spaces, steps: ctx.spaceSteps, log }));
+        // A website from a person's OpenVibe.Git repository, made by their agent (plan §AD.10): space.build.publish.
+        app.use('/api/v1/builder/sites', rateLimit({ windowMs: 60_000, max: 60, standardHeaders: true, legacyHeaders: false }), viewers.middleware('api'), require('./spaces/repo-sites-api').createRepoSitesApi({ config, spaces: ctx.spaces, sites, deploys, siteSources, gitPublish, log }));
         app.use('/api/v1/agent/approvals', rateLimit({ windowMs: 60_000, max: 240, standardHeaders: true, legacyHeaders: false }), viewers.middleware('api'), require('./spaces/agent-api').createApprovalsApi({ spaces: ctx.spaces, steps: ctx.spaceSteps, log }));
         app.use('/api/v1', rateLimit({ windowMs: 60_000, max: 240, standardHeaders: true, legacyHeaders: false }), createApi(ctx));
         app.use('/preview', rateLimit({ windowMs: 60_000, max: 300, standardHeaders: true, legacyHeaders: false }), viewers.middleware('dashboard'), (req, res, next) => Promise.resolve(tenant.preview(req, res)).catch(next));
