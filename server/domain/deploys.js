@@ -285,8 +285,13 @@ function createDeploys({ store, config = null, access, projects, sites, blobs, o
         await q.activation.run(site.id, deploy.id, current.active_deploy_id, kind, principalOf(viewer) || 'space', now);
         // A real deploy or rollback supersedes any pending preview: it stops being served at once.
         await q.clearPreview.run(site.id);
+        // Announced to the network (plan §AD.10 step 6, "a hosted thing appears in the person's feed, their profile and
+        // search, with its address, the way a stream does"): a site's deploy is public news (the payload names the site; the
+        // feed builds its address), one card a site (a later deploy refreshes it). A scratch site (temporary) and a rollback stay
+        // internal. Every site is served publicly at <name>.<sitesDomain>; nothing private is announced.
+        const announce = !site.scratch && kind !== 'rollback';
         await outbox.emit({
-            event_type: 'space.deploy.activated', actor: actorRef(viewer), visibility: 'internal', priority: 'low',
+            event_type: 'space.deploy.activated', actor: actorRef(viewer), visibility: announce ? 'public' : 'internal', priority: 'low',
             subject: { type: 'deploy', id: deploy.id },
             payload: { project_id: site.project_id, site_id: site.id, site: site.name, deploy_id: deploy.id, previous_deploy_id: current.active_deploy_id, rollback: kind === 'rollback' },
         }, { traceparent });
