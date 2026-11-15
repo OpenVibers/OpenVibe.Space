@@ -64,6 +64,8 @@ function createHosting(app, { db, auth, config: suppliedConfig, now, resolver, f
     const worker = createWorker({ config, store, domains, blobs, outbox, log });
     const billing = createSpaceBilling({ db, config, now: store.now, ...(fetchImpl ? { fetchImpl } : {}), log });
     const ctx = { config, store, blobs, outbox, billing, access, takedowns, projects, sites, deploys, domains, siteConfig, siteSources, gitPublish, auth, viewers, tenant, worker, uploadGate, indexnow, log, valkey: valkey || null };
+    // Live sites in OpenVibe.Search (server/search-index.js), started by server/index.js; off without a search URL and secret.
+    ctx.searchIndex = require('./search-index').createSiteSearchIndex({ db, blobs, sites, takedowns, config, fetchImpl, log });
     // Sharing (openvibe-sdk/share): the shares row next to each space, members, transfers and the one access check.
     ctx.sharing = createSharing({ db, config, outbox, now: store.now, ...(fetchImpl ? { fetchImpl } : {}), log });
     ctx.actorLimits = require('./http/actor-limits').createHostActorLimits({ registry: app.locals.metrics, valkey: ctx.valkey });
