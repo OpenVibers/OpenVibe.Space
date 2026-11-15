@@ -15,7 +15,8 @@
 const { ApiError } = require('../http/errors');
 const { principalOf } = require('./access');
 
-const PROVIDERS = Object.freeze({ 'github.com': 'github', 'gitlab.com': 'gitlab', 'codeberg.org': 'codeberg' });
+// openvibe: OpenVibe.Git (plan §AD.10 step 2): it sends the folder of each push itself (domain/git-publish.js).
+const PROVIDERS = Object.freeze({ 'github.com': 'github', 'gitlab.com': 'gitlab', 'codeberg.org': 'codeberg', 'git.openvibe.codes': 'openvibe' });
 const PROVIDER_NAMES = new Set(Object.values(PROVIDERS));
 const FIELDS = new Set(['provider', 'repo_url', 'ref']);
 const MAX_URL = 300;

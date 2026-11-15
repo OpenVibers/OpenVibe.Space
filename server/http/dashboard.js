@@ -13,7 +13,7 @@ const { readUpload, UploadError } = require('./upload');
 const { ApiError, privateNoStore } = require('./errors');
 
 function createDashboard(ctx) {
-    const { config, projects, sites, deploys, domains, siteConfig, siteSources, viewers, access, log = console } = ctx;
+    const { config, projects, sites, deploys, domains, siteConfig, siteSources, gitPublish, viewers, access, log = console } = ctx;
     const router = express.Router();
     const urlencoded = express.urlencoded({ extended: false, limit: '16kb' });
 
@@ -89,6 +89,7 @@ function createDashboard(ctx) {
             domains: (await domains.listForSite(site.id)).map((d) => ({ domain: d, instructions: domains.instructions(d, site) })),
             siteConfig: { ...cfg, headersText: siteConfig.headersToText(cfg.headers), redirectsText: siteConfig.redirectsToText(cfg.redirects) },
             source: await siteSources.forSite(site.id),
+            publish: await publishView(req.viewer, await siteSources.forSite(site.id), role),
         }), takedownNotice(await ctx.takedowns.ofSite(site)) || notice(req), { uploadKit: true });
     }));
 
@@ -136,6 +137,45 @@ function createDashboard(ctx) {
         const redirects = siteConfig.parseRedirectsText(req.body.redirects);
         await siteConfig.set(req.viewer, site, { headers, redirects, spa: req.body.spa === '1' });
         return back(`/sites/${site.id}`, 'Site configuration saved.');
+    }));
+    // Published from OpenVibe.Git (plan §AD.10 step 2): what the site's card shows. A source on OpenVibe.Git shows
+    // Git's setting and its last deploy; no source shows the person's repositories to choose from.
+    async function publishView(viewer, source, role) {
+        if (!gitPublish || !gitPublish.enabled) return { enabled: false };
+        const maintain = role === 'owner' || role === 'maintainer';
+        const repo = gitPublish.repoOf(source);
+        try {
+            if (repo) return { enabled: true, maintain, repo, status: await gitPublish.status(viewer, repo) };
+            if (source || !maintain) return { enabled: true, maintain, other: Boolean(source) };
+            return { enabled: true, maintain, repos: await gitPublish.repos(viewer) };
+        } catch (err) {
+            return { enabled: true, maintain, repo, error: (err && err.message) || 'OpenVibe.Git did not answer' };
+        }
+    }
+    // Publish from one of the person's OpenVibe.Git repositories: the site's source is that repository and branch, and
+    // Git is told to send that folder of every push here (it lands as a preview). Host never fetches the repository.
+    router.post('/sites/:id/git-publish', action(async (req) => {
+        const repo = gitPublish.repoOk(req.body.repo);
+        const branch = String(req.body.branch || '').trim() || 'main';
+        const folder = String(req.body.folder || '').trim();
+        const { site } = await siteSources.put(req.viewer, req.params.id, { provider: 'openvibe', repo_url: gitPublish.repoUrl(repo), ref: branch });
+        try { await gitPublish.set(req.viewer, repo, { site_id: site.id, branch, folder }); }
+        catch (err) { await siteSources.remove(req.viewer, site.id).catch(() => {}); throw err; }
+        return back(`/sites/${site.id}`, `Publishing ${repo} (${branch}${folder ? `, ${folder}/` : ''}). Each push arrives here as a preview; make one live from Deploys.`);
+    }));
+    router.post('/sites/:id/git-publish/deploy', action(async (req) => {
+        const { site } = await sites.load(req.viewer, req.params.id, 'deploy');
+        const repo = gitPublish.repoOf(await siteSources.forSite(site.id));
+        if (!repo) throw new ApiError(409, 'publish.not_set', 'this site is not published from OpenVibe.Git');
+        await gitPublish.deployNow(req.viewer, repo);
+        return back(`/sites/${site.id}`, 'Sent from OpenVibe.Git: the branch arrives as a preview in a moment.');
+    }));
+    router.post('/sites/:id/git-publish/stop', action(async (req) => {
+        const { site } = await sites.load(req.viewer, req.params.id, 'maintain');
+        const repo = gitPublish.repoOf(await siteSources.forSite(site.id));
+        if (repo) await gitPublish.stop(req.viewer, repo).catch((err) => { if (err.status !== 404) throw err; });
+        await siteSources.remove(req.viewer, site.id);
+        return back(`/sites/${site.id}`, 'No longer published from OpenVibe.Git. What is live stays live.');
     }));
     // The Git source the project's CI deploys from (Host never fetches it); git deploys land as previews.
     router.post('/sites/:id/source', action(async (req) => {

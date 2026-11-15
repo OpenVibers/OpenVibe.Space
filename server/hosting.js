@@ -15,6 +15,7 @@ const { createDeploys } = require('./domain/deploys');
 const { createDomains } = require('./domain/domains');
 const { createSiteConfig } = require('./domain/site-config');
 const { createSiteSources } = require('./domain/site-sources');
+const { createGitPublish } = require('./domain/git-publish');
 const { createViewerResolver, guard } = require('./auth/viewer');
 const { createTenantServer } = require('./http/tenant');
 const { createUploadGate } = require('./http/upload');
@@ -56,12 +57,13 @@ function createHosting(app, { db, auth, config: suppliedConfig, now, resolver, f
     const domains = createDomains({ store, config, access, projects, sites, outbox, resolver, log, indexnow: announce });
     const siteConfig = createSiteConfig({ store });
     const siteSources = createSiteSources({ store, sites });
+    const gitPublish = createGitPublish({ config, log, ...(fetchImpl ? { fetchImpl } : {}) });
     const viewers = createViewerResolver({ auth, config, log });
     const tenant = createTenantServer({ store, config, blobs, takedowns, siteConfig, access, apps: () => app.locals.ctx && app.locals.ctx.apps, log });
     const uploadGate = createUploadGate(config.uploads.maxConcurrent);
     const worker = createWorker({ config, store, domains, blobs, outbox, log });
     const billing = createSpaceBilling({ db, config, now: store.now, ...(fetchImpl ? { fetchImpl } : {}), log });
-    const ctx = { config, store, blobs, outbox, billing, access, takedowns, projects, sites, deploys, domains, siteConfig, siteSources, auth, viewers, tenant, worker, uploadGate, indexnow, log, valkey: valkey || null };
+    const ctx = { config, store, blobs, outbox, billing, access, takedowns, projects, sites, deploys, domains, siteConfig, siteSources, gitPublish, auth, viewers, tenant, worker, uploadGate, indexnow, log, valkey: valkey || null };
     // Sharing (openvibe-sdk/share): the shares row next to each space, members, transfers and the one access check.
     ctx.sharing = createSharing({ db, config, outbox, now: store.now, ...(fetchImpl ? { fetchImpl } : {}), log });
     ctx.actorLimits = require('./http/actor-limits').createHostActorLimits({ registry: app.locals.metrics, valkey: ctx.valkey });
