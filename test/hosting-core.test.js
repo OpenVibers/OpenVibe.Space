@@ -43,6 +43,13 @@ const { load } = require('../server/hosting-config');
             assert.strictEqual(require('openvibe-contracts').validate(`${envelope.event_type}@1`, envelope.payload).valid, true, envelope.event_type);
         }
         assert.deepStrictEqual(types, ['space.deploy.created', 'space.deploy.activated', 'space.deploy.created', 'space.deploy.activated', 'space.deploy.activated']);
+        // A site going live is public news (plan §AD.10 step 6: the feed, the profile, search); a deploy being made is not.
+        const vis = rows.map((r) => { const e = typeof r.envelope === 'string' ? JSON.parse(r.envelope) : r.envelope; return `${e.event_type}:${e.visibility}`; });
+        assert.deepStrictEqual(vis, ['space.deploy.created:internal', 'space.deploy.activated:public', 'space.deploy.created:internal', 'space.deploy.activated:public', 'space.deploy.activated:public']);
+        await h.deploys.rollback(user, site.id, { deployId: second.deploy.id, expectedActive: first.deploy.id });
+        const last = await db.prepare('SELECT envelope FROM event_outbox ORDER BY id DESC LIMIT 1').get();
+        const rolled = typeof last.envelope === 'string' ? JSON.parse(last.envelope) : last.envelope;
+        assert.deepStrictEqual([rolled.event_type, rolled.payload.rollback, rolled.visibility], ['space.deploy.activated', true, 'internal'], 'a rollback is not news');
         console.log('hosting-core: passed');
     } finally {
         await db.close();
