@@ -194,3 +194,27 @@ body[data-page="spaces"] .page:has(.sp-editor) { padding-bottom: 0; }
 /* The shared hero draws its aura 54px past its right edge (openvibe-shared showcase, .sc-hero-vis at right:-54px); with no
    clip a phone scrolls sideways by ~44px. Clip the page on this axis only: vertical scrolling is untouched. */
 .page { overflow-x: clip; }
+
+/* The new space (2026-11-15, the owner: "more elegant and simplistic and minimalist design, better organization"):
+   who builds it as cards, one calm box with its button inside, ideas as quiet chips. */
+.sp-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.sp-builders { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: 8px; margin: 0; padding: 0; border: 0; }
+.sp-builders legend { padding: 0 0 8px; font-weight: 700; }
+.sp-builder { position: relative; display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 10px 14px; border: 1px solid var(--border, #2c3d5c); border-radius: 14px; cursor: pointer; transition: border-color .18s, background-color .18s; }
+.sp-builder input { position: absolute; opacity: 0; pointer-events: none; }
+.sp-builder > i { display: grid; place-items: center; flex: none; width: 36px; height: 36px; border-radius: 11px; background: color-mix(in srgb, var(--text-primary, #e6edf7) 7%, transparent); }
+.sp-builder b { display: block; }
+.sp-builder small { display: block; color: var(--text-secondary, #9fb0c8); font-size: .85rem; }
+.sp-builder:has(input:checked) { border-color: var(--accent, #60a5fa); background: color-mix(in srgb, var(--accent, #60a5fa) 10%, transparent); }
+.sp-builder:has(input:checked) > i { background: var(--accent, #60a5fa); color: #fff; }
+.sp-builder:has(input:focus-visible) { outline: 2px solid var(--accent, #60a5fa); outline-offset: 2px; }
+.sp-box { display: flex; padding: 6px; border: 1px solid var(--border, #2c3d5c); border-radius: 18px; background: var(--bg-primary, #0b1220); transition: border-color .18s, box-shadow .18s; }
+.sp-box:focus-within { border-color: var(--accent, #60a5fa); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent, #60a5fa) 22%, transparent); }
+.sp-box textarea { flex: 1; min-width: 0; min-height: 52px; max-height: 40vh; border: 0 !important; outline: none; resize: none; background: transparent; color: inherit; font: inherit; font-size: 16px; line-height: 1.45; padding: 6px 8px; field-sizing: content; }
+.sp-go-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.sp-go-row .sp-go { min-height: 48px; padding-inline: 22px; border-radius: 14px; }
+.sp-go-row .sp-muted { font-size: .85rem; }
+@media (max-width: 560px) { .sp-go-row .sp-go { flex: 1 1 100%; justify-content: center; } }
+.sp-ideas { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; padding-bottom: 2px; }
+.sp-ideas::-webkit-scrollbar { display: none; }
+.sp-chip { flex: none; min-height: 40px; white-space: nowrap; }

@@ -68,7 +68,8 @@ function createSpacesPages(ctx) {
             "img-src 'self' data: blob: https:", "media-src 'self' data: blob: https:",
             "connect-src 'self' https://openvibe.network https://openvibe.chat https://openvibe.events https://cloudflareinsights.com",
             `frame-src 'self' https://openvibe.network ${sites}`, "frame-ancestors 'self'", "object-src 'none'", "base-uri 'self'",
-            "form-action 'self' https://openvibe.network", "script-src-attr 'unsafe-inline'",
+            // Codes builds a space as a full project (2026-11-15): the new-space form hands the words over by redirect.
+            "form-action 'self' https://openvibe.network https://openvibe.codes", "script-src-attr 'unsafe-inline'",
         ].join('; '));
         next();
     });
@@ -198,7 +199,7 @@ function createSpacesPages(ctx) {
         if (!signedIn(req)) throw new ApiError(401, 'auth.required', 'sign in first');
         // ?template=<id>: someone picked a template on openvibe.website; it leads the page, one press from a new space.
         const pick = req.query.template ? templates.get(String(req.query.template)) : null;
-        html(res, 200, render.newPage({ viewer: req.viewer, templates: templates.list(), csrf: csrfOf(req), aiOn: ai.enabled(), buildsLeft: await buildsLeft(req), pick, prompt: pick ? '' : promptOf(req), from: fromOf(req) }));
+        html(res, 200, render.newPage({ viewer: req.viewer, templates: templates.list(), csrf: csrfOf(req), aiOn: ai.enabled(), agentOn: agentOn(), builder: String(req.query.builder || ''), buildsLeft: await buildsLeft(req), pick, prompt: pick ? '' : promptOf(req), from: fromOf(req) }));
     }));
     router.post('/spaces/new', ...action(async (req, res) => {
         const body = req.body || {};
@@ -209,11 +210,17 @@ function createSpacesPages(ctx) {
             const space = await spaces.create(req.viewer, { name: t.name, description: t.description, instructions: t.instructions || '', capabilities: t.capabilities, files: templates.files(t.id), template: t.id });
             return res.redirect(303, `/spaces/${space.slug}/edit`);
         }
-        const again = (error) => html(res, 422, render.newPage({ viewer: req.viewer, templates: templates.list(), csrf: csrfOf(req), aiOn: ai.enabled(), buildsLeft: 0, error, prompt }));
+        const builder = ['actor', 'quick', 'codes'].includes(String(body.builder || '')) ? String(body.builder) : '';
+        const again = (error) => html(res, 422, render.newPage({ viewer: req.viewer, templates: templates.list(), csrf: csrfOf(req), aiOn: ai.enabled(), agentOn: agentOn(), builder, buildsLeft: 0, error, prompt }));
         if (prompt.length < 8) return again('Describe your space in a sentence or two (what it does, who uses it, how it should look).');
-        // The builder: the person's own agent (plan 2026-10-22 §Z, stage Z1) or Space's old AI loop, while the
-        // flag says which one it is. The old path is untouched and still works.
-        const withAgent = agentOn();
+        // Codes (2026-11-15): a full project with its own repository; Codes takes the words over (its home's ?prompt=).
+        if (builder === 'codes') {
+            const codes = String((config.codesPublicUrl || 'https://openvibe.codes')).replace(/\/+$/, '');
+            return res.redirect(303, `${codes}/?mode=new&kind=website&prompt=${encodeURIComponent(prompt.slice(0, 4000))}`);
+        }
+        // The builder: the person's own agent (plan 2026-10-22 §Z, stage Z1) or Space's quick AI loop. The person
+        // picks (2026-11-15); without a pick the agent builds when it is on.
+        const withAgent = builder === 'quick' ? false : agentOn();
         if (!withAgent && !ai.enabled()) return again('OpenVibe AI is not available right now. Start from a template instead.');
         // The abuse screen: what is asked of the builder must pass it (a guest's prompt passes the same checks).
         contentCheck.refuse(contentCheck.promptReason(prompt));

@@ -63,6 +63,23 @@ const BUILD_CAPS = ['space.build.read', 'space.build.create', 'space.build.write
         assert.match(call.body.task, /spc_[0-9A-HJKMNP-TV-Z]{26}/, 'the task names the space it works on');
     });
 
+    await check('who builds it: the page offers your Actor first, and Codes takes the words over', async () => {
+        const pageNew = await t.api('GET', '/spaces/new', { session: alice });
+        assert.strictEqual(pageNew.status, 200);
+        assert.match(pageNew.text, /<legend>Who builds it<\/legend>/);
+        assert.match(pageNew.text, /name="builder" value="actor" checked/, 'the Actor is the first choice while it is on');
+        assert.match(pageNew.text, /name="builder" value="codes"/);
+        assert.ok(!/class="eyebrow">New space</.test(pageNew.text), 'no "New space" eyebrow above the question');
+        assert.match(String(pageNew.headers['content-security-policy']), /form-action [^;]*https:\/\/openvibe\.codes/, 'the browser lets the form go on to Codes');
+        const before = actorCalls.length;
+        const r = await form(alice, '/spaces/new', { prompt: 'A big shop with a cart and accounts', builder: 'codes' });
+        assert.strictEqual(r.status, 303, r.text);
+        const to = new URL(r.headers.location);
+        assert.strictEqual(to.origin, 'https://openvibe.codes');
+        assert.deepStrictEqual([to.searchParams.get('mode'), to.searchParams.get('kind'), to.searchParams.get('prompt')], ['new', 'website', 'A big shop with a cart and accounts']);
+        assert.strictEqual(actorCalls.length, before, 'Codes builds it: no agent task, no space made here');
+    });
+
     await check('the editor carries the task, so the Dock opens at it', async () => {
         const page = await t.api('GET', `/spaces/${slug}/edit`, { session: alice });
         assert.strictEqual(page.status, 200);
