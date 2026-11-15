@@ -75,6 +75,8 @@ function load(env = process.env) {
         // OpenVibe.Network: SSO (OAuth2 authorization server), JWKS, client-credentials tokens.
         networkUrl: trim(env.OV_NETWORK_URL || 'https://openvibe.network'),
         networkInternalUrl: trim(env.OV_NETWORK_INTERNAL_URL || 'http://127.0.0.1:4000'),
+        // OpenVibe.Search's owner API (server/search-index.js: live sites as documents); off when empty.
+        search: { url: trim(env.SPACE_SEARCH_URL || (isProduction ? 'http://127.0.0.1:4710' : '')) },
         oauth: {
             clientId: env.OV_OAUTH_CLIENT_ID || 'space',
             clientSecret: env.OV_OAUTH_CLIENT_SECRET || '',

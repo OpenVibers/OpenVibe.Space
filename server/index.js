@@ -28,6 +28,7 @@ const { createPgTelemetrySink, startTelemetryRetention } = require('openvibe-sdk
     app.locals.hosting.worker.start();
     app.locals.hosting.outbox.start();
     app.locals.hosting.billing.start();   // off unless SPACE_BILLING_INTERVAL_MS > 0
+    app.locals.hosting.searchIndex.start();   // live sites in OpenVibe.Search (off without its URL and the client secret)
     app.locals.hosting.guestCleanup.start();   // the guest drafts whose week is up (off with SPACE_GUEST_DRAFTS=off)
     // The person's own agent (plan 2026-10-22 §Z, stage Z1): the watcher follows the tasks that build spaces
     // (off unless SPACE_BUILDER=agent and OpenVibe.Actor is there).
