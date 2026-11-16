@@ -150,7 +150,3 @@ Static uploads are validated before storage; tenant content runs on a separate r
 ## License
 
 AGPL-3.0-only. See [LICENSE](LICENSE).
-
-<!-- versions:start -->
-- openvibe-contracts: v0.419.0
-<!-- versions:end -->
