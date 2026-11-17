@@ -134,7 +134,9 @@ async function createApp(opts = {}) {
             ? createNetworkSender({ networkInternalUrl: hc.networkInternalUrl, clientId: hc.oauth.clientId, clientSecret: hc.oauth.clientSecret, ...(opts.fetchImpl ? { fetch: opts.fetchImpl } : {}) })
             : async () => { throw new Error('OV_OAUTH_CLIENT_SECRET is not set: Space cannot answer account events'); });
         app.locals.accountData = accountData;
-        app.post('/internal/events', accountData.consumer({ secrets: hc.events.secrets, send: accountSend, log: opts.log || console }));
+        // Other topics: the public events a space's events.json listens to (server/spaces/schedules.js).
+        app.post('/internal/events', accountData.consumer({ secrets: hc.events.secrets, send: accountSend, log: opts.log || console,
+            onEvent: (ev) => (app.locals.hosting && app.locals.hosting.spaceSchedules ? app.locals.hosting.spaceSchedules.onEvent(ev) : 'ignored:type') }));
     }
 
     app.use(helmet({

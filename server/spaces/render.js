@@ -203,10 +203,11 @@ function spacePage({ viewer, space, owner, url, csrf, forkedFrom }) {
 function schedulesHtml(runs) {
     if (!Array.isArray(runs) || !runs.length) return '';
     const every = (s) => (s % 86400 === 0 ? `${s / 86400} d` : s % 3600 === 0 ? `${s / 3600} h` : `${Math.round(s / 60)} min`);
-    const row = (r) => `<li class="sp-ed-sched-${r.last_status === 'ok' ? 'ok' : 'err'}"><b>${esc(r.function)}</b><span class="sp-muted">every ${esc(every(r.every_s))}</span>`
+    const when = (r) => (/^on /.test(r.trigger || '') ? r.trigger : `every ${every(r.every_s)}`);
+    const row = (r) => `<li class="sp-ed-sched-${r.last_status === 'ok' ? 'ok' : 'err'}"><b>${esc(r.function)}</b><span class="sp-muted">${esc(when(r))}</span>`
         + `<span>${r.last_run_at ? `<time datetime="${esc(r.last_run_at)}">${esc(r.last_run_at.slice(0, 16).replace('T', ' '))} UTC</time> · ${r.last_status === 'ok' ? 'ok' : 'failed'} · ${esc(String(r.last_ms || 0))} ms` : 'not run yet'}</span>`
         + `${r.last_error ? `<code>${esc(r.last_error)}</code>` : ''}</li>`;
-    return `<details class="sp-ed-fnlog sp-ed-sched" id="ed-schedules"><summary><i class="ovg-fill" data-ov-icon="clock" aria-hidden="true"></i> Schedules <span class="sp-muted">${runs.length} · schedules.json</span></summary><ol>${runs.map(row).join('')}</ol></details>`;
+    return `<details class="sp-ed-fnlog sp-ed-sched" id="ed-schedules"><summary><i class="ovg-fill" data-ov-icon="clock" aria-hidden="true"></i> Schedules and events <span class="sp-muted">${runs.length} · schedules.json, events.json</span></summary><ol>${runs.map(row).join('')}</ol></details>`;
 }
 
 function editorPage({ space, files, csrf, canPublish, url, aiOn, buildsLeft, templates, guest = null, schedules = null }) {

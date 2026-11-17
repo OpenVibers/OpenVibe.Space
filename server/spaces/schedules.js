@@ -15,6 +15,11 @@
  *
  * The job is off with SPACE_SCHEDULES=off or SPACE_SCHEDULES_INTERVAL_MS=0 (a drill or a test leaves it alone) and
  * runs once a minute otherwise.
+ *
+ * Events (the third trigger): events.json lists [{ "function": "onlive", "on": "live.stream.started" }]; when OpenVibe.Events
+ * delivers one of the PUBLIC event types below, each published space that listed it runs that function as the space,
+ * with x-ov-trigger: event and the body { trigger: "event", type, at, event: { id, subject, payload } } (the payload's
+ * plain values only, 2 KB at most). Nothing private reaches a space: only these types are subscribed and dispatched.
  */
 const fs = require('fs');
 
@@ -24,6 +29,15 @@ const MIN_S = 15 * 60;
 const MAX_S = 7 * 86400;
 const PER_TICK = 20;
 const NAME_RE = /^[a-z0-9][a-z0-9-]{0,39}$/;
+// The public event types a space may listen to (OpenVibe.Events' own public list, server/home.js TYPE_WORDS).
+const EVENT_TYPES = Object.freeze([
+    'live.stream.started', 'live.stream.ended', 'blog.post.published', 'wiki.page.published', 'community.paste.created',
+    'community.thread.created', 'coupons.coupon.created', 'deals.offer.created', 'deals.offer.updated',
+    'games.world.published', 'services.app.published', 'reviews.signal.added', 'trade.observation.created',
+]);
+const MAX_PAYLOAD = 2048;
+const PER_EVENT = 50;
+const QUEUE_MAX = 200;
 
 /** "15m" | "2h" | "1d" → seconds, or null. */
 function everySeconds(v) {
@@ -49,6 +63,34 @@ function parseSchedules(text) {
     return { list, why: j.length > MAX_SCHEDULES ? `only the first ${MAX_SCHEDULES} schedules run` : null };
 }
 
+/** events.json's text → { list: [{ fn, on }], why }. */
+function parseEvents(text) {
+    let j;
+    try { j = JSON.parse(String(text || '')); } catch { return { list: [], why: 'events.json is not valid JSON' }; }
+    if (!Array.isArray(j)) return { list: [], why: 'events.json is a list of { function, on }' };
+    const list = [];
+    for (const s of j.slice(0, MAX_SCHEDULES)) {
+        const fn = s && String(s.function || '').trim();
+        const on = s && String(s.on || '').trim();
+        if (!fn || !NAME_RE.test(fn)) return { list: [], why: `"${String(fn || '').slice(0, 40)}" is not a function name` };
+        if (!EVENT_TYPES.includes(on)) return { list: [], why: `${fn}: "${on.slice(0, 60)}" is not a public event (one of ${EVENT_TYPES.join(', ')})` };
+        if (!list.some((x) => x.fn === fn && x.on === on)) list.push({ fn, on });
+    }
+    return { list, why: j.length > MAX_SCHEDULES ? `only the first ${MAX_SCHEDULES} run` : null };
+}
+
+/** An event's payload as a space may see it: plain values only (no objects in objects), 2 KB at most. */
+function publicPayload(p) {
+    const out = {};
+    for (const [k, v] of Object.entries(p && typeof p === 'object' && !Array.isArray(p) ? p : {})) {
+        if (!/^[a-z][a-z0-9_]{0,40}$/i.test(k)) continue;
+        if (v === null || typeof v === 'boolean' || (typeof v === 'number' && Number.isFinite(v))) out[k] = v;
+        else if (typeof v === 'string') out[k] = v.slice(0, 300);
+        if (JSON.stringify(out).length > MAX_PAYLOAD) { delete out[k]; break; }
+    }
+    return out;
+}
+
 function createSpaceSchedules({ store, blobs, apps, config = {}, log = console }) {
     const { db } = store;
     const now = () => (typeof store.now === 'function' ? store.now() : Date.now());
@@ -62,11 +104,16 @@ function createSpaceSchedules({ store, blobs, apps, config = {}, log = console }
             WHERE s.status = 'active' ORDER BY s.id LIMIT 2000`),
         file: db.prepare(`SELECT f.sha256, f.size, d.project_id FROM space_deploy_files f JOIN space_deploys d ON d.id = f.deploy_id
             WHERE f.deploy_id = ? AND f.path = ? AND d.state = 'ready'`),
-        runs: db.prepare('SELECT fn, last_run_at FROM space_schedule_runs WHERE site_id = ?'),
-        status: db.prepare('SELECT fn, every_s, last_run_at, last_status, last_ms, last_error, runs FROM space_schedule_runs WHERE site_id = ? ORDER BY fn'),
-        record: db.prepare(`INSERT INTO space_schedule_runs (site_id, fn, every_s, last_run_at, last_status, last_ms, last_error, runs)
-            VALUES (?, ?, ?, ?, ?, ?, ?, 1)
-            ON CONFLICT (site_id, fn) DO UPDATE SET every_s = EXCLUDED.every_s, last_run_at = EXCLUDED.last_run_at,
+        eventSites: db.prepare(`SELECT s.id AS site_id, s.project_id, s.active_deploy_id AS deploy_id, f.sha256, f.size
+            FROM space_sites s JOIN space_projects p ON p.id = s.project_id AND p.status = 'active'
+            JOIN space_deploy_files f ON f.deploy_id = s.active_deploy_id AND f.path = 'events.json'
+            JOIN space_deploys d ON d.id = s.active_deploy_id AND d.state = 'ready'
+            WHERE s.status = 'active' ORDER BY s.id LIMIT 2000`),
+        runs: db.prepare("SELECT fn, last_run_at FROM space_schedule_runs WHERE site_id = ? AND (trigger = '' OR trigger LIKE 'every %')"),
+        status: db.prepare('SELECT fn, every_s, trigger, last_run_at, last_status, last_ms, last_error, runs FROM space_schedule_runs WHERE site_id = ? ORDER BY fn, trigger'),
+        record: db.prepare(`INSERT INTO space_schedule_runs (site_id, fn, every_s, trigger, last_run_at, last_status, last_ms, last_error, runs)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+            ON CONFLICT (site_id, fn) DO UPDATE SET every_s = EXCLUDED.every_s, trigger = EXCLUDED.trigger, last_run_at = EXCLUDED.last_run_at,
                 last_status = EXCLUDED.last_status, last_ms = EXCLUDED.last_ms, last_error = EXCLUDED.last_error,
                 runs = space_schedule_runs.runs + 1`),
     };
@@ -98,10 +145,11 @@ function createSpaceSchedules({ store, blobs, apps, config = {}, log = console }
         return { ran };
     }
 
-    async function runOne({ row, fn, every }) {
+    async function runOne({ row, fn, every = 0, on = null, event = null }) {
         const started = now();
+        const trigger = on ? `on ${on}` : `every ${every}`;
         const done = async (status, error = null) => {
-            await q.record.run(row.site_id, fn, every, new Date(started).toISOString(), status, Math.max(0, now() - started), error ? String(error).slice(0, 300) : null);
+            await q.record.run(row.site_id, fn, every, trigger, new Date(started).toISOString(), status, Math.max(0, now() - started), error ? String(error).slice(0, 300) : null);
         };
         try {
             const a = typeof apps === 'function' ? apps() : apps;
@@ -111,8 +159,9 @@ function createSpaceSchedules({ store, blobs, apps, config = {}, log = console }
             if (!file || file.project_id !== row.project_id) return done('error', `there is no functions/${fn}.js`);
             const code = await read(file.project_id, file.sha256);
             const at = new Date(started).toISOString();
-            const request = { method: 'POST', path: `/api/${fn}`, query: {}, headers: { 'content-type': 'application/json', 'x-ov-trigger': 'schedule' }, body: { trigger: 'schedule', at } };
-            const out = await a.runFunction(space, fn, code, request, { caller: `schedule:${row.site_id}` });
+            const body = event ? { trigger: 'event', type: on, at, event } : { trigger: 'schedule', at };
+            const request = { method: 'POST', path: `/api/${fn}`, query: {}, headers: { 'content-type': 'application/json', 'x-ov-trigger': event ? 'event' : 'schedule' }, body };
+            const out = await a.runFunction(space, fn, code, request, { caller: `${event ? 'event' : 'schedule'}:${row.site_id}` });
             // The sandbox answers { status, headers, body, logs }; a failure is a 4xx or 5xx with its reason as the body.
             const code_ = Number(out && out.status) || 500;
             if (code_ >= 400) return done('error', `${code_}: ${String((out && out.body) || '').slice(0, 240)}`);
@@ -123,11 +172,43 @@ function createSpaceSchedules({ store, blobs, apps, config = {}, log = console }
         }
     }
 
+    // Events arrive in Events' delivery request: they are queued and run after the answer, one at a time.
+    const queue = [];
+    let draining = false;
+    async function drain() {
+        if (draining) return;
+        draining = true;
+        try {
+            while (queue.length) {
+                const ev = queue.shift();
+                for (const row of await q.eventSites.all()) {
+                    if (Number(row.size) > MAX_FILE) continue;
+                    let parsed;
+                    try { parsed = parseEvents(await read(row.project_id, row.sha256)); } catch { continue; }
+                    for (const t of parsed.list.filter((x) => x.on === ev.type).slice(0, PER_EVENT)) await runOne({ row, fn: t.fn, on: t.on, event: ev.event });
+                }
+            }
+        } catch (err) { log.warn('[Space events] dispatch failed:', err && err.message); }
+        finally { draining = false; }
+    }
+    /** OpenVibe.Events' delivery of an event (the account-data consumer's onEvent): a public type is queued for the spaces. */
+    function onEvent(ev) {
+        const type = ev && String(ev.event_type || '');
+        if (!EVENT_TYPES.includes(type)) return 'ignored:type';
+        if (queue.length >= QUEUE_MAX) return 'ignored:busy';
+        queue.push({ type, event: { id: String(ev.event_id || ''), at: ev.timestamp || null, subject: ev.subject && typeof ev.subject === 'object' ? { type: String(ev.subject.type || '').slice(0, 40), id: String(ev.subject.id || '').slice(0, 80) } : null, payload: publicPayload(ev.payload) } });
+        setImmediate(() => { drain().catch(() => {}); });
+        return 'queued';
+    }
+
     return {
         enabled,
+        onEvent,
+        /** Wait for the queued events to run (tests). */
+        settle: async () => { while (draining || queue.length) await new Promise((r) => setTimeout(r, 10)); },
         tick,
         /** The last run of each schedule of a site, for the editor. */
-        status: async (siteId) => (await q.status.all(siteId)).map((r) => ({ function: r.fn, every_s: r.every_s, last_run_at: r.last_run_at ? new Date(r.last_run_at).toISOString() : null, last_status: r.last_status, last_ms: r.last_ms, last_error: r.last_error, runs: r.runs })),
+        status: async (siteId) => (await q.status.all(siteId)).map((r) => ({ function: r.fn, every_s: r.every_s, trigger: r.trigger, last_run_at: r.last_run_at ? new Date(r.last_run_at).toISOString() : null, last_status: r.last_status, last_ms: r.last_ms, last_error: r.last_error, runs: r.runs })),
         start() {
             if (!enabled || timer) return;
             timer = setInterval(() => { tick().catch((err) => log.warn('[Space schedules] tick failed:', err && err.message)); }, Number(opts.intervalMs));
@@ -137,4 +218,4 @@ function createSpaceSchedules({ store, blobs, apps, config = {}, log = console }
     };
 }
 
-module.exports = { createSpaceSchedules, parseSchedules, everySeconds, MAX_SCHEDULES, MIN_S };
+module.exports = { createSpaceSchedules, parseSchedules, parseEvents, publicPayload, everySeconds, EVENT_TYPES, MAX_SCHEDULES, MIN_S };
