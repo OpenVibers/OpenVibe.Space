@@ -234,7 +234,7 @@ function versionsHtml(list) {
 
 function editorPage({ space, files, csrf, canPublish, url, aiOn, buildsLeft, templates, guest = null, schedules = null, memory = null, versions = null }) {
     const boot = {
-        space: { id: space.id, slug: space.slug, name: space.name, description: space.description, instructions: space.instructions, capabilities: caps(space), visibility: space.visibility, published: Boolean(space.site_id), url, building: Boolean(space.building_run_id), building_prompt: space.building_prompt || '' },
+        space: { id: space.id, slug: space.slug, name: space.name, description: space.description, instructions: space.instructions, capabilities: caps(space), visibility: space.visibility, embeddable: space.embeddable === true, published: Boolean(space.site_id), url, building: Boolean(space.building_run_id), building_prompt: space.building_prompt || '' },
         files, csrf, canPublish, aiOn, buildsLeft, templates: templates.map((t) => ({ id: t.id, name: t.name })),
         // Where the editor's calls go: a guest draft is edited by its id (its address is a secret link), an
         // owned space by its slug. A guest carries its secret with every call.
@@ -300,6 +300,11 @@ function editorPage({ space, files, csrf, canPublish, url, aiOn, buildsLeft, tem
       <fieldset><legend>Who can find it</legend>
         <label class="sp-check"><input type="radio" name="visibility" value="public"> Public: in the gallery</label>
         <label class="sp-check"><input type="radio" name="visibility" value="unlisted"> Unlisted: only with its link</label>
+      </fieldset>
+      <fieldset><legend>Other sites</legend>
+        <label class="sp-check"><input type="checkbox" name="embeddable" value="1"> Let any site embed it</label>
+        <div class="sp-embed" id="ed-embed" hidden><p class="sp-muted">Paste this where it should show (it works once the space is published):</p>
+          <div class="sp-embed-row"><code id="ed-embed-code"></code><button class="sp-btn sp-btn-quiet sp-btn-sm" type="button" id="ed-embed-copy">Copy</button></div></div>
       </fieldset>`}
       <div class="sp-row sp-dialog-actions"><button class="sp-btn" value="save">Save settings</button><button class="sp-btn sp-btn-quiet" value="cancel" formnovalidate>Cancel</button></div>
       <hr>

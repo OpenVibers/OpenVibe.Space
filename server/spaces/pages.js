@@ -151,7 +151,7 @@ function createSpacesPages(ctx) {
      * answer. Guests never get an agent (they have no account, and the agent works for the person).
      */
     const agentOn = () => Boolean(config.builder && config.builder.mode === 'agent' && ctx.spaceAgent && ctx.spaceAgent.enabled);
-    const settingsOut = (s) => ({ id: s.id, slug: s.slug, name: s.name, description: s.description, instructions: s.instructions, capabilities: spaces.capsOf(s.capabilities), visibility: s.visibility, published: Boolean(s.site_id), url: spaces.urlOf(s), building: Boolean(s.building_run_id) });
+    const settingsOut = (s) => ({ id: s.id, slug: s.slug, name: s.name, description: s.description, instructions: s.instructions, capabilities: spaces.capsOf(s.capabilities), visibility: s.visibility, embeddable: s.embeddable === true, published: Boolean(s.site_id), url: spaces.urlOf(s), building: Boolean(s.building_run_id) });
 
     // ── Guest drafts (openvibe.website, plan 5.9) ────────────────────────────────────────────────────────────
     // A visitor who is not signed in makes a draft on openvibe.space. The draft has no owner and a random
@@ -381,6 +381,8 @@ function createSpacesPages(ctx) {
         // A guest draft has no capabilities (there is no visitor to ask anything of) and is never in the gallery.
         const input = who.guest ? { name: body.name, description: body.description, instructions: body.instructions, capabilities: [], visibility: 'unlisted' } : body;
         const updated = await spaces.updateSettings(req.viewer, who.space, input);
+        // Its pages read the space through a short cache: a changed setting (embedding) applies at once.
+        if (updated.site_id && ctx.apps && typeof ctx.apps.forget === 'function') ctx.apps.forget(updated.site_id);
         if (who.guest) await spaces.touchGuest(updated);
         return { space: settingsOut(updated) };
     }));

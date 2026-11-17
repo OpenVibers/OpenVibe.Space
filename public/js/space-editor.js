@@ -274,6 +274,7 @@
     form.elements.instructions.value = space.instructions || '';
     Array.prototype.forEach.call(form.querySelectorAll('input[name=cap]'), function (c) { c.checked = space.capabilities.indexOf(c.value) >= 0; });
     Array.prototype.forEach.call(form.querySelectorAll('input[name=visibility]'), function (r) { r.checked = r.value === (space.visibility || 'public'); });
+    if (form.elements.embeddable) { form.elements.embeddable.checked = !!space.embeddable; showEmbed(); }
     $('ed-unpublish').hidden = !space.published;
     dialog.showModal();
   });
@@ -281,8 +282,28 @@
     if (dialog.returnValue !== 'save') return;
     var caps = Array.prototype.filter.call(form.querySelectorAll('input[name=cap]'), function (c) { return c.checked; }).map(function (c) { return c.value; });
     var vis = form.querySelector('input[name=visibility]:checked');
-    call('PUT', '/settings', { name: form.elements.name.value, description: form.elements.description.value, instructions: form.elements.instructions.value, capabilities: caps, visibility: vis ? vis.value : 'public' })
+    var body = { name: form.elements.name.value, description: form.elements.description.value, instructions: form.elements.instructions.value, capabilities: caps, visibility: vis ? vis.value : 'public' };
+    if (form.elements.embeddable) body.embeddable = form.elements.embeddable.checked;
+    call('PUT', '/settings', body)
       .then(function (j) { space = Object.assign(space, j.space); $('ed-name').textContent = space.name; status('Settings saved'); }, function (e) { status(e.message, 'bad'); });
+  });
+
+  // ── Embedding (plan §AD.15): the snippet to paste, shown while "Let any site embed it" is on ──
+  function embedSnippet() {
+    var src = space.url || '';
+    return '<iframe src="' + src + '" title="' + String(space.name || 'Space').replace(/[&<>"]/g, '') + '" width="100%" height="600" style="border:0;border-radius:16px" allow="clipboard-write; fullscreen" loading="lazy"></iframe>';
+  }
+  function showEmbed() {
+    var box = $('ed-embed'); if (!box || !form.elements.embeddable) return;
+    box.hidden = !form.elements.embeddable.checked;
+    $('ed-embed-code').textContent = embedSnippet();
+  }
+  if (form.elements.embeddable) form.elements.embeddable.addEventListener('change', showEmbed);
+  var copyBtn = $('ed-embed-copy');
+  if (copyBtn) copyBtn.addEventListener('click', function () {
+    var text = embedSnippet();
+    var done = function () { copyBtn.textContent = 'Copied'; setTimeout(function () { copyBtn.textContent = 'Copy'; }, 1600); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, function () { status('Select the snippet and copy it', 'bad'); });
   });
 
   // ── Publishing ──

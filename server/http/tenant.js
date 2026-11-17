@@ -57,7 +57,7 @@ const TENANT_CSP = [
  * fonts, and calls to Space's API for the space SDK. It still runs only on its own registrable origin, so the network's
  * cookies and pages stay out of its reach; the details page on openvibe.space may embed it.
  */
-function appCsp(config) {
+function appCsp(config, { embeddable = false } = {}) {
     const api = new URL(config.baseUrl).origin;
     return [
         "default-src 'self'",
@@ -70,7 +70,9 @@ function appCsp(config) {
         "object-src 'none'",
         "base-uri 'self'",
         `form-action 'self' ${api}`,
-        `frame-ancestors 'self' ${api}`,
+        // A space its maker lets other sites embed (plan §AD.15) may be framed by any https page; else only by itself
+        // and openvibe.space.
+        embeddable ? "frame-ancestors 'self' https:" : `frame-ancestors 'self' ${api}`,
         'upgrade-insecure-requests',
     ].join('; ');
 }
@@ -461,7 +463,7 @@ function createTenantServer({ store, config, blobs, takedowns = null, siteConfig
         baseHeaders(res, { sandbox: site.environment === 'sandbox', scratch: site.scratch === true });
         // A published space: the app policy, and the space SDK at /_openvibe/sdk.js (never one of its files).
         const space = apps && apps() ? await apps().forSite(site.id) : null;
-        if (space) res.setHeader('Content-Security-Policy', appCsp(config));
+        if (space) res.setHeader('Content-Security-Policy', appCsp(config, { embeddable: space.embeddable === true }));
         // A space's function (/api/<name>) also answers POST; everything else here is static.
         if (req.method !== 'GET' && req.method !== 'HEAD' && !(space && req.method === 'POST' && FN_PATH.test(String(req.url || '').split('?')[0]))) {
             return plain(res, 405, 'Static site: only GET and HEAD are supported.', { Allow: 'GET, HEAD' });

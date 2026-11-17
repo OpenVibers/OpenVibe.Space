@@ -236,3 +236,9 @@ body[data-page="spaces"] .page:has(.sp-editor) { padding-bottom: 0; }
 .sp-ed-versions li{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;font-size:13px;min-width:0}
 .sp-ed-versions li small{flex:1 1 100%;color:var(--text-secondary,#a8b3c4)}
 .sp-ed-versions li code{flex:1 1 100%;font-size:12px;overflow-wrap:anywhere;color:var(--text-muted,#7d8aa0)}
+
+/* Embedding (plan AD.15): the snippet to paste. */
+.sp-embed{display:grid;gap:6px;margin-top:6px}
+.sp-embed p{margin:0;font-size:13px}
+.sp-embed-row{display:flex;gap:8px;align-items:flex-start;min-width:0}
+.sp-embed-row code{flex:1;min-width:0;padding:8px 10px;border-radius:10px;font-size:12px;overflow-wrap:anywhere;background:color-mix(in srgb,var(--text-primary,#ececf1) 6%,transparent)}
