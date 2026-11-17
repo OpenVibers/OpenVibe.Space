@@ -341,7 +341,8 @@ function createSpacesPages(ctx) {
             return;
         }
         const { space } = who;
-        html(res, 200, render.editorPage({ space, files: await spaces.files(space), csrf: csrfOf(req), canPublish: spaces.canPublish(req.viewer), url: spaces.urlOf(space), aiOn: ai.enabled(), buildsLeft: await buildsLeft(req), templates: templates.list() }));
+        const schedules = space.site_id && ctx.spaceSchedules ? await ctx.spaceSchedules.status(space.site_id).catch(() => null) : null;
+        html(res, 200, render.editorPage({ space, schedules, files: await spaces.files(space), csrf: csrfOf(req), canPublish: spaces.canPublish(req.viewer), url: spaces.urlOf(space), aiOn: ai.enabled(), buildsLeft: await buildsLeft(req), templates: templates.list() }));
     }));
 
     router.post('/spaces/:slug/fork', ...action(async (req, res) => {

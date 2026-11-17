@@ -68,6 +68,14 @@ const ORIGIN = 'https://openvibe.space';
             assert.strictEqual(runs.broken.runs, 1, 'the hourly ones wait');
         });
 
+        await check('the maker\'s editor shows each schedule and how it last ran', async () => {
+            const page = await t.api('GET', `/spaces/${slug}/edit`, { session: alice });
+            assert.strictEqual(page.status, 200);
+            assert.match(page.text, /<details class="sp-ed-fnlog sp-ed-sched" id="ed-schedules">/);
+            assert.match(page.text, /<li class="sp-ed-sched-ok"><b>tick<\/b><span class="sp-muted">every 15 min<\/span>/);
+            assert.match(page.text, /<li class="sp-ed-sched-err"><b>missing<\/b>[\s\S]*?there is no functions\/missing\.js/);
+        });
+
         await check('the job is off outside production unless asked, and in a drill', () => {
             assert.strictEqual(sched.enabled, false, 'tests and drills: the clock does not start by itself');
         });
