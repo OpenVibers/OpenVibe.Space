@@ -483,6 +483,8 @@ function createTenantServer({ store, config, blobs, takedowns = null, siteConfig
         const q0 = target.indexOf('?');
         const rawPath = q0 >= 0 ? target.slice(0, q0) : target;
         const search = q0 >= 0 ? target.slice(q0) : '';
+        // A published space installs as an app (plan §AD.15): its manifest and icons, beside its files.
+        if (space && rawPath.startsWith('/_openvibe/') && rawPath !== '/_openvibe/sdk.js' && require('../spaces/app-manifest').serve(space, rawPath, req, res)) return;
         if (space && rawPath === '/_openvibe/sdk.js') {
             res.statusCode = 200;
             res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
