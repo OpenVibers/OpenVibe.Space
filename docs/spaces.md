@@ -132,7 +132,24 @@ A published space may run its functions on a clock. List them in `schedules.json
 - **What is kept:** the last run of each schedule (when, whether it answered under 400, how long it took, and the
   error), so a space can show that it is alive. A draft or an unpublished change never runs; publishing starts it.
 - **The other triggers:** a webhook is `POST /api/<name>` on the published space, and a person is the page calling
-  `OV.fn`; schedules add the clock (plan §AD.15).
+  `OV.fn`; schedules add the clock and events (below) the rest of the network (plan §AD.15).
+
+### Events: a space that reacts
+
+`events.json` at the root names public OpenVibe events, and the function each one runs:
+
+```json
+[{ "function": "onlive", "on": "live.stream.started" }]
+```
+
+- **Which events:** the public ones only: `live.stream.started`, `live.stream.ended`, `blog.post.published`,
+  `wiki.page.published`, `community.paste.created`, `community.thread.created`, `coupons.coupon.created`,
+  `deals.offer.created`, `deals.offer.updated`, `games.world.published`, `services.app.published`,
+  `reviews.signal.added`, `trade.observation.created`. Anything else is refused in the file and never delivered.
+- **How it runs:** the published copy, as the space (`ov.user` is `null`), a `POST` with `x-ov-trigger: event` and the
+  body `{ "trigger": "event", "type", "at", "event": { "id", "at", "subject": { "type", "id" }, "payload" } }`. The
+  payload carries only its plain values (text, numbers, true or false), 2 KB at most. Events are handled after
+  OpenVibe.Events has its answer, one at a time; the editor shows the last run of each under **Schedules and events**.
 
 ## Sign-in, step by step
 
