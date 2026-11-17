@@ -220,7 +220,19 @@ function memoryHtml(facts) {
         + `<ol>${facts.map(row).join('')}</ol><p class="sp-ed-memory-all"><button type="button" class="sp-btn sp-btn-quiet sp-btn-sm" data-forget-all>Forget everything</button></p></details>`;
 }
 
-function editorPage({ space, files, csrf, canPublish, url, aiOn, buildsLeft, templates, guest = null, schedules = null, memory = null }) {
+/** Every change as a version: when, who or what, what it changed, and Restore (plan §AD.15: see, compare and undo). */
+function versionsHtml(list) {
+    if (!Array.isArray(list) || list.length < 2) return '';
+    const WHO = { editor: 'saved', ai: 'OpenVibe AI', agent: 'your agent', restore: 'restored', created: 'created', copy: 'copied', official: 'updated' };
+    const paths = (c) => [...c.added.map((p) => `+ ${p}`), ...c.changed.map((p) => `~ ${p}`), ...c.removed.map((p) => `− ${p}`)];
+    const row = (v, i) => `<li><b>#${esc(String(v.n))}</b><span>${esc(WHO[v.source] || v.source)}${v.by && v.source !== 'ai' ? ` · ${esc(v.by)}` : ''}</span>`
+        + `<time class="sp-muted" datetime="${esc(v.at)}">${esc(v.at.slice(0, 16).replace('T', ' '))} UTC</time>`
+        + (i === 0 ? '<span class="sp-muted">now</span>' : `<button type="button" class="sp-btn sp-btn-quiet sp-btn-sm" data-restore="${esc(String(v.n))}">Restore</button>`)
+        + `${v.note ? `<small>${esc(v.note)}</small>` : ''}<code>${esc(paths(v.changes).join('  ') || 'no file changes')}</code></li>`;
+    return `<details class="sp-ed-fnlog sp-ed-versions" id="ed-versions"><summary><i class="ovg-fill" data-ov-icon="history" aria-hidden="true"></i> Versions <span class="sp-muted">${list.length} · every change, undoable</span></summary><ol>${list.map(row).join('')}</ol></details>`;
+}
+
+function editorPage({ space, files, csrf, canPublish, url, aiOn, buildsLeft, templates, guest = null, schedules = null, memory = null, versions = null }) {
     const boot = {
         space: { id: space.id, slug: space.slug, name: space.name, description: space.description, instructions: space.instructions, capabilities: caps(space), visibility: space.visibility, published: Boolean(space.site_id), url, building: Boolean(space.building_run_id), building_prompt: space.building_prompt || '' },
         files, csrf, canPublish, aiOn, buildsLeft, templates: templates.map((t) => ({ id: t.id, name: t.name })),
@@ -269,7 +281,7 @@ function editorPage({ space, files, csrf, canPublish, url, aiOn, buildsLeft, tem
     <section class="sp-ed-preview" aria-label="Preview">
       <div class="sp-ed-preview-bar"><span><i class="ovg-fill" data-ov-icon="eye" aria-hidden="true"></i> Preview <span class="sp-muted">(runs as you)</span></span><button class="sp-btn sp-btn-quiet sp-btn-sm" id="ed-run" type="button"><i class="ovg-fill" data-ov-icon="retry" aria-hidden="true"></i> Run</button></div>
       <iframe id="ed-frame" title="Preview of the space" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-pointer-lock"></iframe>
-      <details class="sp-ed-fnlog" id="ed-fnlog" hidden><summary><i class="ovg-fill" data-ov-icon="terminal" aria-hidden="true"></i> Function log <span class="sp-muted" id="ed-fnlog-last"></span></summary><ol id="ed-fnlog-list"></ol></details>${schedulesHtml(schedules)}${memoryHtml(memory)}
+      <details class="sp-ed-fnlog" id="ed-fnlog" hidden><summary><i class="ovg-fill" data-ov-icon="terminal" aria-hidden="true"></i> Function log <span class="sp-muted" id="ed-fnlog-last"></span></summary><ol id="ed-fnlog-list"></ol></details>${schedulesHtml(schedules)}${memoryHtml(memory)}${versionsHtml(versions)}
     </section>
   </div>
   <div class="sp-ed-building" id="ed-building" hidden><div><i class="ovg-fill" data-ov-icon="busy" data-ovg="busy" aria-hidden="true"></i><h2 id="ed-building-title" class="ovk-titled">${sectionIcon('grid')}OpenVibe AI is building…</h2><p id="ed-building-text"></p><p class="sp-muted">This usually takes under a minute or two. You can leave and come back.</p></div></div>

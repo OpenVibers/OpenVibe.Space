@@ -112,7 +112,7 @@ function createSpacesBuilderApi({ config, spaces, steps = null, log = console })
     router.put('/:id/files', guard('space.build.write'), json, run(async (req) => {
         const { person, space } = await ownSpace(req);
         const body = req.body || {};
-        const files = await spaces.saveFiles(spaces.viewerOf(person, space), space, body.files);
+        const files = await spaces.saveFiles(spaces.viewerOf(person, space), space, body.files, { source: 'agent' });
         if (steps) await steps.working({ space, person });
         return { files };
     }));

@@ -57,6 +57,13 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, outb
         files: db.prepare('SELECT path, content FROM space_app_files WHERE space_id = ? ORDER BY path'),
         clearFiles: db.prepare('DELETE FROM space_app_files WHERE space_id = ?'),
         addFile: db.prepare('INSERT INTO space_app_files (space_id, path, content, updated_at) VALUES (?, ?, ?, ?)'),
+        // Versions (plan §AD.15): the files after each change, the last VERSIONS_KEPT of each space.
+        versionAdd: db.prepare(`INSERT INTO space_app_versions (space_id, n, files, by_subject, by_name, source, note, bytes, created_at)
+            VALUES (?, COALESCE((SELECT max(n) FROM space_app_versions WHERE space_id = ?), 0) + 1, ?, ?, ?, ?, ?, ?, ?)`),
+        versionLast: db.prepare('SELECT n, files FROM space_app_versions WHERE space_id = ? ORDER BY n DESC LIMIT 1'),
+        versionList: db.prepare('SELECT n, files, by_subject, by_name, source, note, bytes, created_at FROM space_app_versions WHERE space_id = ? ORDER BY n DESC LIMIT ?'),
+        versionGet: db.prepare('SELECT n, files, source, created_at FROM space_app_versions WHERE space_id = ? AND n = ?'),
+        versionPrune: db.prepare('DELETE FROM space_app_versions WHERE space_id = ? AND n <= (SELECT max(n) FROM space_app_versions WHERE space_id = ?) - ?'),
         touch: db.prepare('UPDATE space_apps SET updated_at = ? WHERE id = ?'),
         settings: db.prepare('UPDATE space_apps SET name = ?, description = ?, instructions = ?, capabilities = ?, visibility = ?, updated_at = ? WHERE id = ?'),
         building: db.prepare('UPDATE space_apps SET building_run_id = ?, building_prompt = ?, updated_at = ? WHERE id = ?'),
@@ -159,12 +166,56 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, outb
         return out;
     }
 
-    async function writeFiles(space, list, now) {
+    async function writeFiles(space, list, now, meta = {}) {
         await store.tx(async () => {
             await q.clearFiles.run(space.id);
             for (const f of list) await q.addFile.run(space.id, f.path, f.content, now);
             await q.touch.run(now, space.id);
+            await recordVersion(space.id, list, now, meta);
         });
+    }
+
+    // ── Versions (plan §AD.15: "every change … is a version you can see, compare and undo") ──
+    /** Who made a change, for its version; a guest or a service is no one in particular (never throws). */
+    const byOf = (viewer) => { try { return personOf(viewer); } catch { return null; } };
+    const VERSIONS_KEPT = 20;
+    const snapshot = (list) => JSON.stringify([...list].map((f) => ({ path: f.path, content: f.content })).sort((a, b) => (a.path < b.path ? -1 : 1)));
+    /** Keep the files after a change as a version (nothing changed: nothing kept), and only the last VERSIONS_KEPT. */
+    async function recordVersion(spaceId, list, now, { by = null, source = 'editor', note = null } = {}) {
+        const files = snapshot(list);
+        const last = await q.versionLast.get(spaceId);
+        if (last && last.files === files) return null;
+        await q.versionAdd.run(spaceId, spaceId, files, by && by.subject ? String(by.subject) : null, by && (by.name || by.username) ? String(by.name || by.username).slice(0, 80) : null,
+            String(source).slice(0, 20), note ? String(note).slice(0, 200) : null, Buffer.byteLength(files), now);
+        await q.versionPrune.run(spaceId, spaceId, VERSIONS_KEPT);
+        return true;
+    }
+    /** What changed from one file list to the next: { added, changed, removed } paths. */
+    function changesBetween(before, after) {
+        const a = new Map((before || []).map((f) => [f.path, f.content]));
+        const b = new Map((after || []).map((f) => [f.path, f.content]));
+        return {
+            added: [...b.keys()].filter((p) => !a.has(p)),
+            changed: [...b.keys()].filter((p) => a.has(p) && a.get(p) !== b.get(p)),
+            removed: [...a.keys()].filter((p) => !b.has(p)),
+        };
+    }
+    /** A space's versions, newest first, each with who or what made it and what it changed from the one before. */
+    async function versions(space, limit = VERSIONS_KEPT) {
+        const rows = await q.versionList.all(space.id, Math.min(Math.max(Number(limit) || VERSIONS_KEPT, 1), 50) + 1);
+        const parsed = rows.map((r) => ({ ...r, list: JSON.parse(r.files) }));
+        return parsed.slice(0, limit).map((r, i) => ({
+            n: r.n, source: r.source, by: r.by_name || null, note: r.note || null, bytes: r.bytes,
+            at: new Date(Number(r.created_at)).toISOString(), changes: changesBetween(parsed[i + 1] ? parsed[i + 1].list : [], r.list),
+        }));
+    }
+    /** Undo to version n: its files become the space's, as a new version (so the undo can be undone). */
+    async function restoreVersion(viewer, space, n) {
+        const row = await q.versionGet.get(space.id, Number(n));
+        if (!row) throw new ApiError(404, 'space.version_not_found', 'no such version');
+        const list = checkFiles(JSON.parse(row.files));
+        await writeFiles(space, list, store.now(), { by: byOf(viewer), source: 'restore', note: `back to version ${row.n}` });
+        return list;
     }
 
     async function uniqueSlug(name) {
@@ -217,15 +268,16 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, outb
                 JSON.stringify(capsOf(input.capabilities)), input.template ? text(input.template, 40) : null, input.forked_from || null,
                 publishedAudience === 'link' ? 'unlisted' : 'public', now, now);
             for (const f of fileList) await q.addFile.run(id, f.path, f.content, now);
+            await recordVersion(id, fileList, now, { by: person, source: input.forked_from ? 'copy' : 'created' });
             // A new space is a draft: Only me until its maker shares it or publishes it.
             if (sharing) await sharing.register(viewer, id, 'private');
         });
         return await get(id);
     }
 
-    async function saveFiles(viewer, space, list) {
+    async function saveFiles(viewer, space, list, { source = 'editor' } = {}) {
         const checked = checkFiles(list);
-        await writeFiles(space, checked, store.now());
+        await writeFiles(space, checked, store.now(), { by: byOf(viewer), source });
         return checked;
     }
 
@@ -348,6 +400,7 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, outb
             applied = true;
             await q.clearFiles.run(space.id);
             for (const f of list) await q.addFile.run(space.id, f.path, f.content, now);
+            await recordVersion(space.id, list, now, { by: { name: 'OpenVibe AI' }, source: 'ai', note: text(space.building_prompt || '', 200) || null });
         });
         return applied;
     }
@@ -538,7 +591,7 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, outb
     async function mine(viewer) { return await q.mine.all(personOf(viewer).subject); }
 
     return {
-        CAPABILITIES, isSpaceId, get, getBySlug, forSite, load, isOwner, files, create, saveFiles, updateSettings, fork,
+        CAPABILITIES, isSpaceId, get, getBySlug, forSite, load, isOwner, files, create, saveFiles, updateSettings, fork, versions, restoreVersion,
         startBuild, finishBuild, failBuild, spend, used, canPublish, publish, unpublish, publishedFiles, remove, gallery, galleryFeed, mine, hostnameOf, urlOf,
         personOf, capsOf, checkFiles, DAY, spacesProject,
         // The person's one agent (plan 2026-10-22 §Z stage Z1)

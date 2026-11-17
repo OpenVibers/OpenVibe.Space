@@ -110,6 +110,10 @@ async function handle(request, ov) {
 - **What it returns** becomes the answer: a string (HTML when it starts with `<`, text otherwise), any other value as
   JSON, nothing as 204, or `{ status, headers, body }` (only `content-type` and `cache-control` headers are kept). An
   answer to a signed-in visitor or to a POST is never cached.
+- **Versions:** every change to a space's files is a version: making it, each save that changes something, an AI
+  build, the person's agent, a restore. The editor lists the last 20 under **Versions** with who or what made each and
+  which files it added, changed or removed; **Restore** undoes to one, as a new version, so the undo can be undone
+  (`POST /spaces/:slug/versions/:n/restore`).
 - **Memory you can see:** what a function keeps with `ov.store` is listed in the editor under **Memory**, newest first,
   with when each fact changed; the maker can forget one fact or everything (`POST /spaces/:slug/memory/forget` with
   `{ key }` or `{ all: true }`). A visitor's own keys are theirs and never show there.
