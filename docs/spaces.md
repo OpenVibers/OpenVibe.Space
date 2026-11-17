@@ -110,6 +110,9 @@ async function handle(request, ov) {
 - **What it returns** becomes the answer: a string (HTML when it starts with `<`, text otherwise), any other value as
   JSON, nothing as 204, or `{ status, headers, body }` (only `content-type` and `cache-control` headers are kept). An
   answer to a signed-in visitor or to a POST is never cached.
+- **Memory you can see:** what a function keeps with `ov.store` is listed in the editor under **Memory**, newest first,
+  with when each fact changed; the maker can forget one fact or everything (`POST /spaces/:slug/memory/forget` with
+  `{ key }` or `{ all: true }`). A visitor's own keys are theirs and never show there.
 - **The sandbox:** each call runs in a fresh QuickJS runtime compiled to WebAssembly, on a worker thread: no network,
   no files, no timers, no Node. It has 32 MB of memory, 1 s of its own computing and 5 s in all (time spent waiting on
   `ov` is not computing), and at most 100 `ov` calls. A call that overstays answers 504; a thrown error answers 500
