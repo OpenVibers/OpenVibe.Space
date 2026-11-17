@@ -483,6 +483,8 @@ function createSpacesPages(ctx) {
         return { files: await spaces.applyProposal(req.viewer, who.space, req.params.id) };
     }));
     router.post('/spaces/:slug/proposals/:id/discard', ...api(async (req, res, who) => ({ discarded: await spaces.discardProposal(who.space, req.params.id) })));
+    // Time travel (plan §AD.15): a version's files, for the preview to show as it was then (nothing changes).
+    router.post('/spaces/:slug/versions/:n/view', ...api(async (req, res, who) => spaces.versionFiles(who.space, req.params.n)));
     // Versions (plan §AD.15): undo to one; the undo is itself a version.
     router.post('/spaces/:slug/versions/:n/restore', ...api(async (req, res, who) => {
         if (who.space.building_run_id) throw new ApiError(409, 'space.building', 'the AI is changing this space; wait for it to finish');

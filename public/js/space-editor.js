@@ -61,6 +61,8 @@
   // ── Versions: Restore undoes to one (the undo is a version too), then the editor reloads with those files ──
   var versionsEl = $('ed-versions');
   if (versionsEl) versionsEl.addEventListener('click', function (e) {
+    var view = e.target.closest('[data-view]');
+    if (view) { travel(Number(view.getAttribute('data-view'))); return; }
     var btn = e.target.closest('[data-restore]');
     if (!btn) return;
     if (dirty && !window.confirm('You have unsaved changes; restoring replaces them. Restore anyway?')) return;
@@ -118,8 +120,9 @@
   var runTimer = null;
   function edited() { dirty = true; status('Unsaved changes'); clearTimeout(runTimer); runTimer = setTimeout(run, 1200); }
   /** index.html with the space's own scripts and stylesheets inlined (a srcdoc frame has no address to load them from). */
-  function previewDoc() {
-    stash();
+  function previewDoc() { stash(); return docOf(files); }
+  function docOf(list) {
+    var fileOf = function (p) { for (var i = 0; i < list.length; i++) if (list[i].path === p) return list[i]; return null; };
     var index = (fileOf('index.html') || { content: '' }).content;
     var esc = function (s) { return s.replace(/<\/(script)/gi, '<\\/$1'); };
     return index
@@ -130,7 +133,44 @@
         var f = fileOf(href); return f && /stylesheet/i.test(a + b) ? '<style>' + f.content + '</style>' : m;
       });
   }
-  function run() { frame.srcdoc = previewDoc(); }
+  function run() { endTravel(); frame.srcdoc = previewDoc(); }
+
+  // ── Time travel (plan §AD.15: "scrub a space back to any day and see what it said then") ──
+  // A version's files in the preview, nothing changed: older and newer step through the versions, Back to now returns,
+  // Restore this makes it the space's files (a version too).
+  var travelBar = null, travelN = 0;
+  function versionNs() { return versionsEl ? Array.prototype.map.call(versionsEl.querySelectorAll('li[data-n]'), function (li) { return Number(li.getAttribute('data-n')); }) : []; }
+  function endTravel() { if (travelBar) { travelBar.remove(); travelBar = null; } travelN = 0; }
+  function travel(n) {
+    var ns = versionNs(); if (!ns.length) return;
+    if (n === ns[0]) { endTravel(); frame.srcdoc = previewDoc(); status('Back to now'); return; }
+    status('Opening version ' + n + '…');
+    call('POST', '/versions/' + encodeURIComponent(String(n)) + '/view').then(function (v) {
+      travelN = v.n;
+      frame.srcdoc = docOf(Array.isArray(v.files) ? v.files : []);
+      if (!travelBar) {
+        travelBar = document.createElement('div'); travelBar.className = 'sp-ed-travel'; travelBar.setAttribute('role', 'status');
+        frame.parentNode.insertBefore(travelBar, frame);
+        travelBar.addEventListener('click', function (e) {
+          var b = e.target.closest('button'); if (!b) return;
+          var list = versionNs(), at = list.indexOf(travelN);
+          if (b.hasAttribute('data-older') && at >= 0 && at < list.length - 1) travel(list[at + 1]);
+          else if (b.hasAttribute('data-newer') && at > 0) travel(list[at - 1]);
+          else if (b.hasAttribute('data-now')) travel(list[0]);
+          else if (b.hasAttribute('data-this')) { var r = versionsEl.querySelector('[data-restore="' + travelN + '"]'); if (r) r.click(); }
+        });
+      }
+      var list = versionNs(), at = list.indexOf(v.n);
+      var li = versionsEl.querySelector('li[data-n="' + v.n + '"]');
+      var when = String(v.at || '').slice(0, 16).replace('T', ' ') + ' UTC';
+      travelBar.textContent = '';
+      var mk = function (attr, label, text, off) { var b = document.createElement('button'); b.type = 'button'; b.className = 'sp-btn sp-btn-quiet sp-btn-sm'; b.setAttribute(attr, ''); b.setAttribute('aria-label', label); b.textContent = text; b.disabled = !!off; return b; };
+      var label = document.createElement('span'); label.className = 'sp-ed-travel-l';
+      label.textContent = 'As it was: #' + v.n + ' · ' + (li ? li.getAttribute('data-who') : v.source) + ' · ' + when;
+      travelBar.append(mk('data-older', 'Older version', '‹', at < 0 || at >= list.length - 1), label, mk('data-newer', 'Newer version', '›', at <= 0), mk('data-now', 'Back to now', 'Now'), mk('data-this', 'Restore this version', 'Restore this'));
+      status('Viewing version ' + v.n + ': nothing is changed');
+    }).catch(function (err) { status(err.message, 'error'); });
+  }
   $('ed-run').addEventListener('click', run);
 
   // The preview's SDK calls: only from our frame, answered to it.

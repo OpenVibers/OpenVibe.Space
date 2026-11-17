@@ -225,9 +225,9 @@ function versionsHtml(list) {
     if (!Array.isArray(list) || list.length < 2) return '';
     const WHO = { editor: 'saved', ai: 'OpenVibe AI', agent: 'your agent', restore: 'restored', created: 'created', copy: 'copied', official: 'updated' };
     const paths = (c) => [...c.added.map((p) => `+ ${p}`), ...c.changed.map((p) => `~ ${p}`), ...c.removed.map((p) => `− ${p}`)];
-    const row = (v, i) => `<li><b>#${esc(String(v.n))}</b><span>${esc(WHO[v.source] || v.source)}${v.by && v.source !== 'ai' ? ` · ${esc(v.by)}` : ''}</span>`
+    const row = (v, i) => `<li data-n="${esc(String(v.n))}" data-at="${esc(v.at)}" data-who="${esc(WHO[v.source] || v.source)}"><b>#${esc(String(v.n))}</b><span>${esc(WHO[v.source] || v.source)}${v.by && v.source !== 'ai' ? ` · ${esc(v.by)}` : ''}</span>`
         + `<time class="sp-muted" datetime="${esc(v.at)}">${esc(v.at.slice(0, 16).replace('T', ' '))} UTC</time>`
-        + (i === 0 ? '<span class="sp-muted">now</span>' : `<button type="button" class="sp-btn sp-btn-quiet sp-btn-sm" data-restore="${esc(String(v.n))}">Restore</button>`)
+        + (i === 0 ? '<span class="sp-muted">now</span>' : `<button type="button" class="sp-btn sp-btn-quiet sp-btn-sm" data-view="${esc(String(v.n))}">View</button><button type="button" class="sp-btn sp-btn-quiet sp-btn-sm" data-restore="${esc(String(v.n))}">Restore</button>`)
         + `${v.note ? `<small>${esc(v.note)}</small>` : ''}<code>${esc(paths(v.changes).join('  ') || 'no file changes')}</code></li>`;
     return `<details class="sp-ed-fnlog sp-ed-versions" id="ed-versions"><summary><i class="ovg-fill" data-ov-icon="history" aria-hidden="true"></i> Versions <span class="sp-muted">${list.length} · every change, undoable</span></summary><ol>${list.map(row).join('')}</ol></details>`;
 }
