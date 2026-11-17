@@ -42,6 +42,22 @@
     }).catch(function (err) { btn.disabled = false; status(err.message, 'error'); });
   });
 
+  // ── Your agent's change waiting for your OK: Apply (the editor reloads with it) or Discard ──
+  var props = $('ed-proposals');
+  if (props) props.addEventListener('click', function (e) {
+    var apply = e.target.closest('[data-apply]'), discard = e.target.closest('[data-discard]');
+    if (!apply && !discard) return;
+    if (apply && dirty && !window.confirm('You have unsaved changes; applying replaces them. Apply anyway?')) return;
+    var btn = apply || discard, id = btn.getAttribute(apply ? 'data-apply' : 'data-discard');
+    btn.disabled = true;
+    call('POST', '/proposals/' + encodeURIComponent(id) + (apply ? '/apply' : '/discard')).then(function () {
+      if (apply) { dirty = false; window.location.reload(); return; }
+      var li = btn.closest('li'); if (li) li.remove();
+      if (!props.querySelector('li')) props.remove();
+      status('Discarded your agent\'s change', 'ok');
+    }).catch(function (err) { btn.disabled = false; status(err.message, 'error'); });
+  });
+
   // ── Versions: Restore undoes to one (the undo is a version too), then the editor reloads with those files ──
   var versionsEl = $('ed-versions');
   if (versionsEl) versionsEl.addEventListener('click', function (e) {
@@ -275,6 +291,7 @@
     Array.prototype.forEach.call(form.querySelectorAll('input[name=cap]'), function (c) { c.checked = space.capabilities.indexOf(c.value) >= 0; });
     Array.prototype.forEach.call(form.querySelectorAll('input[name=visibility]'), function (r) { r.checked = r.value === (space.visibility || 'public'); });
     if (form.elements.embeddable) { form.elements.embeddable.checked = !!space.embeddable; showEmbed(); }
+    if (form.elements.agent_review) form.elements.agent_review.checked = !!space.agent_review;
     $('ed-unpublish').hidden = !space.published;
     dialog.showModal();
   });
@@ -284,6 +301,7 @@
     var vis = form.querySelector('input[name=visibility]:checked');
     var body = { name: form.elements.name.value, description: form.elements.description.value, instructions: form.elements.instructions.value, capabilities: caps, visibility: vis ? vis.value : 'public' };
     if (form.elements.embeddable) body.embeddable = form.elements.embeddable.checked;
+    if (form.elements.agent_review) body.agent_review = form.elements.agent_review.checked;
     call('PUT', '/settings', body)
       .then(function (j) { space = Object.assign(space, j.space); $('ed-name').textContent = space.name; status('Settings saved'); }, function (e) { status(e.message, 'bad'); });
   });
