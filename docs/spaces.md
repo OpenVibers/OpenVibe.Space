@@ -121,6 +121,9 @@ async function handle(request, ov) {
   its name, its home, standalone, a colour from its id) and icons (`/_openvibe/icon.svg`, `icon-192.png`,
   `icon-512.png`: a tile in that colour with its first letter), and the space SDK links them on a page that links no
   manifest of its own, so any space can be added to a phone's home screen. The editor's preview never gets them.
+- **Embed it on any site:** Settings → Other sites → **Let any site embed it** (off by default) lets any https page
+  frame the published space (`frame-ancestors 'self' https:`); the editor shows the `<iframe>` snippet to paste, with
+  Copy. Off, only the space itself and openvibe.space may frame it.
 - **The sandbox:** each call runs in a fresh QuickJS runtime compiled to WebAssembly, on a worker thread: no network,
   no files, no timers, no Node. It has 32 MB of memory, 1 s of its own computing and 5 s in all (time spent waiting on
   `ov` is not computing), and at most 100 `ov` calls. A call that overstays answers 504; a thrown error answers 500

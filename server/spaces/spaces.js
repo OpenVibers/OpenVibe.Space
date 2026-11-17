@@ -65,7 +65,7 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, outb
         versionGet: db.prepare('SELECT n, files, source, created_at FROM space_app_versions WHERE space_id = ? AND n = ?'),
         versionPrune: db.prepare('DELETE FROM space_app_versions WHERE space_id = ? AND n <= (SELECT max(n) FROM space_app_versions WHERE space_id = ?) - ?'),
         touch: db.prepare('UPDATE space_apps SET updated_at = ? WHERE id = ?'),
-        settings: db.prepare('UPDATE space_apps SET name = ?, description = ?, instructions = ?, capabilities = ?, visibility = ?, updated_at = ? WHERE id = ?'),
+        settings: db.prepare('UPDATE space_apps SET name = ?, description = ?, instructions = ?, capabilities = ?, visibility = ?, embeddable = ?, updated_at = ? WHERE id = ?'),
         building: db.prepare('UPDATE space_apps SET building_run_id = ?, building_prompt = ?, updated_at = ? WHERE id = ?'),
         built: db.prepare('UPDATE space_apps SET building_run_id = NULL, building_prompt = NULL, name = ?, description = ?, instructions = ?, capabilities = ?, updated_at = ? WHERE id = ? AND building_run_id = ?'),
         buildFailed: db.prepare('UPDATE space_apps SET building_run_id = NULL, building_prompt = NULL, updated_at = ? WHERE id = ? AND building_run_id = ?'),
@@ -373,7 +373,9 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, outb
         if (!['public', 'unlisted'].includes(visibility)) throw new ApiError(422, 'space.invalid_visibility', 'visibility is public (in the gallery) or unlisted (only by its link)');
         await q.settings.run(name, input.description !== undefined ? text(input.description, 400) : space.description,
             input.instructions !== undefined ? String(input.instructions || '').trim().slice(0, 4000) : space.instructions,
-            JSON.stringify(input.capabilities !== undefined ? capsOf(input.capabilities) : capsOf(space.capabilities)), visibility, store.now(), space.id);
+            JSON.stringify(input.capabilities !== undefined ? capsOf(input.capabilities) : capsOf(space.capabilities)), visibility,
+            // Other sites may embed it (plan §AD.15): the maker's choice, off by default.
+            input.embeddable !== undefined ? input.embeddable === true : space.embeddable === true, store.now(), space.id);
         if (sharing && input.visibility !== undefined) await sharing.syncAudience(space.id, visibility);
         return await get(space.id);
     }
