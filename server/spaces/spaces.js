@@ -252,6 +252,12 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, outb
         return true;
     }
 
+    /** Time travel (plan §AD.15: "scrub a space back to any day and see what it said then"): version n's files, to look at. */
+    async function versionFiles(space, n) {
+        const row = await q.versionGet.get(space.id, Number(n));
+        if (!row) throw new ApiError(404, 'space.version_not_found', 'no such version');
+        return { n: Number(row.n), source: row.source, at: new Date(Number(row.created_at)).toISOString(), files: JSON.parse(row.files) };
+    }
     /** Undo to version n: its files become the space's, as a new version (so the undo can be undone). */
     async function restoreVersion(viewer, space, n) {
         const row = await q.versionGet.get(space.id, Number(n));
@@ -638,7 +644,7 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, outb
     async function mine(viewer) { return await q.mine.all(personOf(viewer).subject); }
 
     return {
-        CAPABILITIES, isSpaceId, get, getBySlug, forSite, load, isOwner, files, create, saveFiles, updateSettings, fork, versions, restoreVersion,
+        CAPABILITIES, isSpaceId, get, getBySlug, forSite, load, isOwner, files, create, saveFiles, updateSettings, fork, versions, restoreVersion, versionFiles,
         proposeFiles, proposals, applyProposal, discardProposal,
         startBuild, finishBuild, failBuild, spend, used, canPublish, publish, unpublish, publishedFiles, remove, gallery, galleryFeed, mine, hostnameOf, urlOf,
         personOf, capsOf, checkFiles, DAY, spacesProject,

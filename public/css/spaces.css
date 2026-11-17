@@ -250,3 +250,11 @@ body[data-page="spaces"] .page:has(.sp-editor) { padding-bottom: 0; }
 .sp-ed-props li small{flex:1 1 100%;color:var(--text-secondary,#a8b3c4)}
 .sp-ed-props li code{flex:1 1 100%;font-size:12px;overflow-wrap:anywhere;color:var(--text-muted,#7d8aa0)}
 .sp-ed-prop-acts{display:flex;gap:8px}
+
+/* Time travel (plan AD.15): the bar over the preview while it shows an older version. */
+.sp-ed-travel{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;padding:6px 8px;border-radius:12px;margin-bottom:6px;
+  background:color-mix(in srgb,var(--accent,#3b82f6) 14%,transparent);border:1px solid color-mix(in srgb,var(--accent,#3b82f6) 40%,transparent);animation:sp-travel-in .25s ease both}
+.sp-ed-travel-l{flex:1 1 160px;min-width:0;font-size:13px;font-weight:650;overflow-wrap:anywhere}
+.sp-ed-travel .sp-btn[data-older],.sp-ed-travel .sp-btn[data-newer]{min-width:36px;font-size:16px;line-height:1}
+@keyframes sp-travel-in{from{opacity:0;transform:translateY(calc(-4px * var(--ov-move,1)))}}
+html[data-ov-motion="off"] .sp-ed-travel{animation:none}

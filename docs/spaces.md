@@ -114,6 +114,9 @@ async function handle(request, ov) {
   build, the person's agent, a restore. The editor lists the last 20 under **Versions** with who or what made each and
   which files it added, changed or removed; **Restore** undoes to one, as a new version, so the undo can be undone
   (`POST /spaces/:slug/versions/:n/restore`).
+- **Time travel:** **View** on an older version shows the space as it was then in the preview, and nothing changes; the
+  bar over the preview steps to older (‹) and newer (›) versions, goes back to **Now**, or makes the one shown the
+  space's files (**Restore this**) (`POST /spaces/:slug/versions/:n/view` answers that version's files).
 - **Your agent's changes can wait for your OK:** Settings → Your agent → **Its changes wait for my OK**. Then what the
   person's agent writes (`PUT /api/v1/builder/spaces/:id/files`, answered with `pending: true`) is kept as a proposal and
   nothing changes; the editor shows **Waiting for your OK** with what it would add, change and remove, and Apply makes
