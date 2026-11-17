@@ -151,7 +151,7 @@ function createSpacesPages(ctx) {
      * answer. Guests never get an agent (they have no account, and the agent works for the person).
      */
     const agentOn = () => Boolean(config.builder && config.builder.mode === 'agent' && ctx.spaceAgent && ctx.spaceAgent.enabled);
-    const settingsOut = (s) => ({ id: s.id, slug: s.slug, name: s.name, description: s.description, instructions: s.instructions, capabilities: spaces.capsOf(s.capabilities), visibility: s.visibility, embeddable: s.embeddable === true, published: Boolean(s.site_id), url: spaces.urlOf(s), building: Boolean(s.building_run_id) });
+    const settingsOut = (s) => ({ id: s.id, slug: s.slug, name: s.name, description: s.description, instructions: s.instructions, capabilities: spaces.capsOf(s.capabilities), visibility: s.visibility, embeddable: s.embeddable === true, agent_review: s.agent_review === true, published: Boolean(s.site_id), url: spaces.urlOf(s), building: Boolean(s.building_run_id) });
 
     // ── Guest drafts (openvibe.website, plan 5.9) ────────────────────────────────────────────────────────────
     // A visitor who is not signed in makes a draft on openvibe.space. The draft has no owner and a random
@@ -344,7 +344,8 @@ function createSpacesPages(ctx) {
         const schedules = space.site_id && ctx.spaceSchedules ? await ctx.spaceSchedules.status(space.site_id).catch(() => null) : null;
         const memory = await data.memory(space, 200).catch(() => null);
         const versions = await spaces.versions(space).catch(() => null);
-        html(res, 200, render.editorPage({ space, schedules, memory, versions, files: await spaces.files(space), csrf: csrfOf(req), canPublish: spaces.canPublish(req.viewer), url: spaces.urlOf(space), aiOn: ai.enabled(), buildsLeft: await buildsLeft(req), templates: templates.list() }));
+        const proposals = await spaces.proposals(space).catch(() => null);
+        html(res, 200, render.editorPage({ space, schedules, memory, versions, proposals, files: await spaces.files(space), csrf: csrfOf(req), canPublish: spaces.canPublish(req.viewer), url: spaces.urlOf(space), aiOn: ai.enabled(), buildsLeft: await buildsLeft(req), templates: templates.list() }));
     }));
 
     router.post('/spaces/:slug/fork', ...action(async (req, res) => {
@@ -476,6 +477,12 @@ function createSpacesPages(ctx) {
         return { space: settingsOut(await spaces.unpublish(req.viewer, who.space)) };
     }));
     router.post('/spaces/:slug/delete', ...api(async (req, res, who) => { await spaces.remove(req.viewer, who.space); return { deleted: true }; }));
+    // An agent's change waiting for the maker's OK (plan §AD.15): apply it (a version) or discard it.
+    router.post('/spaces/:slug/proposals/:id/apply', ...api(async (req, res, who) => {
+        if (who.space.building_run_id) throw new ApiError(409, 'space.building', 'the AI is changing this space; wait for it to finish');
+        return { files: await spaces.applyProposal(req.viewer, who.space, req.params.id) };
+    }));
+    router.post('/spaces/:slug/proposals/:id/discard', ...api(async (req, res, who) => ({ discarded: await spaces.discardProposal(who.space, req.params.id) })));
     // Versions (plan §AD.15): undo to one; the undo is itself a version.
     router.post('/spaces/:slug/versions/:n/restore', ...api(async (req, res, who) => {
         if (who.space.building_run_id) throw new ApiError(409, 'space.building', 'the AI is changing this space; wait for it to finish');

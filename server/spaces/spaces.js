@@ -65,7 +65,13 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, outb
         versionGet: db.prepare('SELECT n, files, source, created_at FROM space_app_versions WHERE space_id = ? AND n = ?'),
         versionPrune: db.prepare('DELETE FROM space_app_versions WHERE space_id = ? AND n <= (SELECT max(n) FROM space_app_versions WHERE space_id = ?) - ?'),
         touch: db.prepare('UPDATE space_apps SET updated_at = ? WHERE id = ?'),
-        settings: db.prepare('UPDATE space_apps SET name = ?, description = ?, instructions = ?, capabilities = ?, visibility = ?, embeddable = ?, updated_at = ? WHERE id = ?'),
+        settings: db.prepare('UPDATE space_apps SET name = ?, description = ?, instructions = ?, capabilities = ?, visibility = ?, embeddable = ?, agent_review = ?, updated_at = ? WHERE id = ?'),
+        // An agent's change waiting for its maker's OK (plan §AD.15), the last five of a space.
+        proposalAdd: db.prepare('INSERT INTO space_app_proposals (space_id, files, by_subject, by_name, note, created_at) VALUES (?, ?, ?, ?, ?, ?)'),
+        proposalList: db.prepare('SELECT id, files, by_name, note, created_at FROM space_app_proposals WHERE space_id = ? ORDER BY id DESC LIMIT 5'),
+        proposalGet: db.prepare('SELECT id, files, by_subject, by_name, note FROM space_app_proposals WHERE space_id = ? AND id = ?'),
+        proposalRemove: db.prepare('DELETE FROM space_app_proposals WHERE space_id = ? AND id = ?'),
+        proposalPrune: db.prepare('DELETE FROM space_app_proposals WHERE space_id = ? AND id NOT IN (SELECT id FROM space_app_proposals WHERE space_id = ? ORDER BY id DESC LIMIT 5)'),
         building: db.prepare('UPDATE space_apps SET building_run_id = ?, building_prompt = ?, updated_at = ? WHERE id = ?'),
         built: db.prepare('UPDATE space_apps SET building_run_id = NULL, building_prompt = NULL, name = ?, description = ?, instructions = ?, capabilities = ?, updated_at = ? WHERE id = ? AND building_run_id = ?'),
         buildFailed: db.prepare('UPDATE space_apps SET building_run_id = NULL, building_prompt = NULL, updated_at = ? WHERE id = ? AND building_run_id = ?'),
@@ -209,6 +215,43 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, outb
             at: new Date(Number(r.created_at)).toISOString(), changes: changesBetween(parsed[i + 1] ? parsed[i + 1].list : [], r.list),
         }));
     }
+    const filesOf = (space) => files(space);
+    // ── An agent's change waiting for its maker's OK (plan §AD.15: "an agent's edit can wait for approval") ──
+    /** Keep what the agent wrote as a proposal (nothing is written); nothing changed: nothing kept. */
+    async function proposeFiles(viewer, space, list, { note = null } = {}) {
+        const checked = checkFiles(list);
+        const files = snapshot(checked);
+        if (files === snapshot(await filesOf(space))) return { proposed: false, files: checked };
+        const by = byOf(viewer);
+        await store.tx(async () => {
+            await q.proposalAdd.run(space.id, files, by && by.subject ? by.subject : null, by && (by.name || by.username) ? String(by.name || by.username).slice(0, 80) : null, note ? String(note).slice(0, 200) : null, store.now());
+            await q.proposalPrune.run(space.id, space.id);
+        });
+        return { proposed: true, files: checked };
+    }
+    /** The proposals waiting, newest first, each with what it would add, change and remove. */
+    async function proposals(space) {
+        const rows = await q.proposalList.all(space.id);
+        if (!rows.length) return [];
+        const now = await filesOf(space);
+        return rows.map((r) => ({ id: Number(r.id), by: r.by_name || null, note: r.note || null, at: new Date(Number(r.created_at)).toISOString(), changes: changesBetween(now, JSON.parse(r.files)) }));
+    }
+    /** Apply one: its files become the space's, as a version the agent made and the maker approved. */
+    async function applyProposal(viewer, space, id) {
+        const row = await q.proposalGet.get(space.id, Number(id));
+        if (!row) throw new ApiError(404, 'space.proposal_not_found', 'no such change waiting');
+        const list = checkFiles(JSON.parse(row.files));
+        await writeFiles(space, list, store.now(), { by: { subject: row.by_subject, name: row.by_name }, source: 'agent', note: 'approved' });
+        await q.proposalRemove.run(space.id, Number(id));
+        return list;
+    }
+    async function discardProposal(space, id) {
+        const row = await q.proposalGet.get(space.id, Number(id));
+        if (!row) throw new ApiError(404, 'space.proposal_not_found', 'no such change waiting');
+        await q.proposalRemove.run(space.id, Number(id));
+        return true;
+    }
+
     /** Undo to version n: its files become the space's, as a new version (so the undo can be undone). */
     async function restoreVersion(viewer, space, n) {
         const row = await q.versionGet.get(space.id, Number(n));
@@ -375,7 +418,9 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, outb
             input.instructions !== undefined ? String(input.instructions || '').trim().slice(0, 4000) : space.instructions,
             JSON.stringify(input.capabilities !== undefined ? capsOf(input.capabilities) : capsOf(space.capabilities)), visibility,
             // Other sites may embed it (plan §AD.15): the maker's choice, off by default.
-            input.embeddable !== undefined ? input.embeddable === true : space.embeddable === true, store.now(), space.id);
+            input.embeddable !== undefined ? input.embeddable === true : space.embeddable === true,
+            // The person's agent's changes wait for the maker's OK (plan §AD.15).
+            input.agent_review !== undefined ? input.agent_review === true : space.agent_review === true, store.now(), space.id);
         if (sharing && input.visibility !== undefined) await sharing.syncAudience(space.id, visibility);
         return await get(space.id);
     }
@@ -594,6 +639,7 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, outb
 
     return {
         CAPABILITIES, isSpaceId, get, getBySlug, forSite, load, isOwner, files, create, saveFiles, updateSettings, fork, versions, restoreVersion,
+        proposeFiles, proposals, applyProposal, discardProposal,
         startBuild, finishBuild, failBuild, spend, used, canPublish, publish, unpublish, publishedFiles, remove, gallery, galleryFeed, mine, hostnameOf, urlOf,
         personOf, capsOf, checkFiles, DAY, spacesProject,
         // The person's one agent (plan 2026-10-22 §Z stage Z1)

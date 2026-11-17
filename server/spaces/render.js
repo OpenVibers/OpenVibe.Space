@@ -232,9 +232,19 @@ function versionsHtml(list) {
     return `<details class="sp-ed-fnlog sp-ed-versions" id="ed-versions"><summary><i class="ovg-fill" data-ov-icon="history" aria-hidden="true"></i> Versions <span class="sp-muted">${list.length} · every change, undoable</span></summary><ol>${list.map(row).join('')}</ol></details>`;
 }
 
-function editorPage({ space, files, csrf, canPublish, url, aiOn, buildsLeft, templates, guest = null, schedules = null, memory = null, versions = null }) {
+/** An agent's change waiting for the maker's OK (plan §AD.15): what it would do, Apply and Discard. */
+function proposalsHtml(list) {
+    if (!Array.isArray(list) || !list.length) return '';
+    const paths = (c) => [...c.added.map((p) => `+ ${p}`), ...c.changed.map((p) => `~ ${p}`), ...c.removed.map((p) => `− ${p}`)];
+    const row = (x) => `<li data-proposal="${esc(String(x.id))}"><b>${esc(x.by || 'Your agent')}</b><time class="sp-muted" datetime="${esc(x.at)}">${esc(x.at.slice(0, 16).replace('T', ' '))} UTC</time>`
+        + `${x.note ? `<small>${esc(x.note)}</small>` : ''}<code>${esc(paths(x.changes).join('  ') || 'no file changes')}</code>`
+        + `<span class="sp-ed-prop-acts"><button type="button" class="sp-btn sp-btn-sm" data-apply="${esc(String(x.id))}">Apply</button><button type="button" class="sp-btn sp-btn-quiet sp-btn-sm" data-discard="${esc(String(x.id))}">Discard</button></span></li>`;
+    return `<details class="sp-ed-fnlog sp-ed-props" id="ed-proposals" open><summary><i class="ovg-fill" data-ov-icon="robot" aria-hidden="true"></i> Waiting for your OK <span class="sp-muted">${list.length} · your agent's change${list.length === 1 ? '' : 's'}</span></summary><ol>${list.map(row).join('')}</ol></details>`;
+}
+
+function editorPage({ space, files, csrf, canPublish, url, aiOn, buildsLeft, templates, guest = null, schedules = null, memory = null, versions = null, proposals = null }) {
     const boot = {
-        space: { id: space.id, slug: space.slug, name: space.name, description: space.description, instructions: space.instructions, capabilities: caps(space), visibility: space.visibility, embeddable: space.embeddable === true, published: Boolean(space.site_id), url, building: Boolean(space.building_run_id), building_prompt: space.building_prompt || '' },
+        space: { id: space.id, slug: space.slug, name: space.name, description: space.description, instructions: space.instructions, capabilities: caps(space), visibility: space.visibility, embeddable: space.embeddable === true, agent_review: space.agent_review === true, published: Boolean(space.site_id), url, building: Boolean(space.building_run_id), building_prompt: space.building_prompt || '' },
         files, csrf, canPublish, aiOn, buildsLeft, templates: templates.map((t) => ({ id: t.id, name: t.name })),
         // Where the editor's calls go: a guest draft is edited by its id (its address is a secret link), an
         // owned space by its slug. A guest carries its secret with every call.
@@ -281,7 +291,7 @@ function editorPage({ space, files, csrf, canPublish, url, aiOn, buildsLeft, tem
     <section class="sp-ed-preview" aria-label="Preview">
       <div class="sp-ed-preview-bar"><span><i class="ovg-fill" data-ov-icon="eye" aria-hidden="true"></i> Preview <span class="sp-muted">(runs as you)</span></span><button class="sp-btn sp-btn-quiet sp-btn-sm" id="ed-run" type="button"><i class="ovg-fill" data-ov-icon="retry" aria-hidden="true"></i> Run</button></div>
       <iframe id="ed-frame" title="Preview of the space" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-pointer-lock"></iframe>
-      <details class="sp-ed-fnlog" id="ed-fnlog" hidden><summary><i class="ovg-fill" data-ov-icon="terminal" aria-hidden="true"></i> Function log <span class="sp-muted" id="ed-fnlog-last"></span></summary><ol id="ed-fnlog-list"></ol></details>${schedulesHtml(schedules)}${memoryHtml(memory)}${versionsHtml(versions)}
+      <details class="sp-ed-fnlog" id="ed-fnlog" hidden><summary><i class="ovg-fill" data-ov-icon="terminal" aria-hidden="true"></i> Function log <span class="sp-muted" id="ed-fnlog-last"></span></summary><ol id="ed-fnlog-list"></ol></details>${proposalsHtml(proposals)}${schedulesHtml(schedules)}${memoryHtml(memory)}${versionsHtml(versions)}
     </section>
   </div>
   <div class="sp-ed-building" id="ed-building" hidden><div><i class="ovg-fill" data-ov-icon="busy" data-ovg="busy" aria-hidden="true"></i><h2 id="ed-building-title" class="ovk-titled">${sectionIcon('grid')}OpenVibe AI is building…</h2><p id="ed-building-text"></p><p class="sp-muted">This usually takes under a minute or two. You can leave and come back.</p></div></div>
@@ -300,6 +310,9 @@ function editorPage({ space, files, csrf, canPublish, url, aiOn, buildsLeft, tem
       <fieldset><legend>Who can find it</legend>
         <label class="sp-check"><input type="radio" name="visibility" value="public"> Public: in the gallery</label>
         <label class="sp-check"><input type="radio" name="visibility" value="unlisted"> Unlisted: only with its link</label>
+      </fieldset>
+      <fieldset><legend>Your agent</legend>
+        <label class="sp-check"><input type="checkbox" name="agent_review" value="1"> Its changes wait for my OK</label>
       </fieldset>
       <fieldset><legend>Other sites</legend>
         <label class="sp-check"><input type="checkbox" name="embeddable" value="1"> Let any site embed it</label>
