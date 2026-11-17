@@ -126,6 +126,10 @@ async function handle(request, ov) {
   `{ "function": "onprice", "on": "space:<slug>/price" }` and its function runs with type `space:<slug>/<topic>`, subject
   `{ type: "space", id: <slug> }` and the value's plain values as the payload. A space hears its own maker's spaces and
   public ones, never another maker's unlisted space and never itself; a space says at most 30 things a minute.
+- **A space from a page:** `openvibe.space/spaces/new?page=<an OpenVibe address>` arrives with the new space's
+  description written from what the page is: a channel on OpenVibe.Live (it follows the streams through `events.json`),
+  a Rundown topic, a comparison on OpenVibe.Compare, or any other OpenVibe page. Only https addresses on OpenVibe's
+  own sites; anything else writes nothing.
 - **Memory you can see:** what a function keeps with `ov.store` is listed in the editor under **Memory**, newest first,
   with when each fact changed; the maker can forget one fact or everything (`POST /spaces/:slug/memory/forget` with
   `{ key }` or `{ all: true }`). A visitor's own keys are theirs and never show there.

@@ -193,7 +193,11 @@ function createSpacesPages(ctx) {
 
     // ?prompt=<text>: a description written elsewhere on the network (openvibe.codes "Something new") fills the box,
     // one press from a build; nothing is built until the person presses Build. ?from=codes says where it came from.
-    const promptOf = (req) => (typeof req.query.prompt === 'string' ? req.query.prompt.replace(/\r\n?/g, '\n').trim().slice(0, 4000) : '');
+    // A space from a page (plan §AD.15): ?page=<an OpenVibe address> writes the description from what the page is.
+    const promptOf = (req) => {
+        if (typeof req.query.page === 'string') { const d = require('./from-page').describe(req.query.page); if (d) return d.prompt; }
+        return typeof req.query.prompt === 'string' ? req.query.prompt.replace(/\r\n?/g, '\n').trim().slice(0, 4000) : '';
+    };
     const fromOf = (req) => (req.query.from === 'codes' ? 'codes' : null);
     router.get('/spaces/new', view(async (req, res) => {
         if (!signedIn(req)) throw new ApiError(401, 'auth.required', 'sign in first');
