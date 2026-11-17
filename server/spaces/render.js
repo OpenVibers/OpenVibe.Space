@@ -199,7 +199,17 @@ function spacePage({ viewer, space, owner, url, csrf, forkedFrom }) {
     });
 }
 
-function editorPage({ space, files, csrf, canPublish, url, aiOn, buildsLeft, templates, guest = null }) {
+/** A published space's schedules and how each last ran (schedules.json; plan §AD.15). */
+function schedulesHtml(runs) {
+    if (!Array.isArray(runs) || !runs.length) return '';
+    const every = (s) => (s % 86400 === 0 ? `${s / 86400} d` : s % 3600 === 0 ? `${s / 3600} h` : `${Math.round(s / 60)} min`);
+    const row = (r) => `<li class="sp-ed-sched-${r.last_status === 'ok' ? 'ok' : 'err'}"><b>${esc(r.function)}</b><span class="sp-muted">every ${esc(every(r.every_s))}</span>`
+        + `<span>${r.last_run_at ? `<time datetime="${esc(r.last_run_at)}">${esc(r.last_run_at.slice(0, 16).replace('T', ' '))} UTC</time> · ${r.last_status === 'ok' ? 'ok' : 'failed'} · ${esc(String(r.last_ms || 0))} ms` : 'not run yet'}</span>`
+        + `${r.last_error ? `<code>${esc(r.last_error)}</code>` : ''}</li>`;
+    return `<details class="sp-ed-fnlog sp-ed-sched" id="ed-schedules"><summary><i class="ovg-fill" data-ov-icon="clock" aria-hidden="true"></i> Schedules <span class="sp-muted">${runs.length} · schedules.json</span></summary><ol>${runs.map(row).join('')}</ol></details>`;
+}
+
+function editorPage({ space, files, csrf, canPublish, url, aiOn, buildsLeft, templates, guest = null, schedules = null }) {
     const boot = {
         space: { id: space.id, slug: space.slug, name: space.name, description: space.description, instructions: space.instructions, capabilities: caps(space), visibility: space.visibility, published: Boolean(space.site_id), url, building: Boolean(space.building_run_id), building_prompt: space.building_prompt || '' },
         files, csrf, canPublish, aiOn, buildsLeft, templates: templates.map((t) => ({ id: t.id, name: t.name })),
@@ -248,7 +258,7 @@ function editorPage({ space, files, csrf, canPublish, url, aiOn, buildsLeft, tem
     <section class="sp-ed-preview" aria-label="Preview">
       <div class="sp-ed-preview-bar"><span><i class="ovg-fill" data-ov-icon="eye" aria-hidden="true"></i> Preview <span class="sp-muted">(runs as you)</span></span><button class="sp-btn sp-btn-quiet sp-btn-sm" id="ed-run" type="button"><i class="ovg-fill" data-ov-icon="retry" aria-hidden="true"></i> Run</button></div>
       <iframe id="ed-frame" title="Preview of the space" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-pointer-lock"></iframe>
-      <details class="sp-ed-fnlog" id="ed-fnlog" hidden><summary><i class="ovg-fill" data-ov-icon="terminal" aria-hidden="true"></i> Function log <span class="sp-muted" id="ed-fnlog-last"></span></summary><ol id="ed-fnlog-list"></ol></details>
+      <details class="sp-ed-fnlog" id="ed-fnlog" hidden><summary><i class="ovg-fill" data-ov-icon="terminal" aria-hidden="true"></i> Function log <span class="sp-muted" id="ed-fnlog-last"></span></summary><ol id="ed-fnlog-list"></ol></details>${schedulesHtml(schedules)}
     </section>
   </div>
   <div class="sp-ed-building" id="ed-building" hidden><div><i class="ovg-fill" data-ov-icon="busy" data-ovg="busy" aria-hidden="true"></i><h2 id="ed-building-title" class="ovk-titled">${sectionIcon('grid')}OpenVibe AI is building…</h2><p id="ed-building-text"></p><p class="sp-muted">This usually takes under a minute or two. You can leave and come back.</p></div></div>

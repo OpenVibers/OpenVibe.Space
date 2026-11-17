@@ -117,6 +117,23 @@ async function handle(request, ov) {
 
 Starting from the **Trivia** template gives a working example: its answers live in `functions/check.js`.
 
+### Schedules: a space that keeps working
+
+A published space may run its functions on a clock. List them in `schedules.json` at the space's root:
+
+```json
+[{ "function": "refresh", "every": "1h" }, { "function": "digest", "every": "1d" }]
+```
+
+- **`every`:** `15m` to `7d` (`<n>m`, `<n>h` or `<n>d`); at most five schedules.
+- **How it runs:** the published copy of `functions/<function>.js`, as the space itself: `ov.user` is `null`, the
+  request is a `POST` with the header `x-ov-trigger: schedule` and the body `{ "trigger": "schedule", "at": "<time>" }`.
+  It has the same sandbox and limits as any call, and runs one at a time with the other spaces' schedules.
+- **What is kept:** the last run of each schedule (when, whether it answered under 400, how long it took, and the
+  error), so a space can show that it is alive. A draft or an unpublished change never runs; publishing starts it.
+- **The other triggers:** a webhook is `POST /api/<name>` on the published space, and a person is the page calling
+  `OV.fn`; schedules add the clock (plan §AD.15).
+
 ## Sign-in, step by step
 
 1. `OV.signIn()` makes a PKCE verifier and state, keeps them in `sessionStorage`, and goes to

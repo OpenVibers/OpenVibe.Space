@@ -30,6 +30,7 @@ const { createPgTelemetrySink, startTelemetryRetention } = require('openvibe-sdk
     app.locals.hosting.billing.start();   // off unless SPACE_BILLING_INTERVAL_MS > 0
     app.locals.hosting.searchIndex.start();   // live sites in OpenVibe.Search (off without its URL and the client secret)
     app.locals.hosting.guestCleanup.start();   // the guest drafts whose week is up (off with SPACE_GUEST_DRAFTS=off)
+    app.locals.hosting.spaceSchedules.start();   // published spaces' schedules.json (off outside production or with SPACE_SCHEDULES=off)
     // The person's own agent (plan 2026-10-22 §Z, stage Z1): the watcher follows the tasks that build spaces
     // (off unless SPACE_BUILDER=agent and OpenVibe.Actor is there).
     const agentWatch = app.locals.hosting.spaceAgentWatch;
@@ -54,7 +55,7 @@ const { createPgTelemetrySink, startTelemetryRetention } = require('openvibe-sdk
     gracefulStop({
         name: 'Space', server,
         drainMs: 4000, deadlineMs: 5000, deadlineExitCode: 1,
-        stop: [async () => { if (subscriptions) subscriptions.stop(); clearInterval(sharingTimer); if (agentWatch) agentWatch.stop(); app.locals.hosting.worker.stop(); app.locals.hosting.guestCleanup.stop(); await app.locals.hosting.outbox.stop(); await app.locals.hosting.billing.stop(); }],
+        stop: [async () => { if (subscriptions) subscriptions.stop(); clearInterval(sharingTimer); if (agentWatch) agentWatch.stop(); app.locals.hosting.worker.stop(); app.locals.hosting.guestCleanup.stop(); app.locals.hosting.spaceSchedules.stop(); await app.locals.hosting.outbox.stop(); await app.locals.hosting.billing.stop(); }],
         close: [
             async () => { if (telemetryRetention) await telemetryRetention.stop(); await telemetry.stop(); },
             async () => {
