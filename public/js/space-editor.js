@@ -28,6 +28,20 @@
       }); });
   }
 
+  // ── Memory (what the space keeps): forget one fact, or everything ──
+  var memory = $('ed-memory');
+  if (memory) memory.addEventListener('click', function (e) {
+    var one = e.target.closest('[data-forget]'), all = e.target.closest('[data-forget-all]');
+    if (!one && !all) return;
+    var btn = one || all;
+    btn.disabled = true;
+    call('POST', '/memory/forget', all ? { all: true } : { key: one.getAttribute('data-forget') }).then(function () {
+      if (all) memory.querySelectorAll('li').forEach(function (li) { li.remove(); });
+      else one.closest('li').remove();
+      status(all ? 'Forgot everything the space kept.' : 'Forgot it.', 'ok');
+    }).catch(function (err) { btn.disabled = false; status(err.message, 'error'); });
+  });
+
   // ── The code editor ──
   var cm = null;
   function modeOf(path) { return /\.css$/i.test(path) ? 'css' : /\.(m?js|json)$/i.test(path) ? 'javascript' : 'htmlmixed'; }

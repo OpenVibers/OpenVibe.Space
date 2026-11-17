@@ -342,7 +342,8 @@ function createSpacesPages(ctx) {
         }
         const { space } = who;
         const schedules = space.site_id && ctx.spaceSchedules ? await ctx.spaceSchedules.status(space.site_id).catch(() => null) : null;
-        html(res, 200, render.editorPage({ space, schedules, files: await spaces.files(space), csrf: csrfOf(req), canPublish: spaces.canPublish(req.viewer), url: spaces.urlOf(space), aiOn: ai.enabled(), buildsLeft: await buildsLeft(req), templates: templates.list() }));
+        const memory = await data.memory(space, 200).catch(() => null);
+        html(res, 200, render.editorPage({ space, schedules, memory, files: await spaces.files(space), csrf: csrfOf(req), canPublish: spaces.canPublish(req.viewer), url: spaces.urlOf(space), aiOn: ai.enabled(), buildsLeft: await buildsLeft(req), templates: templates.list() }));
     }));
 
     router.post('/spaces/:slug/fork', ...action(async (req, res) => {
@@ -472,6 +473,13 @@ function createSpacesPages(ctx) {
         return { space: settingsOut(await spaces.unpublish(req.viewer, who.space)) };
     }));
     router.post('/spaces/:slug/delete', ...api(async (req, res, who) => { await spaces.remove(req.viewer, who.space); return { deleted: true }; }));
+    // Memory you can see (plan §AD.15): the maker forgets one fact the space keeps (ov.store), or all of them.
+    router.post('/spaces/:slug/memory/forget', ...api(async (req, res, who) => {
+        const body = req.body || {};
+        if (body.all === true) { for (const m of await data.memory(who.space, 500)) await data.forget(who.space, m.key); return { forgotten: 'all' }; }
+        await data.forget(who.space, String(body.key || ''));
+        return { forgotten: String(body.key || '') };
+    }));
     router.post('/spaces/:slug/preview', ...api(async (req, res, who) => {
         const space = who.space;
         const b = req.body || {};

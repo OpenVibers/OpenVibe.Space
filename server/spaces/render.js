@@ -209,7 +209,17 @@ function schedulesHtml(runs) {
     return `<details class="sp-ed-fnlog sp-ed-sched" id="ed-schedules"><summary><i class="ovg-fill" data-ov-icon="clock" aria-hidden="true"></i> Schedules <span class="sp-muted">${runs.length} · schedules.json</span></summary><ol>${runs.map(row).join('')}</ol></details>`;
 }
 
-function editorPage({ space, files, csrf, canPublish, url, aiOn, buildsLeft, templates, guest = null, schedules = null }) {
+/** What the space keeps (ov.store), each fact with when it changed and Forget (plan §AD.15: memory you can see). */
+function memoryHtml(facts) {
+    if (!Array.isArray(facts) || !facts.length) return '';
+    const shown = (v) => { const t = typeof v === 'string' ? v : JSON.stringify(v); return t.length > 160 ? `${t.slice(0, 159)}…` : t; };
+    const row = (m) => `<li><b>${esc(m.key)}</b><code>${esc(shown(m.value))}</code><span class="sp-muted">${m.updated_at ? esc(m.updated_at.slice(0, 16).replace('T', ' ')) + ' UTC' : ''}</span>`
+        + `<button type="button" class="sp-btn sp-btn-quiet sp-btn-sm" data-forget="${esc(m.key)}">Forget</button></li>`;
+    return `<details class="sp-ed-fnlog sp-ed-memory" id="ed-memory"><summary><i class="ovg-fill" data-ov-icon="brain" aria-hidden="true"></i> Memory <span class="sp-muted">${facts.length} · what the space keeps</span></summary>`
+        + `<ol>${facts.map(row).join('')}</ol><p class="sp-ed-memory-all"><button type="button" class="sp-btn sp-btn-quiet sp-btn-sm" data-forget-all>Forget everything</button></p></details>`;
+}
+
+function editorPage({ space, files, csrf, canPublish, url, aiOn, buildsLeft, templates, guest = null, schedules = null, memory = null }) {
     const boot = {
         space: { id: space.id, slug: space.slug, name: space.name, description: space.description, instructions: space.instructions, capabilities: caps(space), visibility: space.visibility, published: Boolean(space.site_id), url, building: Boolean(space.building_run_id), building_prompt: space.building_prompt || '' },
         files, csrf, canPublish, aiOn, buildsLeft, templates: templates.map((t) => ({ id: t.id, name: t.name })),
@@ -258,7 +268,7 @@ function editorPage({ space, files, csrf, canPublish, url, aiOn, buildsLeft, tem
     <section class="sp-ed-preview" aria-label="Preview">
       <div class="sp-ed-preview-bar"><span><i class="ovg-fill" data-ov-icon="eye" aria-hidden="true"></i> Preview <span class="sp-muted">(runs as you)</span></span><button class="sp-btn sp-btn-quiet sp-btn-sm" id="ed-run" type="button"><i class="ovg-fill" data-ov-icon="retry" aria-hidden="true"></i> Run</button></div>
       <iframe id="ed-frame" title="Preview of the space" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-pointer-lock"></iframe>
-      <details class="sp-ed-fnlog" id="ed-fnlog" hidden><summary><i class="ovg-fill" data-ov-icon="terminal" aria-hidden="true"></i> Function log <span class="sp-muted" id="ed-fnlog-last"></span></summary><ol id="ed-fnlog-list"></ol></details>${schedulesHtml(schedules)}
+      <details class="sp-ed-fnlog" id="ed-fnlog" hidden><summary><i class="ovg-fill" data-ov-icon="terminal" aria-hidden="true"></i> Function log <span class="sp-muted" id="ed-fnlog-last"></span></summary><ol id="ed-fnlog-list"></ol></details>${schedulesHtml(schedules)}${memoryHtml(memory)}
     </section>
   </div>
   <div class="sp-ed-building" id="ed-building" hidden><div><i class="ovg-fill" data-ov-icon="busy" data-ovg="busy" aria-hidden="true"></i><h2 id="ed-building-title" class="ovk-titled">${sectionIcon('grid')}OpenVibe AI is building…</h2><p id="ed-building-text"></p><p class="sp-muted">This usually takes under a minute or two. You can leave and come back.</p></div></div>
