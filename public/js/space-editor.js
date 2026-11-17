@@ -42,6 +42,19 @@
     }).catch(function (err) { btn.disabled = false; status(err.message, 'error'); });
   });
 
+  // ── Versions: Restore undoes to one (the undo is a version too), then the editor reloads with those files ──
+  var versionsEl = $('ed-versions');
+  if (versionsEl) versionsEl.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-restore]');
+    if (!btn) return;
+    if (dirty && !window.confirm('You have unsaved changes; restoring replaces them. Restore anyway?')) return;
+    btn.disabled = true;
+    call('POST', '/versions/' + encodeURIComponent(btn.getAttribute('data-restore')) + '/restore').then(function () {
+      dirty = false;
+      window.location.reload();
+    }).catch(function (err) { btn.disabled = false; status(err.message, 'error'); });
+  });
+
   // ── The code editor ──
   var cm = null;
   function modeOf(path) { return /\.css$/i.test(path) ? 'css' : /\.(m?js|json)$/i.test(path) ? 'javascript' : 'htmlmixed'; }

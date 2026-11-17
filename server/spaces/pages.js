@@ -343,7 +343,8 @@ function createSpacesPages(ctx) {
         const { space } = who;
         const schedules = space.site_id && ctx.spaceSchedules ? await ctx.spaceSchedules.status(space.site_id).catch(() => null) : null;
         const memory = await data.memory(space, 200).catch(() => null);
-        html(res, 200, render.editorPage({ space, schedules, memory, files: await spaces.files(space), csrf: csrfOf(req), canPublish: spaces.canPublish(req.viewer), url: spaces.urlOf(space), aiOn: ai.enabled(), buildsLeft: await buildsLeft(req), templates: templates.list() }));
+        const versions = await spaces.versions(space).catch(() => null);
+        html(res, 200, render.editorPage({ space, schedules, memory, versions, files: await spaces.files(space), csrf: csrfOf(req), canPublish: spaces.canPublish(req.viewer), url: spaces.urlOf(space), aiOn: ai.enabled(), buildsLeft: await buildsLeft(req), templates: templates.list() }));
     }));
 
     router.post('/spaces/:slug/fork', ...action(async (req, res) => {
@@ -473,6 +474,12 @@ function createSpacesPages(ctx) {
         return { space: settingsOut(await spaces.unpublish(req.viewer, who.space)) };
     }));
     router.post('/spaces/:slug/delete', ...api(async (req, res, who) => { await spaces.remove(req.viewer, who.space); return { deleted: true }; }));
+    // Versions (plan §AD.15): undo to one; the undo is itself a version.
+    router.post('/spaces/:slug/versions/:n/restore', ...api(async (req, res, who) => {
+        if (who.space.building_run_id) throw new ApiError(409, 'space.building', 'the AI is changing this space; wait for it to finish');
+        const files = await spaces.restoreVersion(req.viewer, who.space, req.params.n);
+        return { files };
+    }));
     // Memory you can see (plan §AD.15): the maker forgets one fact the space keeps (ov.store), or all of them.
     router.post('/spaces/:slug/memory/forget', ...api(async (req, res, who) => {
         const body = req.body || {};
