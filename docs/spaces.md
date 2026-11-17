@@ -113,6 +113,10 @@ async function handle(request, ov) {
 - **Memory you can see:** what a function keeps with `ov.store` is listed in the editor under **Memory**, newest first,
   with when each fact changed; the maker can forget one fact or everything (`POST /spaces/:slug/memory/forget` with
   `{ key }` or `{ all: true }`). A visitor's own keys are theirs and never show there.
+- **Install it as an app:** a published space serves its own web app manifest (`/_openvibe/manifest.webmanifest`:
+  its name, its home, standalone, a colour from its id) and icons (`/_openvibe/icon.svg`, `icon-192.png`,
+  `icon-512.png`: a tile in that colour with its first letter), and the space SDK links them on a page that links no
+  manifest of its own, so any space can be added to a phone's home screen. The editor's preview never gets them.
 - **The sandbox:** each call runs in a fresh QuickJS runtime compiled to WebAssembly, on a worker thread: no network,
   no files, no timers, no Node. It has 32 MB of memory, 1 s of its own computing and 5 s in all (time spent waiting on
   `ov` is not computing), and at most 100 `ov` calls. A call that overstays answers 504; a thrown error answers 500

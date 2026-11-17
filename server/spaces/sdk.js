@@ -143,6 +143,14 @@ const SDK = String.raw`(function () {
   OV.ai = { ask: function (input) { return call('ai.ask', { input: input }).then(function (r) { return r.text; }); } };
   OV.me = function () { return call('me'); };
   window.OV = OV;
+  // A published space installs as an app (plan §AD.15): the manifest and icons are the space's own (/_openvibe/), and a
+  // page that links none of its own gets them.
+  if (CFG.mode !== 'preview' && document.head && !document.querySelector('link[rel="manifest"]')) {
+    var add = function (tag, attrs) { var el = document.createElement(tag); for (var k in attrs) el.setAttribute(k, attrs[k]); document.head.appendChild(el); };
+    add('link', { rel: 'manifest', href: '/_openvibe/manifest.webmanifest' });
+    if (!document.querySelector('link[rel="apple-touch-icon"]')) add('link', { rel: 'apple-touch-icon', href: '/_openvibe/icon-192.png' });
+    if (!document.querySelector('link[rel="icon"]')) add('link', { rel: 'icon', href: '/_openvibe/icon.svg', type: 'image/svg+xml' });
+  }
 })();
 `;
 
