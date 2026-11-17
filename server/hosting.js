@@ -85,6 +85,8 @@ function createHosting(app, { db, auth, config: suppliedConfig, now, resolver, f
     ctx.guestCleanup = require('./spaces/guest-cleanup').createGuestCleanup({ store, config, log });
     // Spaces that keep working (plan §AD.15): schedules.json runs a published space's functions on a clock.
     ctx.spaceSchedules = require('./spaces/schedules').createSpaceSchedules({ store, blobs, apps: () => ctx.apps, config, log });
+    // Spaces that talk (plan §AD.15): a space's out.<topic> reaches the spaces that listen to it.
+    ctx.spaceData.onOut((space, topic, value) => ctx.spaceSchedules.tell(space, topic, value));
     {
         const { sdkSource } = require('./spaces/sdk');
         const bySite = new Map();

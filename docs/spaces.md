@@ -118,6 +118,11 @@ async function handle(request, ov) {
   person's agent writes (`PUT /api/v1/builder/spaces/:id/files`, answered with `pending: true`) is kept as a proposal and
   nothing changes; the editor shows **Waiting for your OK** with what it would add, change and remove, and Apply makes
   it the space's files (a version, "approved") or Discard drops it. The last five proposals are kept.
+- **Spaces that talk:** a space says something by keeping `out.<topic>` in its own store
+  (`ov.store.set("out.price", { usd: 12 })`); another space listens in its `events.json` with
+  `{ "function": "onprice", "on": "space:<slug>/price" }` and its function runs with type `space:<slug>/<topic>`, subject
+  `{ type: "space", id: <slug> }` and the value's plain values as the payload. A space hears its own maker's spaces and
+  public ones, never another maker's unlisted space and never itself; a space says at most 30 things a minute.
 - **Memory you can see:** what a function keeps with `ov.store` is listed in the editor under **Memory**, newest first,
   with when each fact changed; the maker can forget one fact or everything (`POST /spaces/:slug/memory/forget` with
   `{ key }` or `{ all: true }`). A visitor's own keys are theirs and never show there.

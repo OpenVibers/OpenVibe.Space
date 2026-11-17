@@ -20,6 +20,13 @@
  * delivers one of the PUBLIC event types below, each published space that listed it runs that function as the space,
  * with x-ov-trigger: event and the body { trigger: "event", type, at, event: { id, subject, payload } } (the payload's
  * plain values only, 2 KB at most). Nothing private reaches a space: only these types are subscribed and dispatched.
+ *
+ * Spaces that talk (plan §AD.15: "one space's output feeds another (a price watch feeds a budget); this is the agentic
+ * graph"): a space says something by keeping `out.<topic>` in its own store (ov.store.set("out.price", { usd: 12 })), and
+ * another space listens with events.json's { "function": "onprice", "on": "space:<its slug>/price" }. The listener runs
+ * like any event, with type "space:<slug>/<topic>", subject { type: "space", id: <slug> } and the value's plain values
+ * as the payload. A space hears only a public published space or one of its own maker's, never itself, and a space says
+ * at most TELL_PER_MINUTE things a minute (a loop between spaces runs dry).
  */
 const fs = require('fs');
 
@@ -29,6 +36,10 @@ const MIN_S = 15 * 60;
 const MAX_S = 7 * 86400;
 const PER_TICK = 20;
 const NAME_RE = /^[a-z0-9][a-z0-9-]{0,39}$/;
+// Another space's output: space:<slug>/<topic> (a slug as Space makes them; a topic as a store key after "out.").
+const SPACE_ON_RE = /^space:([a-z0-9][a-z0-9-]{0,62})\/([a-z0-9][a-z0-9_.-]{0,40})$/;
+const TOPIC_RE = /^[a-z0-9][a-z0-9_.-]{0,40}$/;
+const TELL_PER_MINUTE = 30;
 // The public event types a space may listen to (OpenVibe.Events' own public list, server/home.js TYPE_WORDS).
 const EVENT_TYPES = Object.freeze([
     'live.stream.started', 'live.stream.ended', 'blog.post.published', 'wiki.page.published', 'community.paste.created',
@@ -73,7 +84,7 @@ function parseEvents(text) {
         const fn = s && String(s.function || '').trim();
         const on = s && String(s.on || '').trim();
         if (!fn || !NAME_RE.test(fn)) return { list: [], why: `"${String(fn || '').slice(0, 40)}" is not a function name` };
-        if (!EVENT_TYPES.includes(on)) return { list: [], why: `${fn}: "${on.slice(0, 60)}" is not a public event (one of ${EVENT_TYPES.join(', ')})` };
+        if (!EVENT_TYPES.includes(on) && !SPACE_ON_RE.test(on)) return { list: [], why: `${fn}: "${on.slice(0, 60)}" is not a public event (one of ${EVENT_TYPES.join(', ')}) or another space's output (space:<slug>/<topic>)` };
         if (!list.some((x) => x.fn === fn && x.on === on)) list.push({ fn, on });
     }
     return { list, why: j.length > MAX_SCHEDULES ? `only the first ${MAX_SCHEDULES} run` : null };
@@ -185,7 +196,16 @@ function createSpaceSchedules({ store, blobs, apps, config = {}, log = console }
                     if (Number(row.size) > MAX_FILE) continue;
                     let parsed;
                     try { parsed = parseEvents(await read(row.project_id, row.sha256)); } catch { continue; }
-                    for (const t of parsed.list.filter((x) => x.on === ev.type).slice(0, PER_EVENT)) await runOne({ row, fn: t.fn, on: t.on, event: ev.event });
+                    const hits = parsed.list.filter((x) => x.on === ev.type).slice(0, PER_EVENT);
+                    if (!hits.length) continue;
+                    // Another space's output: heard by a space of the same maker, or from a public one; never by itself.
+                    if (ev.from) {
+                        const a = typeof apps === 'function' ? apps() : apps;
+                        const listener = a ? await a.forSite(row.site_id) : null;
+                        if (!listener || listener.id === ev.from.id) continue;
+                        if (!ev.from.open && !(ev.from.owner && listener.owner_subject === ev.from.owner)) continue;
+                    }
+                    for (const t of hits) await runOne({ row, fn: t.fn, on: t.on, event: ev.event });
                 }
             }
         } catch (err) { log.warn('[Space events] dispatch failed:', err && err.message); }
@@ -201,9 +221,30 @@ function createSpaceSchedules({ store, blobs, apps, config = {}, log = console }
         return 'queued';
     }
 
+    /** A space said something (its own store's out.<topic>): queued for the spaces that listen to it. */
+    const told = new Map();   // space id → the times it said something this minute
+    function tell(space, topic, value) {
+        if (!space || !space.id || !space.slug || !space.site_id || !TOPIC_RE.test(String(topic || ''))) return 'ignored';
+        const t = now();
+        const recent = (told.get(space.id) || []).filter((x) => t - x < 60000);
+        if (recent.length >= TELL_PER_MINUTE) return 'ignored:busy';
+        if (queue.length >= QUEUE_MAX) return 'ignored:busy';
+        recent.push(t); told.set(space.id, recent);
+        if (told.size > 5000) told.clear();
+        const payload = publicPayload(value && typeof value === 'object' && !Array.isArray(value) ? value : { value });
+        queue.push({
+            type: `space:${space.slug}/${topic}`,
+            from: { id: space.id, owner: space.owner_subject || null, open: space.visibility === 'public' },
+            event: { id: `spk_${space.id}_${t}`, at: new Date(t).toISOString(), subject: { type: 'space', id: space.slug }, payload },
+        });
+        setImmediate(() => { drain().catch(() => {}); });
+        return 'queued';
+    }
+
     return {
         enabled,
         onEvent,
+        tell,
         /** Wait for the queued events to run (tests). */
         settle: async () => { while (draining || queue.length) await new Promise((r) => setTimeout(r, 10)); },
         tick,
@@ -218,4 +259,4 @@ function createSpaceSchedules({ store, blobs, apps, config = {}, log = console }
     };
 }
 
-module.exports = { createSpaceSchedules, parseSchedules, parseEvents, publicPayload, everySeconds, EVENT_TYPES, MAX_SCHEDULES, MIN_S };
+module.exports = { createSpaceSchedules, parseSchedules, parseEvents, publicPayload, everySeconds, EVENT_TYPES, MAX_SCHEDULES, MIN_S, SPACE_ON_RE, TELL_PER_MINUTE };

@@ -134,6 +134,12 @@ function createSpaceData({ store, config, spaces, ai, now: clock = null }) {
         return row ? parse(row.value) : null;
     }
     async function kvSet(space, person, key, value) {
+        const said = await kvSetOnly(space, person, key, value);
+        // Spaces that talk (plan §AD.15): what a space keeps as out.<topic> in its own store goes to the spaces that listen.
+        if (outHook && person && person.subject === `space:${space.id}` && /^out\.[a-z0-9][a-z0-9_.-]{0,40}$/.test(key)) { try { outHook(space, key.slice(4), value); } catch { /* the write stands */ } }
+        return said;
+    }
+    async function kvSetOnly(space, person, key, value) {
         checkName('key', key);
         const v = jsonOf(value, limits.kvBytes);
         throttle(`w:${space.id}:${person.subject}`, writeLimit(person));
@@ -143,6 +149,9 @@ function createSpaceData({ store, config, spaces, ai, now: clock = null }) {
         await q.kvSet.run(space.id, person.subject, key, v, now());
         return true;
     }
+    let outHook = null;
+    /** Who hears a space's out.<topic> (the schedules' tell). */
+    function onOut(fn) { outHook = typeof fn === 'function' ? fn : null; }
     async function kvRemove(space, person, key) { await q.kvRemove.run(space.id, person.subject, checkName('key', key)); return true; }
     /** The space's own memory (what its functions keep with ov.store), newest first: for the maker, never a visitor. */
     async function memory(space, limit = 200) {
@@ -230,7 +239,7 @@ function createSpaceData({ store, config, spaces, ai, now: clock = null }) {
     }
     async function revoke(bearer) { if (typeof bearer === 'string') await q.dropToken.run(sha(bearer)); }
 
-    return { run, listItems, addItem, setItem, removeItem, kvGet, kvSet, kvRemove, memory, forget, grantedFor, approve, exchange, verify, revoke, CODE_TTL, TOKEN_TTL };
+    return { run, listItems, addItem, setItem, removeItem, kvGet, kvSet, kvRemove, memory, forget, onOut, grantedFor, approve, exchange, verify, revoke, CODE_TTL, TOKEN_TTL };
 }
 
 module.exports = { createSpaceData, NAME_RE };
