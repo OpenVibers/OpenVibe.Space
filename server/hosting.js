@@ -83,6 +83,8 @@ function createHosting(app, { db, auth, config: suppliedConfig, now, resolver, f
     ctx.spaceAgentWatch = require('./spaces/agent-watch').createAgentWatcher({ config, spaces: ctx.spaces, agent: ctx.spaceAgent, steps: ctx.spaceSteps, log });
     // Guest drafts (openvibe.website, plan 5.9): the job that removes the drafts whose week is up.
     ctx.guestCleanup = require('./spaces/guest-cleanup').createGuestCleanup({ store, config, log });
+    // Spaces that keep working (plan §AD.15): schedules.json runs a published space's functions on a clock.
+    ctx.spaceSchedules = require('./spaces/schedules').createSpaceSchedules({ store, blobs, apps: () => ctx.apps, config, log });
     {
         const { sdkSource } = require('./spaces/sdk');
         const bySite = new Map();

@@ -193,6 +193,12 @@ function load(env = process.env) {
             fnWorkers: int(env.SPACE_FN_WORKERS, 2),
             fnCallsPerMinute: int(env.SPACE_FN_CALLS_PER_MINUTE, 240),
             fnCallsPerCallerPerMinute: int(env.SPACE_FN_CALLS_PER_CALLER_PER_MINUTE, 60),
+            // Schedules (server/spaces/schedules.js): a published space's schedules.json, run once a minute; off with
+            // SPACE_SCHEDULES=off or SPACE_SCHEDULES_INTERVAL_MS=0, and off by default outside production (drills, tests).
+            schedules: {
+                enabled: String(env.SPACE_SCHEDULES || 'on').trim().toLowerCase() !== 'off',
+                intervalMs: int(env.SPACE_SCHEDULES_INTERVAL_MS, nodeEnv === 'production' ? 60000 : 0),
+            },
             ai: {
                 enabled: String(env.SPACE_AI || 'on').trim().toLowerCase() !== 'off',
                 url: trim(env.OV_AI_INTERNAL_URL || env.OV_AI_URL || 'http://127.0.0.1:4700'),
