@@ -80,7 +80,7 @@ async function seedOfficialSpaces({ spaces, viewer, log = console, revise = fals
         } else if (revise) {
             const filesChanged = !sameFiles(await spaces.files(space), def.files);
             const settingsChanged = !sameSettings(space, def);
-            if (filesChanged) await spaces.saveFiles(viewer, space, def.files);
+            if (filesChanged) await spaces.saveFiles(viewer, space, def.files, { source: 'official' });
             if (settingsChanged) await spaces.updateSettings(viewer, space, {
                 name: def.name, description: def.description, capabilities: def.capabilities,
             });

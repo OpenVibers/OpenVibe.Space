@@ -94,35 +94,51 @@ function galleryPage({ viewer, spaces, templates, q, sort, csrf }) {
     return page({ title: 'Spaces', description: 'Make a space: a small app on your OpenVibe account, built by OpenVibe AI or from a template, with sign-in, shared lists, private storage and AI.', path: '/spaces', showcase: true, styles: ['kit.css'], body });
 }
 
+/**
+ * Who builds it (2026-11-15, the owner on this page: "should fully use tools like codes or actor, depending on the user
+ * selection"): your Actor (it writes the space's files with its tools), a quick build (OpenVibe AI, about a minute),
+ * or Codes (a full project with its own repository, then published here). Cards that are radios; no script.
+ */
+function builderChoice({ agentOn, aiOn, builder }) {
+    const opts = [
+        agentOn ? ['actor', 'Your Actor', 'Builds it step by step with its tools; you watch it work.', 'spark'] : null,
+        aiOn ? ['quick', 'Quick build', 'OpenVibe AI makes it in about a minute.', 'wand'] : null,
+        ['codes', 'Codes', 'A full project with its own repository, for bigger apps.', 'code'],
+    ].filter(Boolean);
+    const pick = opts.some(([id]) => id === builder) ? builder : opts[0][0];
+    return `<fieldset class="sp-builders"><legend>Who builds it</legend>${opts.map(([id, t, d, ic]) => `<label class="sp-builder"><input type="radio" name="builder" value="${id}"${id === pick ? ' checked' : ''}><i class="ovg-fill" data-ov-icon="${ic}" aria-hidden="true"></i><span><b>${t}</b><small>${d}</small></span></label>`).join('')}</fieldset>`;
+}
+
 // A description handed over from another OpenVibe site: say so, and put the Build button one press away.
 const handedOver = (from, prompt) => (prompt && from === 'codes'
     ? '<p class="sp-handover" role="status"><i class="ovg-fill" data-ov-icon="code" aria-hidden="true"></i> From OpenVibe Codes: check what you wrote, then press Build it.</p>'
     : '');
 
-function newPage({ viewer, templates, csrf, error, prompt, aiOn, buildsLeft, pick = null, from = null }) {
+function newPage({ viewer, templates, csrf, error, prompt, aiOn, buildsLeft, pick = null, from = null, agentOn = false, builder = '' }) {
     const picked = pick ? `<section class="sp-pick" style="--tpl:${esc(pick.accent)}" aria-labelledby="sp-pick-h">
   <span class="sp-template-icon"><i class="ovg-fill" data-ov-icon="${esc(pick.icon)}" aria-hidden="true"></i></span>
   <div class="sp-pick-text"><p class="eyebrow">The template you picked</p><h2 id="sp-pick-h" class="ovk-titled">${sectionIcon('grid')}${esc(pick.name)}</h2><p>${esc(pick.description)}</p></div>
   <form method="post" action="/spaces/new"><input type="hidden" name="csrf" value="${esc(csrf)}"><input type="hidden" name="template" value="${esc(pick.id)}"><button class="sp-btn">Start from this</button></form>
 </section>` : '';
     const body = `<div class="sp-wrap">
-  <p class="eyebrow">New space</p>
   ${kit.pageHead({ title: `${pick ? 'Make it yours' : 'What do you want to make?'}`, icon: 'home', back: { href: '/', label: 'Home' } })}
   ${error ? `<p class="sp-flash is-bad" role="alert">${esc(error)}</p>` : ''}
   ${picked}
   ${handedOver(from, prompt)}
   <form class="sp-ai-form" method="post" action="/spaces/new">
     <input type="hidden" name="csrf" value="${esc(csrf)}">
-    <label for="sp-prompt">Describe it and OpenVibe AI builds it</label>
-    <textarea id="sp-prompt" name="prompt" rows="4" maxlength="4000" placeholder="A trivia quiz about 90s cartoons with a leaderboard…" ${aiOn ? '' : 'disabled'}>${esc(prompt || '')}</textarea>
-    <div class="sp-row"><button class="sp-btn" ${aiOn ? '' : 'disabled'}${prompt && aiOn ? ' autofocus' : ''}><i class="ovg-fill" data-ov-icon="wand" aria-hidden="true"></i> Build it</button>
-      <span class="sp-muted">${aiOn ? `${Number(buildsLeft)} AI builds left today. It takes about a minute; you can change everything after.` : 'OpenVibe AI is not available right now; start from a template instead.'}</span></div>
+    <label for="sp-prompt" class="sp-sr">Describe it</label>
+    <div class="sp-box"><textarea id="sp-prompt" name="prompt" rows="3" maxlength="4000" placeholder="A trivia quiz about 90s cartoons with a leaderboard…">${esc(prompt || '')}</textarea></div>
     <div class="sp-ideas" aria-label="Ideas">${['A daily mood check-in with a shared chart', 'A pixel art board everyone can paint on', 'A recipe idea generator that asks what is in my fridge', 'A study flashcard deck I can quiz myself with'].map((i) => `<button type="button" class="sp-chip" data-idea="${esc(i)}">${esc(i)}</button>`).join('')}</div>
+    ${builderChoice({ agentOn, aiOn, builder })}
+    <div class="sp-go-row"><button class="sp-btn sp-go"${prompt ? ' autofocus' : ''}><i class="ovg-fill" data-ov-icon="wand" aria-hidden="true"></i> <span data-sp-go>Build it</span></button>
+      <span class="sp-muted">${aiOn || agentOn ? `${Number(buildsLeft)} builds left today. You can change everything after.` : 'Building here is not available right now: Codes or a template still work.'}</span></div>
   </form>
   <h2 class="ovk-titled sp-subtitle">${sectionIcon('grid')}Or start from a template</h2>
   ${templateCards(templates, { viewer, csrf, compact: true })}
 </div>
-<script>document.querySelectorAll('.sp-chip').forEach(function (b) { b.addEventListener('click', function () { var t = document.getElementById('sp-prompt'); t.value = b.getAttribute('data-idea'); t.focus(); }); });</script>`;
+<script>(function () { var go = document.querySelector('[data-sp-go]'); var say = function () { var c = document.querySelector('input[name=builder]:checked'); if (go) go.textContent = c && c.value === 'codes' ? 'Continue in Codes' : 'Build it'; }; document.querySelectorAll('input[name=builder]').forEach(function (r) { r.addEventListener('change', say); }); say(); })();
+document.querySelectorAll('.sp-chip').forEach(function (b) { b.addEventListener('click', function () { var t = document.getElementById('sp-prompt'); t.value = b.getAttribute('data-idea'); t.focus(); }); });</script>`;
     return page({ title: 'New space', path: '/spaces/new', robots: 'noindex,nofollow', body });
 }
 
@@ -183,9 +199,52 @@ function spacePage({ viewer, space, owner, url, csrf, forkedFrom }) {
     });
 }
 
-function editorPage({ space, files, csrf, canPublish, url, aiOn, buildsLeft, templates, guest = null }) {
+/** A published space's schedules and how each last ran (schedules.json; plan §AD.15). */
+function schedulesHtml(runs) {
+    if (!Array.isArray(runs) || !runs.length) return '';
+    const every = (s) => (s % 86400 === 0 ? `${s / 86400} d` : s % 3600 === 0 ? `${s / 3600} h` : `${Math.round(s / 60)} min`);
+    const when = (r) => (/^on /.test(r.trigger || '') ? r.trigger : `every ${every(r.every_s)}`);
+    const row = (r) => `<li class="sp-ed-sched-${r.last_status === 'ok' ? 'ok' : 'err'}"><b>${esc(r.function)}</b><span class="sp-muted">${esc(when(r))}</span>`
+        + `<span>${r.last_run_at ? `<time datetime="${esc(r.last_run_at)}">${esc(r.last_run_at.slice(0, 16).replace('T', ' '))} UTC</time> · ${r.last_status === 'ok' ? 'ok' : 'failed'} · ${esc(String(r.last_ms || 0))} ms` : 'not run yet'}</span>`
+        + `${r.last_error ? `<code>${esc(r.last_error)}</code>` : ''}</li>`;
+    return `<details class="sp-ed-fnlog sp-ed-sched" id="ed-schedules"><summary><i class="ovg-fill" data-ov-icon="clock" aria-hidden="true"></i> Schedules and events <span class="sp-muted">${runs.length} · schedules.json, events.json</span></summary><ol>${runs.map(row).join('')}</ol></details>`;
+}
+
+/** What the space keeps (ov.store), each fact with when it changed and Forget (plan §AD.15: memory you can see). */
+function memoryHtml(facts) {
+    if (!Array.isArray(facts) || !facts.length) return '';
+    const shown = (v) => { const t = typeof v === 'string' ? v : JSON.stringify(v); return t.length > 160 ? `${t.slice(0, 159)}…` : t; };
+    const row = (m) => `<li><b>${esc(m.key)}</b><code>${esc(shown(m.value))}</code><span class="sp-muted">${m.updated_at ? esc(m.updated_at.slice(0, 16).replace('T', ' ')) + ' UTC' : ''}</span>`
+        + `<button type="button" class="sp-btn sp-btn-quiet sp-btn-sm" data-forget="${esc(m.key)}">Forget</button></li>`;
+    return `<details class="sp-ed-fnlog sp-ed-memory" id="ed-memory"><summary><i class="ovg-fill" data-ov-icon="brain" aria-hidden="true"></i> Memory <span class="sp-muted">${facts.length} · what the space keeps</span></summary>`
+        + `<ol>${facts.map(row).join('')}</ol><p class="sp-ed-memory-all"><button type="button" class="sp-btn sp-btn-quiet sp-btn-sm" data-forget-all>Forget everything</button></p></details>`;
+}
+
+/** Every change as a version: when, who or what, what it changed, and Restore (plan §AD.15: see, compare and undo). */
+function versionsHtml(list) {
+    if (!Array.isArray(list) || list.length < 2) return '';
+    const WHO = { editor: 'saved', ai: 'OpenVibe AI', agent: 'your agent', restore: 'restored', created: 'created', copy: 'copied', official: 'updated' };
+    const paths = (c) => [...c.added.map((p) => `+ ${p}`), ...c.changed.map((p) => `~ ${p}`), ...c.removed.map((p) => `− ${p}`)];
+    const row = (v, i) => `<li data-n="${esc(String(v.n))}" data-at="${esc(v.at)}" data-who="${esc(WHO[v.source] || v.source)}"><b>#${esc(String(v.n))}</b><span>${esc(WHO[v.source] || v.source)}${v.by && v.source !== 'ai' ? ` · ${esc(v.by)}` : ''}</span>`
+        + `<time class="sp-muted" datetime="${esc(v.at)}">${esc(v.at.slice(0, 16).replace('T', ' '))} UTC</time>`
+        + (i === 0 ? '<span class="sp-muted">now</span>' : `<button type="button" class="sp-btn sp-btn-quiet sp-btn-sm" data-view="${esc(String(v.n))}">View</button><button type="button" class="sp-btn sp-btn-quiet sp-btn-sm" data-restore="${esc(String(v.n))}">Restore</button>`)
+        + `${v.note ? `<small>${esc(v.note)}</small>` : ''}<code>${esc(paths(v.changes).join('  ') || 'no file changes')}</code></li>`;
+    return `<details class="sp-ed-fnlog sp-ed-versions" id="ed-versions"><summary><i class="ovg-fill" data-ov-icon="history" aria-hidden="true"></i> Versions <span class="sp-muted">${list.length} · every change, undoable</span></summary><ol>${list.map(row).join('')}</ol></details>`;
+}
+
+/** An agent's change waiting for the maker's OK (plan §AD.15): what it would do, Apply and Discard. */
+function proposalsHtml(list) {
+    if (!Array.isArray(list) || !list.length) return '';
+    const paths = (c) => [...c.added.map((p) => `+ ${p}`), ...c.changed.map((p) => `~ ${p}`), ...c.removed.map((p) => `− ${p}`)];
+    const row = (x) => `<li data-proposal="${esc(String(x.id))}"><b>${esc(x.by || 'Your agent')}</b><time class="sp-muted" datetime="${esc(x.at)}">${esc(x.at.slice(0, 16).replace('T', ' '))} UTC</time>`
+        + `${x.note ? `<small>${esc(x.note)}</small>` : ''}<code>${esc(paths(x.changes).join('  ') || 'no file changes')}</code>`
+        + `<span class="sp-ed-prop-acts"><button type="button" class="sp-btn sp-btn-sm" data-apply="${esc(String(x.id))}">Apply</button><button type="button" class="sp-btn sp-btn-quiet sp-btn-sm" data-discard="${esc(String(x.id))}">Discard</button></span></li>`;
+    return `<details class="sp-ed-fnlog sp-ed-props" id="ed-proposals" open><summary><i class="ovg-fill" data-ov-icon="robot" aria-hidden="true"></i> Waiting for your OK <span class="sp-muted">${list.length} · your agent's change${list.length === 1 ? '' : 's'}</span></summary><ol>${list.map(row).join('')}</ol></details>`;
+}
+
+function editorPage({ space, files, csrf, canPublish, url, aiOn, buildsLeft, templates, guest = null, schedules = null, memory = null, versions = null, proposals = null }) {
     const boot = {
-        space: { id: space.id, slug: space.slug, name: space.name, description: space.description, instructions: space.instructions, capabilities: caps(space), visibility: space.visibility, published: Boolean(space.site_id), url, building: Boolean(space.building_run_id), building_prompt: space.building_prompt || '' },
+        space: { id: space.id, slug: space.slug, name: space.name, description: space.description, instructions: space.instructions, capabilities: caps(space), visibility: space.visibility, embeddable: space.embeddable === true, agent_review: space.agent_review === true, published: Boolean(space.site_id), url, building: Boolean(space.building_run_id), building_prompt: space.building_prompt || '' },
         files, csrf, canPublish, aiOn, buildsLeft, templates: templates.map((t) => ({ id: t.id, name: t.name })),
         // Where the editor's calls go: a guest draft is edited by its id (its address is a secret link), an
         // owned space by its slug. A guest carries its secret with every call.
@@ -232,7 +291,7 @@ function editorPage({ space, files, csrf, canPublish, url, aiOn, buildsLeft, tem
     <section class="sp-ed-preview" aria-label="Preview">
       <div class="sp-ed-preview-bar"><span><i class="ovg-fill" data-ov-icon="eye" aria-hidden="true"></i> Preview <span class="sp-muted">(runs as you)</span></span><button class="sp-btn sp-btn-quiet sp-btn-sm" id="ed-run" type="button"><i class="ovg-fill" data-ov-icon="retry" aria-hidden="true"></i> Run</button></div>
       <iframe id="ed-frame" title="Preview of the space" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-pointer-lock"></iframe>
-      <details class="sp-ed-fnlog" id="ed-fnlog" hidden><summary><i class="ovg-fill" data-ov-icon="terminal" aria-hidden="true"></i> Function log <span class="sp-muted" id="ed-fnlog-last"></span></summary><ol id="ed-fnlog-list"></ol></details>
+      <details class="sp-ed-fnlog" id="ed-fnlog" hidden><summary><i class="ovg-fill" data-ov-icon="terminal" aria-hidden="true"></i> Function log <span class="sp-muted" id="ed-fnlog-last"></span></summary><ol id="ed-fnlog-list"></ol></details>${proposalsHtml(proposals)}${schedulesHtml(schedules)}${memoryHtml(memory)}${versionsHtml(versions)}
     </section>
   </div>
   <div class="sp-ed-building" id="ed-building" hidden><div><i class="ovg-fill" data-ov-icon="busy" data-ovg="busy" aria-hidden="true"></i><h2 id="ed-building-title" class="ovk-titled">${sectionIcon('grid')}OpenVibe AI is building…</h2><p id="ed-building-text"></p><p class="sp-muted">This usually takes under a minute or two. You can leave and come back.</p></div></div>
@@ -251,6 +310,14 @@ function editorPage({ space, files, csrf, canPublish, url, aiOn, buildsLeft, tem
       <fieldset><legend>Who can find it</legend>
         <label class="sp-check"><input type="radio" name="visibility" value="public"> Public: in the gallery</label>
         <label class="sp-check"><input type="radio" name="visibility" value="unlisted"> Unlisted: only with its link</label>
+      </fieldset>
+      <fieldset><legend>Your agent</legend>
+        <label class="sp-check"><input type="checkbox" name="agent_review" value="1"> Its changes wait for my OK</label>
+      </fieldset>
+      <fieldset><legend>Other sites</legend>
+        <label class="sp-check"><input type="checkbox" name="embeddable" value="1"> Let any site embed it</label>
+        <div class="sp-embed" id="ed-embed" hidden><p class="sp-muted">Paste this where it should show (it works once the space is published):</p>
+          <div class="sp-embed-row"><code id="ed-embed-code"></code><button class="sp-btn sp-btn-quiet sp-btn-sm" type="button" id="ed-embed-copy">Copy</button></div></div>
       </fieldset>`}
       <div class="sp-row sp-dialog-actions"><button class="sp-btn" value="save">Save settings</button><button class="sp-btn sp-btn-quiet" value="cancel" formnovalidate>Cancel</button></div>
       <hr>

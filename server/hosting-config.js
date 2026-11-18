@@ -60,6 +60,12 @@ function load(env = process.env) {
         objectStore: {
             mode: String(env.SPACE_OBJECT_STORE || '').toLowerCase() === 'media' ? 'media' : 'local',
         },
+        // OpenVibe.Git (plan §AD.10 step 2, domain/git-publish.js): where a site published from a person's repository
+        // asks Git to send it (Git sends the files; Host never fetches one). Its public address names the repository.
+        git: {
+            internalUrl: trim(env.OV_GIT_INTERNAL_URL || (env.NODE_ENV === 'production' ? 'http://127.0.0.1:5270' : '')),
+            url: trim(env.OV_GIT_URL || 'https://git.openvibe.codes'),
+        },
         media: {
             url: trim(env.OV_MEDIA_URL || 'http://127.0.0.1:4100'),
             namespace: String(env.OV_MEDIA_NAMESPACE || 'space').trim() || 'space',
@@ -69,6 +75,8 @@ function load(env = process.env) {
         // OpenVibe.Network: SSO (OAuth2 authorization server), JWKS, client-credentials tokens.
         networkUrl: trim(env.OV_NETWORK_URL || 'https://openvibe.network'),
         networkInternalUrl: trim(env.OV_NETWORK_INTERNAL_URL || 'http://127.0.0.1:4000'),
+        // OpenVibe.Search's owner API (server/search-index.js: live sites as documents); off when empty.
+        search: { url: trim(env.SPACE_SEARCH_URL || (isProduction ? 'http://127.0.0.1:4710' : '')) },
         oauth: {
             clientId: env.OV_OAUTH_CLIENT_ID || 'space',
             clientSecret: env.OV_OAUTH_CLIENT_SECRET || '',
@@ -185,6 +193,12 @@ function load(env = process.env) {
             fnWorkers: int(env.SPACE_FN_WORKERS, 2),
             fnCallsPerMinute: int(env.SPACE_FN_CALLS_PER_MINUTE, 240),
             fnCallsPerCallerPerMinute: int(env.SPACE_FN_CALLS_PER_CALLER_PER_MINUTE, 60),
+            // Schedules (server/spaces/schedules.js): a published space's schedules.json, run once a minute; off with
+            // SPACE_SCHEDULES=off or SPACE_SCHEDULES_INTERVAL_MS=0, and off by default outside production (drills, tests).
+            schedules: {
+                enabled: String(env.SPACE_SCHEDULES || 'on').trim().toLowerCase() !== 'off',
+                intervalMs: int(env.SPACE_SCHEDULES_INTERVAL_MS, nodeEnv === 'production' ? 60000 : 0),
+            },
             ai: {
                 enabled: String(env.SPACE_AI || 'on').trim().toLowerCase() !== 'off',
                 url: trim(env.OV_AI_INTERNAL_URL || env.OV_AI_URL || 'http://127.0.0.1:4700'),

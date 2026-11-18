@@ -112,7 +112,13 @@ function createSpacesBuilderApi({ config, spaces, steps = null, log = console })
     router.put('/:id/files', guard('space.build.write'), json, run(async (req) => {
         const { person, space } = await ownSpace(req);
         const body = req.body || {};
-        const files = await spaces.saveFiles(spaces.viewerOf(person, space), space, body.files);
+        // The maker may want an agent's change to wait for their OK (plan §AD.15): then it is kept as a proposal.
+        if (space.agent_review === true) {
+            const out = await spaces.proposeFiles(spaces.viewerOf(person, space), space, body.files, { note: body.note });
+            if (steps) await steps.working({ space, person });
+            return { files: out.files, pending: out.proposed, note: out.proposed ? 'waiting for the maker\'s OK in the editor' : 'nothing changed' };
+        }
+        const files = await spaces.saveFiles(spaces.viewerOf(person, space), space, body.files, { source: 'agent' });
         if (steps) await steps.working({ space, person });
         return { files };
     }));

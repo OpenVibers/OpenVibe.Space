@@ -27,9 +27,9 @@
     "express": "^4.21.2",
     "express-rate-limit": "^7.5.0",
     "helmet": "^8.1.0",
-    "openvibe-contracts": "https://codeload.github.com/OpenVibers/OpenVibe.Contracts/tar.gz/refs/tags/v0.419.0",
-    "openvibe-sdk": "https://codeload.github.com/OpenVibers/OpenVibe.SDK/tar.gz/refs/tags/v0.168.0",
-    "openvibe-shared": "https://codeload.github.com/OpenVibers/OpenVibe.Shared/tar.gz/refs/tags/v4.248.0",
+    "openvibe-contracts": "https://git.openvibe.codes/api/v1/repos/openvibers/openvibe.contracts/archive/v0.443.0.tar.gz",
+    "openvibe-sdk": "https://git.openvibe.codes/api/v1/repos/openvibers/openvibe.sdk/archive/v0.177.0.tar.gz",
+    "openvibe-shared": "https://git.openvibe.codes/api/v1/repos/openvibers/openvibe.shared/archive/v4.313.0.tar.gz",
     "pg": "^8.23.0",
     "quickjs-emscripten": "0.32.0"
   },
@@ -38,6 +38,7 @@
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",
+    "@resvg/resvg-js": "^2.6.2",
     "jsonwebtoken": "^9.0.3"
   }
 }

@@ -28,6 +28,51 @@
       }); });
   }
 
+  // ── Memory (what the space keeps): forget one fact, or everything ──
+  var memory = $('ed-memory');
+  if (memory) memory.addEventListener('click', function (e) {
+    var one = e.target.closest('[data-forget]'), all = e.target.closest('[data-forget-all]');
+    if (!one && !all) return;
+    var btn = one || all;
+    btn.disabled = true;
+    call('POST', '/memory/forget', all ? { all: true } : { key: one.getAttribute('data-forget') }).then(function () {
+      if (all) memory.querySelectorAll('li').forEach(function (li) { li.remove(); });
+      else one.closest('li').remove();
+      status(all ? 'Forgot everything the space kept.' : 'Forgot it.', 'ok');
+    }).catch(function (err) { btn.disabled = false; status(err.message, 'error'); });
+  });
+
+  // ── Your agent's change waiting for your OK: Apply (the editor reloads with it) or Discard ──
+  var props = $('ed-proposals');
+  if (props) props.addEventListener('click', function (e) {
+    var apply = e.target.closest('[data-apply]'), discard = e.target.closest('[data-discard]');
+    if (!apply && !discard) return;
+    if (apply && dirty && !window.confirm('You have unsaved changes; applying replaces them. Apply anyway?')) return;
+    var btn = apply || discard, id = btn.getAttribute(apply ? 'data-apply' : 'data-discard');
+    btn.disabled = true;
+    call('POST', '/proposals/' + encodeURIComponent(id) + (apply ? '/apply' : '/discard')).then(function () {
+      if (apply) { dirty = false; window.location.reload(); return; }
+      var li = btn.closest('li'); if (li) li.remove();
+      if (!props.querySelector('li')) props.remove();
+      status('Discarded your agent\'s change', 'ok');
+    }).catch(function (err) { btn.disabled = false; status(err.message, 'error'); });
+  });
+
+  // ── Versions: Restore undoes to one (the undo is a version too), then the editor reloads with those files ──
+  var versionsEl = $('ed-versions');
+  if (versionsEl) versionsEl.addEventListener('click', function (e) {
+    var view = e.target.closest('[data-view]');
+    if (view) { travel(Number(view.getAttribute('data-view'))); return; }
+    var btn = e.target.closest('[data-restore]');
+    if (!btn) return;
+    if (dirty && !window.confirm('You have unsaved changes; restoring replaces them. Restore anyway?')) return;
+    btn.disabled = true;
+    call('POST', '/versions/' + encodeURIComponent(btn.getAttribute('data-restore')) + '/restore').then(function () {
+      dirty = false;
+      window.location.reload();
+    }).catch(function (err) { btn.disabled = false; status(err.message, 'error'); });
+  });
+
   // ── The code editor ──
   var cm = null;
   function modeOf(path) { return /\.css$/i.test(path) ? 'css' : /\.(m?js|json)$/i.test(path) ? 'javascript' : 'htmlmixed'; }
@@ -75,8 +120,9 @@
   var runTimer = null;
   function edited() { dirty = true; status('Unsaved changes'); clearTimeout(runTimer); runTimer = setTimeout(run, 1200); }
   /** index.html with the space's own scripts and stylesheets inlined (a srcdoc frame has no address to load them from). */
-  function previewDoc() {
-    stash();
+  function previewDoc() { stash(); return docOf(files); }
+  function docOf(list) {
+    var fileOf = function (p) { for (var i = 0; i < list.length; i++) if (list[i].path === p) return list[i]; return null; };
     var index = (fileOf('index.html') || { content: '' }).content;
     var esc = function (s) { return s.replace(/<\/(script)/gi, '<\\/$1'); };
     return index
@@ -87,7 +133,44 @@
         var f = fileOf(href); return f && /stylesheet/i.test(a + b) ? '<style>' + f.content + '</style>' : m;
       });
   }
-  function run() { frame.srcdoc = previewDoc(); }
+  function run() { endTravel(); frame.srcdoc = previewDoc(); }
+
+  // ── Time travel (plan §AD.15: "scrub a space back to any day and see what it said then") ──
+  // A version's files in the preview, nothing changed: older and newer step through the versions, Back to now returns,
+  // Restore this makes it the space's files (a version too).
+  var travelBar = null, travelN = 0;
+  function versionNs() { return versionsEl ? Array.prototype.map.call(versionsEl.querySelectorAll('li[data-n]'), function (li) { return Number(li.getAttribute('data-n')); }) : []; }
+  function endTravel() { if (travelBar) { travelBar.remove(); travelBar = null; } travelN = 0; }
+  function travel(n) {
+    var ns = versionNs(); if (!ns.length) return;
+    if (n === ns[0]) { endTravel(); frame.srcdoc = previewDoc(); status('Back to now'); return; }
+    status('Opening version ' + n + '…');
+    call('POST', '/versions/' + encodeURIComponent(String(n)) + '/view').then(function (v) {
+      travelN = v.n;
+      frame.srcdoc = docOf(Array.isArray(v.files) ? v.files : []);
+      if (!travelBar) {
+        travelBar = document.createElement('div'); travelBar.className = 'sp-ed-travel'; travelBar.setAttribute('role', 'status');
+        frame.parentNode.insertBefore(travelBar, frame);
+        travelBar.addEventListener('click', function (e) {
+          var b = e.target.closest('button'); if (!b) return;
+          var list = versionNs(), at = list.indexOf(travelN);
+          if (b.hasAttribute('data-older') && at >= 0 && at < list.length - 1) travel(list[at + 1]);
+          else if (b.hasAttribute('data-newer') && at > 0) travel(list[at - 1]);
+          else if (b.hasAttribute('data-now')) travel(list[0]);
+          else if (b.hasAttribute('data-this')) { var r = versionsEl.querySelector('[data-restore="' + travelN + '"]'); if (r) r.click(); }
+        });
+      }
+      var list = versionNs(), at = list.indexOf(v.n);
+      var li = versionsEl.querySelector('li[data-n="' + v.n + '"]');
+      var when = String(v.at || '').slice(0, 16).replace('T', ' ') + ' UTC';
+      travelBar.textContent = '';
+      var mk = function (attr, label, text, off) { var b = document.createElement('button'); b.type = 'button'; b.className = 'sp-btn sp-btn-quiet sp-btn-sm'; b.setAttribute(attr, ''); b.setAttribute('aria-label', label); b.textContent = text; b.disabled = !!off; return b; };
+      var label = document.createElement('span'); label.className = 'sp-ed-travel-l';
+      label.textContent = 'As it was: #' + v.n + ' · ' + (li ? li.getAttribute('data-who') : v.source) + ' · ' + when;
+      travelBar.append(mk('data-older', 'Older version', '‹', at < 0 || at >= list.length - 1), label, mk('data-newer', 'Newer version', '›', at <= 0), mk('data-now', 'Back to now', 'Now'), mk('data-this', 'Restore this version', 'Restore this'));
+      status('Viewing version ' + v.n + ': nothing is changed');
+    }).catch(function (err) { status(err.message, 'error'); });
+  }
   $('ed-run').addEventListener('click', run);
 
   // The preview's SDK calls: only from our frame, answered to it.
@@ -247,6 +330,8 @@
     form.elements.instructions.value = space.instructions || '';
     Array.prototype.forEach.call(form.querySelectorAll('input[name=cap]'), function (c) { c.checked = space.capabilities.indexOf(c.value) >= 0; });
     Array.prototype.forEach.call(form.querySelectorAll('input[name=visibility]'), function (r) { r.checked = r.value === (space.visibility || 'public'); });
+    if (form.elements.embeddable) { form.elements.embeddable.checked = !!space.embeddable; showEmbed(); }
+    if (form.elements.agent_review) form.elements.agent_review.checked = !!space.agent_review;
     $('ed-unpublish').hidden = !space.published;
     dialog.showModal();
   });
@@ -254,8 +339,29 @@
     if (dialog.returnValue !== 'save') return;
     var caps = Array.prototype.filter.call(form.querySelectorAll('input[name=cap]'), function (c) { return c.checked; }).map(function (c) { return c.value; });
     var vis = form.querySelector('input[name=visibility]:checked');
-    call('PUT', '/settings', { name: form.elements.name.value, description: form.elements.description.value, instructions: form.elements.instructions.value, capabilities: caps, visibility: vis ? vis.value : 'public' })
+    var body = { name: form.elements.name.value, description: form.elements.description.value, instructions: form.elements.instructions.value, capabilities: caps, visibility: vis ? vis.value : 'public' };
+    if (form.elements.embeddable) body.embeddable = form.elements.embeddable.checked;
+    if (form.elements.agent_review) body.agent_review = form.elements.agent_review.checked;
+    call('PUT', '/settings', body)
       .then(function (j) { space = Object.assign(space, j.space); $('ed-name').textContent = space.name; status('Settings saved'); }, function (e) { status(e.message, 'bad'); });
+  });
+
+  // ── Embedding (plan §AD.15): the snippet to paste, shown while "Let any site embed it" is on ──
+  function embedSnippet() {
+    var src = space.url || '';
+    return '<iframe src="' + src + '" title="' + String(space.name || 'Space').replace(/[&<>"]/g, '') + '" width="100%" height="600" style="border:0;border-radius:16px" allow="clipboard-write; fullscreen" loading="lazy"></iframe>';
+  }
+  function showEmbed() {
+    var box = $('ed-embed'); if (!box || !form.elements.embeddable) return;
+    box.hidden = !form.elements.embeddable.checked;
+    $('ed-embed-code').textContent = embedSnippet();
+  }
+  if (form.elements.embeddable) form.elements.embeddable.addEventListener('change', showEmbed);
+  var copyBtn = $('ed-embed-copy');
+  if (copyBtn) copyBtn.addEventListener('click', function () {
+    var text = embedSnippet();
+    var done = function () { copyBtn.textContent = 'Copied'; setTimeout(function () { copyBtn.textContent = 'Copy'; }, 1600); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, function () { status('Select the snippet and copy it', 'bad'); });
   });
 
   // ── Publishing ──

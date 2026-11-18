@@ -28,7 +28,9 @@ const { createPgTelemetrySink, startTelemetryRetention } = require('openvibe-sdk
     app.locals.hosting.worker.start();
     app.locals.hosting.outbox.start();
     app.locals.hosting.billing.start();   // off unless SPACE_BILLING_INTERVAL_MS > 0
+    app.locals.hosting.searchIndex.start();   // live sites in OpenVibe.Search (off without its URL and the client secret)
     app.locals.hosting.guestCleanup.start();   // the guest drafts whose week is up (off with SPACE_GUEST_DRAFTS=off)
+    app.locals.hosting.spaceSchedules.start();   // published spaces' schedules.json (off outside production or with SPACE_SCHEDULES=off)
     // The person's own agent (plan 2026-10-22 §Z, stage Z1): the watcher follows the tasks that build spaces
     // (off unless SPACE_BUILDER=agent and OpenVibe.Actor is there).
     const agentWatch = app.locals.hosting.spaceAgentWatch;
@@ -45,6 +47,13 @@ const { createPgTelemetrySink, startTelemetryRetention } = require('openvibe-sdk
         networkInternalUrl: hc.networkInternalUrl, clientId: hc.oauth.clientId, clientSecret: hc.oauth.clientSecret,
     });
 
+    // Spaces' event triggers (plan §AD.15): the public event types a space's events.json may name, delivered to the same
+    // loopback endpoint; their own subscription, so the account topics never depend on it.
+    const eventTriggers = startSubscriptions({
+        topics: require('./spaces/schedules').EVENT_TYPES, eventsUrl: hc.events.url, endpoint: `http://127.0.0.1:${config.port}/internal/events`, secret: hc.events.secrets[0],
+        networkInternalUrl: hc.networkInternalUrl, clientId: hc.oauth.clientId, clientSecret: hc.oauth.clientSecret,
+    });
+
     // ── Stop (roadmap WS-P lifecycle; openvibe-sdk/service) ──────
     // SIGTERM: the server stops taking connections, closes idle keep-alive ones (it keeps them 65 s
     // otherwise) and lets requests in flight finish (4 s at most); then space.db closes and the
@@ -53,7 +62,7 @@ const { createPgTelemetrySink, startTelemetryRetention } = require('openvibe-sdk
     gracefulStop({
         name: 'Space', server,
         drainMs: 4000, deadlineMs: 5000, deadlineExitCode: 1,
-        stop: [async () => { if (subscriptions) subscriptions.stop(); clearInterval(sharingTimer); if (agentWatch) agentWatch.stop(); app.locals.hosting.worker.stop(); app.locals.hosting.guestCleanup.stop(); await app.locals.hosting.outbox.stop(); await app.locals.hosting.billing.stop(); }],
+        stop: [async () => { if (subscriptions) subscriptions.stop(); if (eventTriggers) eventTriggers.stop(); clearInterval(sharingTimer); if (agentWatch) agentWatch.stop(); app.locals.hosting.worker.stop(); app.locals.hosting.guestCleanup.stop(); app.locals.hosting.spaceSchedules.stop(); await app.locals.hosting.outbox.stop(); await app.locals.hosting.billing.stop(); }],
         close: [
             async () => { if (telemetryRetention) await telemetryRetention.stop(); await telemetry.stop(); },
             async () => {

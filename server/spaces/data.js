@@ -44,6 +44,7 @@ function createSpaceData({ store, config, spaces, ai, now: clock = null }) {
         kvSet: db.prepare(`INSERT INTO space_app_kv (space_id, subject, key, value, updated_at) VALUES (?, ?, ?, ?, ?)
                            ON CONFLICT (space_id, subject, key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`),
         kvRemove: db.prepare('DELETE FROM space_app_kv WHERE space_id = ? AND subject = ? AND key = ?'),
+        kvList: db.prepare('SELECT key, value, updated_at FROM space_app_kv WHERE space_id = ? AND subject = ? ORDER BY updated_at DESC, key LIMIT ?'),
         grant: db.prepare('SELECT capabilities FROM space_app_grants WHERE space_id = ? AND subject = ?'),
         setGrant: db.prepare(`INSERT INTO space_app_grants (space_id, subject, capabilities, granted_at) VALUES (?, ?, ?, ?)
                               ON CONFLICT (space_id, subject) DO UPDATE SET capabilities = excluded.capabilities, granted_at = excluded.granted_at`),
@@ -133,6 +134,12 @@ function createSpaceData({ store, config, spaces, ai, now: clock = null }) {
         return row ? parse(row.value) : null;
     }
     async function kvSet(space, person, key, value) {
+        const said = await kvSetOnly(space, person, key, value);
+        // Spaces that talk (plan §AD.15): what a space keeps as out.<topic> in its own store goes to the spaces that listen.
+        if (outHook && person && person.subject === `space:${space.id}` && /^out\.[a-z0-9][a-z0-9_.-]{0,40}$/.test(key)) { try { outHook(space, key.slice(4), value); } catch { /* the write stands */ } }
+        return said;
+    }
+    async function kvSetOnly(space, person, key, value) {
         checkName('key', key);
         const v = jsonOf(value, limits.kvBytes);
         throttle(`w:${space.id}:${person.subject}`, writeLimit(person));
@@ -142,7 +149,16 @@ function createSpaceData({ store, config, spaces, ai, now: clock = null }) {
         await q.kvSet.run(space.id, person.subject, key, v, now());
         return true;
     }
+    let outHook = null;
+    /** Who hears a space's out.<topic> (the schedules' tell). */
+    function onOut(fn) { outHook = typeof fn === 'function' ? fn : null; }
     async function kvRemove(space, person, key) { await q.kvRemove.run(space.id, person.subject, checkName('key', key)); return true; }
+    /** The space's own memory (what its functions keep with ov.store), newest first: for the maker, never a visitor. */
+    async function memory(space, limit = 200) {
+        const rows = await q.kvList.all(space.id, `space:${space.id}`, Math.min(Math.max(Number(limit) || 200, 1), 500));
+        return rows.map((r) => ({ key: r.key, value: parse(r.value), updated_at: r.updated_at ? new Date(Number(r.updated_at) || r.updated_at).toISOString() : null }));
+    }
+    async function forget(space, key) { await q.kvRemove.run(space.id, `space:${space.id}`, checkName('key', key)); return true; }
 
     // ── AI ──
     async function ask(space, person, args) {
@@ -223,7 +239,7 @@ function createSpaceData({ store, config, spaces, ai, now: clock = null }) {
     }
     async function revoke(bearer) { if (typeof bearer === 'string') await q.dropToken.run(sha(bearer)); }
 
-    return { run, listItems, addItem, setItem, removeItem, kvGet, kvSet, kvRemove, grantedFor, approve, exchange, verify, revoke, CODE_TTL, TOKEN_TTL };
+    return { run, listItems, addItem, setItem, removeItem, kvGet, kvSet, kvRemove, memory, forget, onOut, grantedFor, approve, exchange, verify, revoke, CODE_TTL, TOKEN_TTL };
 }
 
 module.exports = { createSpaceData, NAME_RE };

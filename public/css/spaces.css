@@ -196,3 +196,67 @@ body[data-page="spaces"] .page:has(.sp-editor) { padding-bottom: 0; }
 .page { overflow-x: clip; }
 /* Design rule 201 (the owner, 11-14): a page starts within 12 px of the bar, 8 px on a phone. */
 @media (max-width: 640px) { .sp-wrap { padding-top: 8px; } }
+
+/* The new space (2026-11-15, the owner: "more elegant and simplistic and minimalist design, better organization"):
+   who builds it as cards, one calm box with its button inside, ideas as quiet chips. */
+.sp-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.sp-builders { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: 8px; margin: 0; padding: 0; border: 0; }
+.sp-builders legend { padding: 0 0 8px; font-weight: 700; }
+.sp-builder { position: relative; display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 10px 14px; border: 1px solid var(--border, #2c3d5c); border-radius: 14px; cursor: pointer; transition: border-color .18s, background-color .18s; }
+.sp-builder input { position: absolute; opacity: 0; pointer-events: none; }
+.sp-builder > i { display: grid; place-items: center; flex: none; width: 36px; height: 36px; border-radius: 11px; background: color-mix(in srgb, var(--text-primary, #e6edf7) 7%, transparent); }
+.sp-builder b { display: block; }
+.sp-builder small { display: block; color: var(--text-secondary, #9fb0c8); font-size: .85rem; }
+.sp-builder:has(input:checked) { border-color: var(--accent, #60a5fa); background: color-mix(in srgb, var(--accent, #60a5fa) 10%, transparent); }
+.sp-builder:has(input:checked) > i { background: var(--accent, #60a5fa); color: #fff; }
+.sp-builder:has(input:focus-visible) { outline: 2px solid var(--accent, #60a5fa); outline-offset: 2px; }
+.sp-box { display: flex; padding: 6px; border: 1px solid var(--border, #2c3d5c); border-radius: 18px; background: var(--bg-primary, #0b1220); transition: border-color .18s, box-shadow .18s; }
+.sp-box:focus-within { border-color: var(--accent, #60a5fa); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent, #60a5fa) 22%, transparent); }
+.sp-box textarea { flex: 1; min-width: 0; min-height: 52px; max-height: 40vh; border: 0 !important; outline: none; resize: none; background: transparent; color: inherit; font: inherit; font-size: 16px; line-height: 1.45; padding: 6px 8px; field-sizing: content; }
+.sp-go-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.sp-go-row .sp-go { min-height: 48px; padding-inline: 22px; border-radius: 14px; }
+.sp-go-row .sp-muted { font-size: .85rem; }
+@media (max-width: 560px) { .sp-go-row .sp-go { flex: 1 1 100%; justify-content: center; } }
+.sp-ideas { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; padding-bottom: 2px; }
+.sp-ideas::-webkit-scrollbar { display: none; }
+.sp-chip { flex: none; min-height: 40px; white-space: nowrap; }
+/* Schedules (schedules.json, plan AD.15): each one, its clock, how it last ran. */
+.sp-ed-sched ol{list-style:none;margin:0;padding:6px 10px 10px;display:grid;gap:6px}
+.sp-ed-sched li{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;font-size:13px;min-width:0}
+.sp-ed-sched li code{flex:1 1 100%;font-size:12px;color:var(--danger,#ef4444);overflow-wrap:anywhere}
+.sp-ed-sched-ok b::before{content:"";display:inline-block;width:7px;height:7px;margin-right:6px;border-radius:50%;background:var(--success,#22c55e)}
+.sp-ed-sched-err b::before{content:"";display:inline-block;width:7px;height:7px;margin-right:6px;border-radius:50%;background:var(--danger,#ef4444)}
+
+/* Memory (plan AD.15): what the space keeps, each fact with Forget. */
+.sp-ed-memory ol{list-style:none;margin:0;padding:6px 10px 6px;display:grid;gap:6px}
+.sp-ed-memory li{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;font-size:13px;min-width:0}
+.sp-ed-memory li code{flex:1 1 220px;min-width:0;font-size:12px;overflow-wrap:anywhere;color:var(--text-secondary,#a8b3c4)}
+.sp-ed-memory-all{margin:0;padding:0 10px 10px}
+
+/* Versions (plan AD.15): every change, with what it changed and Restore. */
+.sp-ed-versions ol{list-style:none;margin:0;padding:6px 10px 10px;display:grid;gap:8px}
+.sp-ed-versions li{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;font-size:13px;min-width:0}
+.sp-ed-versions li small{flex:1 1 100%;color:var(--text-secondary,#a8b3c4)}
+.sp-ed-versions li code{flex:1 1 100%;font-size:12px;overflow-wrap:anywhere;color:var(--text-muted,#7d8aa0)}
+
+/* Embedding (plan AD.15): the snippet to paste. */
+.sp-embed{display:grid;gap:6px;margin-top:6px}
+.sp-embed p{margin:0;font-size:13px}
+.sp-embed-row{display:flex;gap:8px;align-items:flex-start;min-width:0}
+.sp-embed-row code{flex:1;min-width:0;padding:8px 10px;border-radius:10px;font-size:12px;overflow-wrap:anywhere;background:color-mix(in srgb,var(--text-primary,#ececf1) 6%,transparent)}
+
+/* Waiting for your OK (plan AD.15): an agent's change, Apply or Discard. */
+.sp-ed-props { border-color: color-mix(in srgb, var(--accent, #3b82f6) 45%, transparent); }
+.sp-ed-props ol{list-style:none;margin:0;padding:6px 10px 10px;display:grid;gap:10px}
+.sp-ed-props li{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;font-size:13px;min-width:0}
+.sp-ed-props li small{flex:1 1 100%;color:var(--text-secondary,#a8b3c4)}
+.sp-ed-props li code{flex:1 1 100%;font-size:12px;overflow-wrap:anywhere;color:var(--text-muted,#7d8aa0)}
+.sp-ed-prop-acts{display:flex;gap:8px}
+
+/* Time travel (plan AD.15): the bar over the preview while it shows an older version. */
+.sp-ed-travel{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;padding:6px 8px;border-radius:12px;margin-bottom:6px;
+  background:color-mix(in srgb,var(--accent,#3b82f6) 14%,transparent);border:1px solid color-mix(in srgb,var(--accent,#3b82f6) 40%,transparent);animation:sp-travel-in .25s ease both}
+.sp-ed-travel-l{flex:1 1 160px;min-width:0;font-size:13px;font-weight:650;overflow-wrap:anywhere}
+.sp-ed-travel .sp-btn[data-older],.sp-ed-travel .sp-btn[data-newer]{min-width:36px;font-size:16px;line-height:1}
+@keyframes sp-travel-in{from{opacity:0;transform:translateY(calc(-4px * var(--ov-move,1)))}}
+html[data-ov-motion="off"] .sp-ed-travel{animation:none}

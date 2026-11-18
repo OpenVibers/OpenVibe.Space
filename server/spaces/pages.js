@@ -68,7 +68,8 @@ function createSpacesPages(ctx) {
             "img-src 'self' data: blob: https:", "media-src 'self' data: blob: https:",
             "connect-src 'self' https://openvibe.network https://openvibe.chat https://openvibe.events https://cloudflareinsights.com",
             `frame-src 'self' https://openvibe.network ${sites}`, "frame-ancestors 'self'", "object-src 'none'", "base-uri 'self'",
-            "form-action 'self' https://openvibe.network", "script-src-attr 'unsafe-inline'",
+            // Codes builds a space as a full project (2026-11-15): the new-space form hands the words over by redirect.
+            "form-action 'self' https://openvibe.network https://openvibe.codes", "script-src-attr 'unsafe-inline'",
         ].join('; '));
         next();
     });
@@ -150,7 +151,7 @@ function createSpacesPages(ctx) {
      * answer. Guests never get an agent (they have no account, and the agent works for the person).
      */
     const agentOn = () => Boolean(config.builder && config.builder.mode === 'agent' && ctx.spaceAgent && ctx.spaceAgent.enabled);
-    const settingsOut = (s) => ({ id: s.id, slug: s.slug, name: s.name, description: s.description, instructions: s.instructions, capabilities: spaces.capsOf(s.capabilities), visibility: s.visibility, published: Boolean(s.site_id), url: spaces.urlOf(s), building: Boolean(s.building_run_id) });
+    const settingsOut = (s) => ({ id: s.id, slug: s.slug, name: s.name, description: s.description, instructions: s.instructions, capabilities: spaces.capsOf(s.capabilities), visibility: s.visibility, embeddable: s.embeddable === true, agent_review: s.agent_review === true, published: Boolean(s.site_id), url: spaces.urlOf(s), building: Boolean(s.building_run_id) });
 
     // ── Guest drafts (openvibe.website, plan 5.9) ────────────────────────────────────────────────────────────
     // A visitor who is not signed in makes a draft on openvibe.space. The draft has no owner and a random
@@ -192,13 +193,17 @@ function createSpacesPages(ctx) {
 
     // ?prompt=<text>: a description written elsewhere on the network (openvibe.codes "Something new") fills the box,
     // one press from a build; nothing is built until the person presses Build. ?from=codes says where it came from.
-    const promptOf = (req) => (typeof req.query.prompt === 'string' ? req.query.prompt.replace(/\r\n?/g, '\n').trim().slice(0, 4000) : '');
+    // A space from a page (plan §AD.15): ?page=<an OpenVibe address> writes the description from what the page is.
+    const promptOf = (req) => {
+        if (typeof req.query.page === 'string') { const d = require('./from-page').describe(req.query.page); if (d) return d.prompt; }
+        return typeof req.query.prompt === 'string' ? req.query.prompt.replace(/\r\n?/g, '\n').trim().slice(0, 4000) : '';
+    };
     const fromOf = (req) => (req.query.from === 'codes' ? 'codes' : null);
     router.get('/spaces/new', view(async (req, res) => {
         if (!signedIn(req)) throw new ApiError(401, 'auth.required', 'sign in first');
         // ?template=<id>: someone picked a template on openvibe.website; it leads the page, one press from a new space.
         const pick = req.query.template ? templates.get(String(req.query.template)) : null;
-        html(res, 200, render.newPage({ viewer: req.viewer, templates: templates.list(), csrf: csrfOf(req), aiOn: ai.enabled(), buildsLeft: await buildsLeft(req), pick, prompt: pick ? '' : promptOf(req), from: fromOf(req) }));
+        html(res, 200, render.newPage({ viewer: req.viewer, templates: templates.list(), csrf: csrfOf(req), aiOn: ai.enabled(), agentOn: agentOn(), builder: String(req.query.builder || ''), buildsLeft: await buildsLeft(req), pick, prompt: pick ? '' : promptOf(req), from: fromOf(req) }));
     }));
     router.post('/spaces/new', ...action(async (req, res) => {
         const body = req.body || {};
@@ -209,11 +214,17 @@ function createSpacesPages(ctx) {
             const space = await spaces.create(req.viewer, { name: t.name, description: t.description, instructions: t.instructions || '', capabilities: t.capabilities, files: templates.files(t.id), template: t.id });
             return res.redirect(303, `/spaces/${space.slug}/edit`);
         }
-        const again = (error) => html(res, 422, render.newPage({ viewer: req.viewer, templates: templates.list(), csrf: csrfOf(req), aiOn: ai.enabled(), buildsLeft: 0, error, prompt }));
+        const builder = ['actor', 'quick', 'codes'].includes(String(body.builder || '')) ? String(body.builder) : '';
+        const again = (error) => html(res, 422, render.newPage({ viewer: req.viewer, templates: templates.list(), csrf: csrfOf(req), aiOn: ai.enabled(), agentOn: agentOn(), builder, buildsLeft: 0, error, prompt }));
         if (prompt.length < 8) return again('Describe your space in a sentence or two (what it does, who uses it, how it should look).');
-        // The builder: the person's own agent (plan 2026-10-22 §Z, stage Z1) or Space's old AI loop, while the
-        // flag says which one it is. The old path is untouched and still works.
-        const withAgent = agentOn();
+        // Codes (2026-11-15): a full project with its own repository; Codes takes the words over (its home's ?prompt=).
+        if (builder === 'codes') {
+            const codes = String((config.codesPublicUrl || 'https://openvibe.codes')).replace(/\/+$/, '');
+            return res.redirect(303, `${codes}/?mode=new&kind=website&prompt=${encodeURIComponent(prompt.slice(0, 4000))}`);
+        }
+        // The builder: the person's own agent (plan 2026-10-22 §Z, stage Z1) or Space's quick AI loop. The person
+        // picks (2026-11-15); without a pick the agent builds when it is on.
+        const withAgent = builder === 'quick' ? false : agentOn();
         if (!withAgent && !ai.enabled()) return again('OpenVibe AI is not available right now. Start from a template instead.');
         // The abuse screen: what is asked of the builder must pass it (a guest's prompt passes the same checks).
         contentCheck.refuse(contentCheck.promptReason(prompt));
@@ -334,7 +345,11 @@ function createSpacesPages(ctx) {
             return;
         }
         const { space } = who;
-        html(res, 200, render.editorPage({ space, files: await spaces.files(space), csrf: csrfOf(req), canPublish: spaces.canPublish(req.viewer), url: spaces.urlOf(space), aiOn: ai.enabled(), buildsLeft: await buildsLeft(req), templates: templates.list() }));
+        const schedules = space.site_id && ctx.spaceSchedules ? await ctx.spaceSchedules.status(space.site_id).catch(() => null) : null;
+        const memory = await data.memory(space, 200).catch(() => null);
+        const versions = await spaces.versions(space).catch(() => null);
+        const proposals = await spaces.proposals(space).catch(() => null);
+        html(res, 200, render.editorPage({ space, schedules, memory, versions, proposals, files: await spaces.files(space), csrf: csrfOf(req), canPublish: spaces.canPublish(req.viewer), url: spaces.urlOf(space), aiOn: ai.enabled(), buildsLeft: await buildsLeft(req), templates: templates.list() }));
     }));
 
     router.post('/spaces/:slug/fork', ...action(async (req, res) => {
@@ -371,6 +386,8 @@ function createSpacesPages(ctx) {
         // A guest draft has no capabilities (there is no visitor to ask anything of) and is never in the gallery.
         const input = who.guest ? { name: body.name, description: body.description, instructions: body.instructions, capabilities: [], visibility: 'unlisted' } : body;
         const updated = await spaces.updateSettings(req.viewer, who.space, input);
+        // Its pages read the space through a short cache: a changed setting (embedding) applies at once.
+        if (updated.site_id && ctx.apps && typeof ctx.apps.forget === 'function') ctx.apps.forget(updated.site_id);
         if (who.guest) await spaces.touchGuest(updated);
         return { space: settingsOut(updated) };
     }));
@@ -464,6 +481,27 @@ function createSpacesPages(ctx) {
         return { space: settingsOut(await spaces.unpublish(req.viewer, who.space)) };
     }));
     router.post('/spaces/:slug/delete', ...api(async (req, res, who) => { await spaces.remove(req.viewer, who.space); return { deleted: true }; }));
+    // An agent's change waiting for the maker's OK (plan §AD.15): apply it (a version) or discard it.
+    router.post('/spaces/:slug/proposals/:id/apply', ...api(async (req, res, who) => {
+        if (who.space.building_run_id) throw new ApiError(409, 'space.building', 'the AI is changing this space; wait for it to finish');
+        return { files: await spaces.applyProposal(req.viewer, who.space, req.params.id) };
+    }));
+    router.post('/spaces/:slug/proposals/:id/discard', ...api(async (req, res, who) => ({ discarded: await spaces.discardProposal(who.space, req.params.id) })));
+    // Time travel (plan §AD.15): a version's files, for the preview to show as it was then (nothing changes).
+    router.post('/spaces/:slug/versions/:n/view', ...api(async (req, res, who) => spaces.versionFiles(who.space, req.params.n)));
+    // Versions (plan §AD.15): undo to one; the undo is itself a version.
+    router.post('/spaces/:slug/versions/:n/restore', ...api(async (req, res, who) => {
+        if (who.space.building_run_id) throw new ApiError(409, 'space.building', 'the AI is changing this space; wait for it to finish');
+        const files = await spaces.restoreVersion(req.viewer, who.space, req.params.n);
+        return { files };
+    }));
+    // Memory you can see (plan §AD.15): the maker forgets one fact the space keeps (ov.store), or all of them.
+    router.post('/spaces/:slug/memory/forget', ...api(async (req, res, who) => {
+        const body = req.body || {};
+        if (body.all === true) { for (const m of await data.memory(who.space, 500)) await data.forget(who.space, m.key); return { forgotten: 'all' }; }
+        await data.forget(who.space, String(body.key || ''));
+        return { forgotten: String(body.key || '') };
+    }));
     router.post('/spaces/:slug/preview', ...api(async (req, res, who) => {
         const space = who.space;
         const b = req.body || {};

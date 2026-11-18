@@ -57,8 +57,21 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, outb
         files: db.prepare('SELECT path, content FROM space_app_files WHERE space_id = ? ORDER BY path'),
         clearFiles: db.prepare('DELETE FROM space_app_files WHERE space_id = ?'),
         addFile: db.prepare('INSERT INTO space_app_files (space_id, path, content, updated_at) VALUES (?, ?, ?, ?)'),
+        // Versions (plan §AD.15): the files after each change, the last VERSIONS_KEPT of each space.
+        versionAdd: db.prepare(`INSERT INTO space_app_versions (space_id, n, files, by_subject, by_name, source, note, bytes, created_at)
+            VALUES (?, COALESCE((SELECT max(n) FROM space_app_versions WHERE space_id = ?), 0) + 1, ?, ?, ?, ?, ?, ?, ?)`),
+        versionLast: db.prepare('SELECT n, files FROM space_app_versions WHERE space_id = ? ORDER BY n DESC LIMIT 1'),
+        versionList: db.prepare('SELECT n, files, by_subject, by_name, source, note, bytes, created_at FROM space_app_versions WHERE space_id = ? ORDER BY n DESC LIMIT ?'),
+        versionGet: db.prepare('SELECT n, files, source, created_at FROM space_app_versions WHERE space_id = ? AND n = ?'),
+        versionPrune: db.prepare('DELETE FROM space_app_versions WHERE space_id = ? AND n <= (SELECT max(n) FROM space_app_versions WHERE space_id = ?) - ?'),
         touch: db.prepare('UPDATE space_apps SET updated_at = ? WHERE id = ?'),
-        settings: db.prepare('UPDATE space_apps SET name = ?, description = ?, instructions = ?, capabilities = ?, visibility = ?, updated_at = ? WHERE id = ?'),
+        settings: db.prepare('UPDATE space_apps SET name = ?, description = ?, instructions = ?, capabilities = ?, visibility = ?, embeddable = ?, agent_review = ?, updated_at = ? WHERE id = ?'),
+        // An agent's change waiting for its maker's OK (plan §AD.15), the last five of a space.
+        proposalAdd: db.prepare('INSERT INTO space_app_proposals (space_id, files, by_subject, by_name, note, created_at) VALUES (?, ?, ?, ?, ?, ?)'),
+        proposalList: db.prepare('SELECT id, files, by_name, note, created_at FROM space_app_proposals WHERE space_id = ? ORDER BY id DESC LIMIT 5'),
+        proposalGet: db.prepare('SELECT id, files, by_subject, by_name, note FROM space_app_proposals WHERE space_id = ? AND id = ?'),
+        proposalRemove: db.prepare('DELETE FROM space_app_proposals WHERE space_id = ? AND id = ?'),
+        proposalPrune: db.prepare('DELETE FROM space_app_proposals WHERE space_id = ? AND id NOT IN (SELECT id FROM space_app_proposals WHERE space_id = ? ORDER BY id DESC LIMIT 5)'),
         building: db.prepare('UPDATE space_apps SET building_run_id = ?, building_prompt = ?, updated_at = ? WHERE id = ?'),
         built: db.prepare('UPDATE space_apps SET building_run_id = NULL, building_prompt = NULL, name = ?, description = ?, instructions = ?, capabilities = ?, updated_at = ? WHERE id = ? AND building_run_id = ?'),
         buildFailed: db.prepare('UPDATE space_apps SET building_run_id = NULL, building_prompt = NULL, updated_at = ? WHERE id = ? AND building_run_id = ?'),
@@ -159,12 +172,99 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, outb
         return out;
     }
 
-    async function writeFiles(space, list, now) {
+    async function writeFiles(space, list, now, meta = {}) {
         await store.tx(async () => {
             await q.clearFiles.run(space.id);
             for (const f of list) await q.addFile.run(space.id, f.path, f.content, now);
             await q.touch.run(now, space.id);
+            await recordVersion(space.id, list, now, meta);
         });
+    }
+
+    // ── Versions (plan §AD.15: "every change … is a version you can see, compare and undo") ──
+    /** Who made a change, for its version; a guest or a service is no one in particular (never throws). */
+    const byOf = (viewer) => { try { return personOf(viewer); } catch { return null; } };
+    const VERSIONS_KEPT = 20;
+    const snapshot = (list) => JSON.stringify([...list].map((f) => ({ path: f.path, content: f.content })).sort((a, b) => (a.path < b.path ? -1 : 1)));
+    /** Keep the files after a change as a version (nothing changed: nothing kept), and only the last VERSIONS_KEPT. */
+    async function recordVersion(spaceId, list, now, { by = null, source = 'editor', note = null } = {}) {
+        const files = snapshot(list);
+        const last = await q.versionLast.get(spaceId);
+        if (last && last.files === files) return null;
+        await q.versionAdd.run(spaceId, spaceId, files, by && by.subject ? String(by.subject) : null, by && (by.name || by.username) ? String(by.name || by.username).slice(0, 80) : null,
+            String(source).slice(0, 20), note ? String(note).slice(0, 200) : null, Buffer.byteLength(files), now);
+        await q.versionPrune.run(spaceId, spaceId, VERSIONS_KEPT);
+        return true;
+    }
+    /** What changed from one file list to the next: { added, changed, removed } paths. */
+    function changesBetween(before, after) {
+        const a = new Map((before || []).map((f) => [f.path, f.content]));
+        const b = new Map((after || []).map((f) => [f.path, f.content]));
+        return {
+            added: [...b.keys()].filter((p) => !a.has(p)),
+            changed: [...b.keys()].filter((p) => a.has(p) && a.get(p) !== b.get(p)),
+            removed: [...a.keys()].filter((p) => !b.has(p)),
+        };
+    }
+    /** A space's versions, newest first, each with who or what made it and what it changed from the one before. */
+    async function versions(space, limit = VERSIONS_KEPT) {
+        const rows = await q.versionList.all(space.id, Math.min(Math.max(Number(limit) || VERSIONS_KEPT, 1), 50) + 1);
+        const parsed = rows.map((r) => ({ ...r, list: JSON.parse(r.files) }));
+        return parsed.slice(0, limit).map((r, i) => ({
+            n: r.n, source: r.source, by: r.by_name || null, note: r.note || null, bytes: r.bytes,
+            at: new Date(Number(r.created_at)).toISOString(), changes: changesBetween(parsed[i + 1] ? parsed[i + 1].list : [], r.list),
+        }));
+    }
+    const filesOf = (space) => files(space);
+    // ── An agent's change waiting for its maker's OK (plan §AD.15: "an agent's edit can wait for approval") ──
+    /** Keep what the agent wrote as a proposal (nothing is written); nothing changed: nothing kept. */
+    async function proposeFiles(viewer, space, list, { note = null } = {}) {
+        const checked = checkFiles(list);
+        const files = snapshot(checked);
+        if (files === snapshot(await filesOf(space))) return { proposed: false, files: checked };
+        const by = byOf(viewer);
+        await store.tx(async () => {
+            await q.proposalAdd.run(space.id, files, by && by.subject ? by.subject : null, by && (by.name || by.username) ? String(by.name || by.username).slice(0, 80) : null, note ? String(note).slice(0, 200) : null, store.now());
+            await q.proposalPrune.run(space.id, space.id);
+        });
+        return { proposed: true, files: checked };
+    }
+    /** The proposals waiting, newest first, each with what it would add, change and remove. */
+    async function proposals(space) {
+        const rows = await q.proposalList.all(space.id);
+        if (!rows.length) return [];
+        const now = await filesOf(space);
+        return rows.map((r) => ({ id: Number(r.id), by: r.by_name || null, note: r.note || null, at: new Date(Number(r.created_at)).toISOString(), changes: changesBetween(now, JSON.parse(r.files)) }));
+    }
+    /** Apply one: its files become the space's, as a version the agent made and the maker approved. */
+    async function applyProposal(viewer, space, id) {
+        const row = await q.proposalGet.get(space.id, Number(id));
+        if (!row) throw new ApiError(404, 'space.proposal_not_found', 'no such change waiting');
+        const list = checkFiles(JSON.parse(row.files));
+        await writeFiles(space, list, store.now(), { by: { subject: row.by_subject, name: row.by_name }, source: 'agent', note: 'approved' });
+        await q.proposalRemove.run(space.id, Number(id));
+        return list;
+    }
+    async function discardProposal(space, id) {
+        const row = await q.proposalGet.get(space.id, Number(id));
+        if (!row) throw new ApiError(404, 'space.proposal_not_found', 'no such change waiting');
+        await q.proposalRemove.run(space.id, Number(id));
+        return true;
+    }
+
+    /** Time travel (plan §AD.15: "scrub a space back to any day and see what it said then"): version n's files, to look at. */
+    async function versionFiles(space, n) {
+        const row = await q.versionGet.get(space.id, Number(n));
+        if (!row) throw new ApiError(404, 'space.version_not_found', 'no such version');
+        return { n: Number(row.n), source: row.source, at: new Date(Number(row.created_at)).toISOString(), files: JSON.parse(row.files) };
+    }
+    /** Undo to version n: its files become the space's, as a new version (so the undo can be undone). */
+    async function restoreVersion(viewer, space, n) {
+        const row = await q.versionGet.get(space.id, Number(n));
+        if (!row) throw new ApiError(404, 'space.version_not_found', 'no such version');
+        const list = checkFiles(JSON.parse(row.files));
+        await writeFiles(space, list, store.now(), { by: byOf(viewer), source: 'restore', note: `back to version ${row.n}` });
+        return list;
     }
 
     async function uniqueSlug(name) {
@@ -217,15 +317,16 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, outb
                 JSON.stringify(capsOf(input.capabilities)), input.template ? text(input.template, 40) : null, input.forked_from || null,
                 publishedAudience === 'link' ? 'unlisted' : 'public', now, now);
             for (const f of fileList) await q.addFile.run(id, f.path, f.content, now);
+            await recordVersion(id, fileList, now, { by: person, source: input.forked_from ? 'copy' : 'created' });
             // A new space is a draft: Only me until its maker shares it or publishes it.
             if (sharing) await sharing.register(viewer, id, 'private');
         });
         return await get(id);
     }
 
-    async function saveFiles(viewer, space, list) {
+    async function saveFiles(viewer, space, list, { source = 'editor' } = {}) {
         const checked = checkFiles(list);
-        await writeFiles(space, checked, store.now());
+        await writeFiles(space, checked, store.now(), { by: byOf(viewer), source });
         return checked;
     }
 
@@ -321,7 +422,11 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, outb
         if (!['public', 'unlisted'].includes(visibility)) throw new ApiError(422, 'space.invalid_visibility', 'visibility is public (in the gallery) or unlisted (only by its link)');
         await q.settings.run(name, input.description !== undefined ? text(input.description, 400) : space.description,
             input.instructions !== undefined ? String(input.instructions || '').trim().slice(0, 4000) : space.instructions,
-            JSON.stringify(input.capabilities !== undefined ? capsOf(input.capabilities) : capsOf(space.capabilities)), visibility, store.now(), space.id);
+            JSON.stringify(input.capabilities !== undefined ? capsOf(input.capabilities) : capsOf(space.capabilities)), visibility,
+            // Other sites may embed it (plan §AD.15): the maker's choice, off by default.
+            input.embeddable !== undefined ? input.embeddable === true : space.embeddable === true,
+            // The person's agent's changes wait for the maker's OK (plan §AD.15).
+            input.agent_review !== undefined ? input.agent_review === true : space.agent_review === true, store.now(), space.id);
         if (sharing && input.visibility !== undefined) await sharing.syncAudience(space.id, visibility);
         return await get(space.id);
     }
@@ -348,6 +453,7 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, outb
             applied = true;
             await q.clearFiles.run(space.id);
             for (const f of list) await q.addFile.run(space.id, f.path, f.content, now);
+            await recordVersion(space.id, list, now, { by: { name: 'OpenVibe AI' }, source: 'ai', note: text(space.building_prompt || '', 200) || null });
         });
         return applied;
     }
@@ -538,9 +644,10 @@ function createSpaces({ store, config, projects, sites, deploys, takedowns, outb
     async function mine(viewer) { return await q.mine.all(personOf(viewer).subject); }
 
     return {
-        CAPABILITIES, isSpaceId, get, getBySlug, forSite, load, isOwner, files, create, saveFiles, updateSettings, fork,
+        CAPABILITIES, isSpaceId, get, getBySlug, forSite, load, isOwner, files, create, saveFiles, updateSettings, fork, versions, restoreVersion, versionFiles,
+        proposeFiles, proposals, applyProposal, discardProposal,
         startBuild, finishBuild, failBuild, spend, used, canPublish, publish, unpublish, publishedFiles, remove, gallery, galleryFeed, mine, hostnameOf, urlOf,
-        personOf, capsOf, checkFiles, DAY,
+        personOf, capsOf, checkFiles, DAY, spacesProject,
         // The person's one agent (plan 2026-10-22 §Z stage Z1)
         ownedOf, mineOf, viewerOf, setAgentTask, setAgentState, setAgentStep, agentRunning,
         askPublish, publishRequest, decidePublish,

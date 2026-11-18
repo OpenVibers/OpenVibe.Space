@@ -15,6 +15,7 @@ const { createDeploys } = require('./domain/deploys');
 const { createDomains } = require('./domain/domains');
 const { createSiteConfig } = require('./domain/site-config');
 const { createSiteSources } = require('./domain/site-sources');
+const { createGitPublish } = require('./domain/git-publish');
 const { createViewerResolver, guard } = require('./auth/viewer');
 const { createTenantServer } = require('./http/tenant');
 const { createUploadGate } = require('./http/upload');
@@ -56,12 +57,15 @@ function createHosting(app, { db, auth, config: suppliedConfig, now, resolver, f
     const domains = createDomains({ store, config, access, projects, sites, outbox, resolver, log, indexnow: announce });
     const siteConfig = createSiteConfig({ store });
     const siteSources = createSiteSources({ store, sites });
+    const gitPublish = createGitPublish({ config, log, ...(fetchImpl ? { fetchImpl } : {}) });
     const viewers = createViewerResolver({ auth, config, log });
     const tenant = createTenantServer({ store, config, blobs, takedowns, siteConfig, access, apps: () => app.locals.ctx && app.locals.ctx.apps, log });
     const uploadGate = createUploadGate(config.uploads.maxConcurrent);
     const worker = createWorker({ config, store, domains, blobs, outbox, log });
     const billing = createSpaceBilling({ db, config, now: store.now, ...(fetchImpl ? { fetchImpl } : {}), log });
-    const ctx = { config, store, blobs, outbox, billing, access, takedowns, projects, sites, deploys, domains, siteConfig, siteSources, auth, viewers, tenant, worker, uploadGate, indexnow, log, valkey: valkey || null };
+    const ctx = { config, store, blobs, outbox, billing, access, takedowns, projects, sites, deploys, domains, siteConfig, siteSources, gitPublish, auth, viewers, tenant, worker, uploadGate, indexnow, log, valkey: valkey || null };
+    // Live sites in OpenVibe.Search (server/search-index.js), started by server/index.js; off without a search URL and secret.
+    ctx.searchIndex = require('./search-index').createSiteSearchIndex({ db, blobs, sites, takedowns, config, fetchImpl, log });
     // Sharing (openvibe-sdk/share): the shares row next to each space, members, transfers and the one access check.
     ctx.sharing = createSharing({ db, config, outbox, now: store.now, ...(fetchImpl ? { fetchImpl } : {}), log });
     ctx.actorLimits = require('./http/actor-limits').createHostActorLimits({ registry: app.locals.metrics, valkey: ctx.valkey });
@@ -79,6 +83,10 @@ function createHosting(app, { db, auth, config: suppliedConfig, now, resolver, f
     ctx.spaceAgentWatch = require('./spaces/agent-watch').createAgentWatcher({ config, spaces: ctx.spaces, agent: ctx.spaceAgent, steps: ctx.spaceSteps, log });
     // Guest drafts (openvibe.website, plan 5.9): the job that removes the drafts whose week is up.
     ctx.guestCleanup = require('./spaces/guest-cleanup').createGuestCleanup({ store, config, log });
+    // Spaces that keep working (plan §AD.15): schedules.json runs a published space's functions on a clock.
+    ctx.spaceSchedules = require('./spaces/schedules').createSpaceSchedules({ store, blobs, apps: () => ctx.apps, config, log });
+    // Spaces that talk (plan §AD.15): a space's out.<topic> reaches the spaces that listen to it.
+    ctx.spaceData.onOut((space, topic, value) => ctx.spaceSchedules.tell(space, topic, value));
     {
         const { sdkSource } = require('./spaces/sdk');
         const bySite = new Map();
@@ -156,7 +164,12 @@ function createHosting(app, { db, auth, config: suppliedConfig, now, resolver, f
         // works through, and where the person's answer to its publish request lands. It is mounted before
         // /api/v1, which answers everything else.
         app.use('/api/v1/builder/spaces', rateLimit({ windowMs: 60_000, max: 240, standardHeaders: true, legacyHeaders: false }), viewers.middleware('api'), require('./spaces/agent-api').createSpacesBuilderApi({ config, spaces: ctx.spaces, steps: ctx.spaceSteps, log }));
+        // A website from a person's OpenVibe.Git repository, made by their agent (plan §AD.10): space.build.publish.
+        app.use('/api/v1/builder/sites', rateLimit({ windowMs: 60_000, max: 60, standardHeaders: true, legacyHeaders: false }), viewers.middleware('api'), require('./spaces/repo-sites-api').createRepoSitesApi({ config, spaces: ctx.spaces, sites, deploys, siteSources, gitPublish, log }));
         app.use('/api/v1/agent/approvals', rateLimit({ windowMs: 60_000, max: 240, standardHeaders: true, legacyHeaders: false }), viewers.middleware('api'), require('./spaces/agent-api').createApprovalsApi({ spaces: ctx.spaces, steps: ctx.spaceSteps, log }));
+        // A person's live sites, public (server/http/people-sites.js): Network's profile reads it.
+        app.use('/api/v1', rateLimit({ windowMs: 60_000, max: 240, standardHeaders: true, legacyHeaders: false, skip: (req) => !/^\/people\/[^/]+\/sites$/.test(req.path) }),
+            require('./http/people-sites').createPeopleSites({ db, sites: ctx.sites, takedowns: ctx.takedowns, config }));
         app.use('/api/v1', rateLimit({ windowMs: 60_000, max: 240, standardHeaders: true, legacyHeaders: false }), createApi(ctx));
         app.use('/preview', rateLimit({ windowMs: 60_000, max: 300, standardHeaders: true, legacyHeaders: false }), viewers.middleware('dashboard'), (req, res, next) => Promise.resolve(tenant.preview(req, res)).catch(next));
         {

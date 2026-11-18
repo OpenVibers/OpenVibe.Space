@@ -110,12 +110,76 @@ async function handle(request, ov) {
 - **What it returns** becomes the answer: a string (HTML when it starts with `<`, text otherwise), any other value as
   JSON, nothing as 204, or `{ status, headers, body }` (only `content-type` and `cache-control` headers are kept). An
   answer to a signed-in visitor or to a POST is never cached.
+- **Versions:** every change to a space's files is a version: making it, each save that changes something, an AI
+  build, the person's agent, a restore. The editor lists the last 20 under **Versions** with who or what made each and
+  which files it added, changed or removed; **Restore** undoes to one, as a new version, so the undo can be undone
+  (`POST /spaces/:slug/versions/:n/restore`).
+- **Time travel:** **View** on an older version shows the space as it was then in the preview, and nothing changes; the
+  bar over the preview steps to older (‹) and newer (›) versions, goes back to **Now**, or makes the one shown the
+  space's files (**Restore this**) (`POST /spaces/:slug/versions/:n/view` answers that version's files).
+- **Your agent's changes can wait for your OK:** Settings → Your agent → **Its changes wait for my OK**. Then what the
+  person's agent writes (`PUT /api/v1/builder/spaces/:id/files`, answered with `pending: true`) is kept as a proposal and
+  nothing changes; the editor shows **Waiting for your OK** with what it would add, change and remove, and Apply makes
+  it the space's files (a version, "approved") or Discard drops it. The last five proposals are kept.
+- **Spaces that talk:** a space says something by keeping `out.<topic>` in its own store
+  (`ov.store.set("out.price", { usd: 12 })`); another space listens in its `events.json` with
+  `{ "function": "onprice", "on": "space:<slug>/price" }` and its function runs with type `space:<slug>/<topic>`, subject
+  `{ type: "space", id: <slug> }` and the value's plain values as the payload. A space hears its own maker's spaces and
+  public ones, never another maker's unlisted space and never itself; a space says at most 30 things a minute.
+- **A space from a page:** `openvibe.space/spaces/new?page=<an OpenVibe address>` arrives with the new space's
+  description written from what the page is: a channel on OpenVibe.Live (it follows the streams through `events.json`),
+  a Rundown topic, a comparison on OpenVibe.Compare, or any other OpenVibe page. Only https addresses on OpenVibe's
+  own sites; anything else writes nothing.
+- **Memory you can see:** what a function keeps with `ov.store` is listed in the editor under **Memory**, newest first,
+  with when each fact changed; the maker can forget one fact or everything (`POST /spaces/:slug/memory/forget` with
+  `{ key }` or `{ all: true }`). A visitor's own keys are theirs and never show there.
+- **Install it as an app:** a published space serves its own web app manifest (`/_openvibe/manifest.webmanifest`:
+  its name, its home, standalone, a colour from its id) and icons (`/_openvibe/icon.svg`, `icon-192.png`,
+  `icon-512.png`: a tile in that colour with its first letter), and the space SDK links them on a page that links no
+  manifest of its own, so any space can be added to a phone's home screen. The editor's preview never gets them.
+- **Embed it on any site:** Settings → Other sites → **Let any site embed it** (off by default) lets any https page
+  frame the published space (`frame-ancestors 'self' https:`); the editor shows the `<iframe>` snippet to paste, with
+  Copy. Off, only the space itself and openvibe.space may frame it.
 - **The sandbox:** each call runs in a fresh QuickJS runtime compiled to WebAssembly, on a worker thread: no network,
   no files, no timers, no Node. It has 32 MB of memory, 1 s of its own computing and 5 s in all (time spent waiting on
   `ov` is not computing), and at most 100 `ov` calls. A call that overstays answers 504; a thrown error answers 500
   with its message.
 
 Starting from the **Trivia** template gives a working example: its answers live in `functions/check.js`.
+
+### Schedules: a space that keeps working
+
+A published space may run its functions on a clock. List them in `schedules.json` at the space's root:
+
+```json
+[{ "function": "refresh", "every": "1h" }, { "function": "digest", "every": "1d" }]
+```
+
+- **`every`:** `15m` to `7d` (`<n>m`, `<n>h` or `<n>d`); at most five schedules.
+- **How it runs:** the published copy of `functions/<function>.js`, as the space itself: `ov.user` is `null`, the
+  request is a `POST` with the header `x-ov-trigger: schedule` and the body `{ "trigger": "schedule", "at": "<time>" }`.
+  It has the same sandbox and limits as any call, and runs one at a time with the other spaces' schedules.
+- **What is kept:** the last run of each schedule (when, whether it answered under 400, how long it took, and the
+  error), so a space can show that it is alive. A draft or an unpublished change never runs; publishing starts it.
+- **The other triggers:** a webhook is `POST /api/<name>` on the published space, and a person is the page calling
+  `OV.fn`; schedules add the clock and events (below) the rest of the network (plan §AD.15).
+
+### Events: a space that reacts
+
+`events.json` at the root names public OpenVibe events, and the function each one runs:
+
+```json
+[{ "function": "onlive", "on": "live.stream.started" }]
+```
+
+- **Which events:** the public ones only: `live.stream.started`, `live.stream.ended`, `blog.post.published`,
+  `wiki.page.published`, `community.paste.created`, `community.thread.created`, `coupons.coupon.created`,
+  `deals.offer.created`, `deals.offer.updated`, `games.world.published`, `services.app.published`,
+  `reviews.signal.added`, `trade.observation.created`. Anything else is refused in the file and never delivered.
+- **How it runs:** the published copy, as the space (`ov.user` is `null`), a `POST` with `x-ov-trigger: event` and the
+  body `{ "trigger": "event", "type", "at", "event": { "id", "at", "subject": { "type", "id" }, "payload" } }`. The
+  payload carries only its plain values (text, numbers, true or false), 2 KB at most. Events are handled after
+  OpenVibe.Events has its answer, one at a time; the editor shows the last run of each under **Schedules and events**.
 
 ## Sign-in, step by step
 

@@ -118,7 +118,7 @@ assert.match(hostingSrc, /target\.kind === 'dashboard' \|\| target\.kind === 'we
             assert.ok(r.text.includes('A snake game &lt;b&gt;with&lt;/b&gt; a leaderboard &amp; sound</textarea>'), 'the description fills the box, escaped');
             assert.ok(!r.text.includes('<b>with</b>'), 'nothing in it is markup');
             assert.match(r.text, /class="sp-handover"[^>]*>[\s\S]*?From OpenVibe Codes/);
-            assert.match(r.text, /<button class="sp-btn"[^>]*autofocus[^>]*>[\s\S]*?Build it/, 'Build it takes the focus');
+            assert.match(r.text, /<button class="sp-btn[^"]*"[^>]*autofocus[^>]*>[\s\S]*?Build it/, 'Build it takes the focus');
             const plain = await t.request({ method: 'GET', host: 'openvibe.space', path: `/spaces/new?prompt=${encodeURIComponent(said)}`, session: alice });
             assert.ok(plain.text.includes('a leaderboard &amp; sound</textarea>') && !plain.text.includes('class="sp-handover"'), 'a prompt from anywhere else fills the box without the Codes line');
             const picked = await t.request({ method: 'GET', host: 'openvibe.space', path: `/spaces/new?template=site-portfolio&prompt=${encodeURIComponent(said)}`, session: alice });
