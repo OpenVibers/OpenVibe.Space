@@ -145,3 +145,5 @@ body {
 @keyframes spSceneRow { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .sp-scene-win, .sp-scene-app li { animation: none; } }
 html[data-ov-motion=reduced] .sp-scene-win, html[data-ov-motion=reduced] .sp-scene-app li { animation: none; }
+/* Design rule 201: the intro is one line on a computer, at most two on a phone. */
+@media (max-width: 640px) { .lede { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; } }
