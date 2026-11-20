@@ -150,6 +150,8 @@ async function createApp(opts = {}) {
                 styleSrc: ["'self'", "'unsafe-inline'", 'https://cdnjs.cloudflare.com', 'https://fonts.googleapis.com', 'https://openvibe.network'],
                 fontSrc: ["'self'", 'https://cdnjs.cloudflare.com', 'https://fonts.gstatic.com', 'data:'],
                 imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+                // The feed's preview videos (ov-home.js watchPreview, the menu's Feed): without media-src, default-src 'self' refused them (2026-11-20).
+                mediaSrc: ["'self'", 'blob:', 'https:'],
                 // The shared navbar's notification bell hears OpenVibe.Events (notificationsRealtime).
                 connectSrc: ["'self'", 'https://openvibe.network', 'https://openvibe.chat', 'https://openvibe.events', 'https://cloudflareinsights.com'],
                 // The Network's hidden /sso/check frame: how a visitor who is signed in elsewhere gets signed in here.
