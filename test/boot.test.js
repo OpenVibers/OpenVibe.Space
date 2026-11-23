@@ -63,14 +63,13 @@ async function check(name, fn) {
             assert.strictEqual(body.checks.db.detail.store, 'pglite');
         });
 
-        await check('GET / renders the home page: what Space will host, and the forum on Community', async () => {
+        await check('GET / renders the home page: what Space will host, and no forum pointer (people come to host a site)', async () => {
             const r = await fetch(`${base}/`);
             assert.strictEqual(r.status, 200);
             const html = await r.text();
             assert.match(html, /<title>OpenVibe\.Space — spaces and static hosting<\/title>/);
             assert.match(html, /<h1>Make a space\. An app on your OpenVibe account\.<\/h1>/);
-            assert.match(html, /The forum moved to OpenVibe\.Community/);
-            assert.match(html, /href="https:\/\/openvibe\.community\/forum"/);
+            assert.doesNotMatch(html, /Looking for the forum\?/);
         });
 
         await check('every forum URL is a permanent redirect to OpenVibe.Community', async () => {
