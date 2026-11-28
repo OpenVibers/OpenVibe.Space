@@ -122,7 +122,7 @@
 .hd-row__title:hover { text-decoration: underline; }
 .hd-row__side { display: inline-flex; gap: 8px; align-items: center; color: var(--hd-dim); }
 .hd-url { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; color: var(--hd-dim) !important; text-decoration: none; overflow-wrap: anywhere; }
-.hd-url i { font-size: 11px; opacity: .7; }
+.hd-url i { font-size: 12px; opacity: .7; }
 .hd-url:hover { color: var(--hd-text) !important; text-decoration: underline; }
 .hd-url--big { font-size: 15px; font-weight: 600; color: var(--accent-light, var(--hd-accent)) !important; }
 .hd-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); gap: 14px; margin: 0 0 20px; }
